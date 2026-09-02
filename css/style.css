@@ -42,6 +42,10 @@ h1 {
 }
 
 /* ---------- 로그인 화면 ---------- */
+#login-view[hidden] {
+  display: none;
+}
+
 #login-view {
   min-height: 100vh;
   display: flex;
