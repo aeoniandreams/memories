@@ -393,7 +393,11 @@ newCardSaveBtn.addEventListener("click", async () => {
     loadCards();
   } catch (err) {
     console.error("[memories] 저장 실패", err);
-    importError.textContent = "저장에 실패했어요 (" + (err.code || err.message) + "). Firestore 보안 규칙이 게시됐는지 확인해주세요.";
+    const who = auth.currentUser
+      ? "로그인 상태: " + (auth.currentUser.email || auth.currentUser.uid)
+      : "로그인 상태: 로그인 안 되어 있음";
+    importError.textContent =
+      "저장에 실패했어요 (" + (err.code || err.message) + "). [" + who + "]";
     importError.hidden = false;
   } finally {
     newCardSaveBtn.disabled = false;
