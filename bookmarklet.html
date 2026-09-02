@@ -75,11 +75,26 @@
   // (X가 외부 스크립트 로딩을 CSP로 막고 있어서, <script src="..."> 방식으로는
   //  캡처 코드가 실행되지 않습니다. 그래서 코드를 통째로 북마클릿에 박아 넣습니다.
   //  이 fetch는 우리 사이트 안에서 우리 사이트의 파일을 읽는 것이라 CSP와 무관합니다.)
+  // 북마크로 저장되는 과정에서 줄바꿈이 사라질 수 있는데, 그러면 // 주석이 그 줄이 아니라
+  // 코드 전체를 삼켜버립니다(주석은 "줄 끝까지"라서). 그래서 주석을 미리 제거하고
+  // 한 줄로 합쳐서, 줄바꿈에 의존하지 않는 안전한 형태로 만듭니다.
+  function stripCommentsAndJoin(src) {
+    return src
+      .split("\n")
+      .map((line) => {
+        const idx = line.indexOf("//");
+        return idx === -1 ? line : line.slice(0, idx);
+      })
+      .join(" ")
+      .trim();
+  }
+
   async function buildLinks() {
     // 캐시된 예전 버전을 받지 않도록 매번 새로 요청합니다.
     const res = await fetch("js/bookmarklet.js?v=" + Date.now(), { cache: "no-store" });
     if (!res.ok) throw new Error("js/bookmarklet.js 요청 실패: " + res.status);
-    const source = (await res.text()).trim();
+    const raw = await res.text();
+    const source = stripCommentsAndJoin(raw);
     if (!source.includes("(function (mode)")) {
       throw new Error("예상치 못한 스크립트 내용입니다.");
     }
