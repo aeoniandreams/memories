@@ -1,12 +1,17 @@
-// X(트위터) 대화 페이지에서 실행되는 캡처 스크립트.
-// bookmarklet.html의 북마클릿이 이 파일을 <script> 태그로 불러와 실행합니다.
-// window.__xBackupMode 값("start" | "finish")에 따라 동작이 달라집니다.
+// X(트위터) 대화 페이지에서 실행되는 캡처 로직.
+//
+// 이 파일 자체는 하나의 익명 함수 표현식입니다: (mode) => "start" | "finish" 를 받아 동작합니다.
+// bookmarklet.html이 이 파일의 텍스트를 그대로 읽어서 북마클릿 링크(javascript: URI) 안에
+// 통째로 박아 넣습니다.
+//
+// 왜 이렇게 하냐면: X는 페이지 안에서 외부 도메인 스크립트를 <script src="...">로 불러오는 걸
+// 보안 정책(CSP)으로 막고 있습니다. 그래서 "외부 스크립트를 불러와서 실행"하는 방식은 X에서
+// 동작하지 않고, 코드 전체를 북마클릿 안에 직접 담아야 실제로 실행됩니다.
 
-(function () {
-  const STORE_KEY = "__xBackupStore";
-  if (!window[STORE_KEY]) {
-    window[STORE_KEY] = new Map();
-  }
+(function (mode) {
+  const STORE_KEY = "__memoriesXBackupStore";
+  const OBSERVER_KEY = "__memoriesXBackupObserver";
+  if (!window[STORE_KEY]) window[STORE_KEY] = new Map();
   const store = window[STORE_KEY];
 
   function extractDate(timeEl) {
@@ -17,6 +22,15 @@
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return { dateDisplay: `${y}.${m}.${day}`, dateSort: `${y}-${m}-${day}` };
+  }
+
+  function extractImages(article) {
+    const imgs = article.querySelectorAll('img[src*="pbs.twimg.com/media"]');
+    const urls = [];
+    imgs.forEach((img) => {
+      if (img.src && urls.indexOf(img.src) === -1) urls.push(img.src);
+    });
+    return urls;
   }
 
   function extractTweets() {
@@ -54,6 +68,7 @@
         const text = textEl ? textEl.innerText : "";
 
         const { dateDisplay, dateSort } = extractDate(timeEl);
+        const images = extractImages(article);
 
         store.set(id, {
           _order: store.size,
@@ -63,6 +78,7 @@
           dateDisplay,
           dateSort,
           text,
+          images,
         });
         added++;
       } catch (err) {
@@ -70,46 +86,71 @@
       }
     });
 
-    return added;
+    return { added, total: articles.length };
   }
 
-  const mode = window.__xBackupMode;
-
   if (mode === "start") {
-    const added = extractTweets();
-    if (window.__xBackupObserver) window.__xBackupObserver.disconnect();
+    if (window[OBSERVER_KEY]) window[OBSERVER_KEY].disconnect();
+    const result = extractTweets();
     const observer = new MutationObserver(() => extractTweets());
     observer.observe(document.body, { childList: true, subtree: true });
-    window.__xBackupObserver = observer;
-    alert(
-      `캡처를 시작했어요!\n지금까지 ${store.size}개 메시지 인식됨.\n\n이제 천천히 끝까지 스크롤해주세요.\n다 되면 "② 캡처 완료" 북마클릿을 눌러주세요.`
-    );
+    window[OBSERVER_KEY] = observer;
+
+    if (result.total === 0) {
+      alert(
+        "⚠️ 캡처를 시작했지만 이 화면에서 트윗을 하나도 찾지 못했어요.\n" +
+          "X의 대화(스레드/DM) 화면이 맞는지 확인 후 다시 눌러주세요."
+      );
+    } else {
+      alert(
+        "✅ 캡처를 시작했어요!\n지금까지 " + store.size + "개 메시지 인식됨.\n\n" +
+          "이제 천천히 끝까지 스크롤해주세요.\n다 되면 \"② 캡처 완료\"를 눌러주세요."
+      );
+    }
   } else if (mode === "finish") {
     extractTweets();
-    if (window.__xBackupObserver) {
-      window.__xBackupObserver.disconnect();
-      window.__xBackupObserver = null;
+    if (window[OBSERVER_KEY]) {
+      window[OBSERVER_KEY].disconnect();
+      window[OBSERVER_KEY] = null;
     }
+
+    if (store.size === 0) {
+      alert(
+        "⚠️ 저장된 메시지가 없어요.\n" +
+          "먼저 \"① 캡처 시작\"을 누르고 대화 화면에서 스크롤한 다음 다시 시도해주세요."
+      );
+      return;
+    }
+
     const messages = Array.from(store.values())
       .sort((a, b) => a._order - b._order)
       .map(({ _order, ...rest }) => rest);
     const json = JSON.stringify(messages, null, 2);
 
-    const finish = () => {
-      alert(`완료! 총 ${messages.length}개 메시지를 클립보드에 복사했어요.\nmemories 앱의 "새 대화 추가"에 붙여넣어주세요.`);
+    const done = () => {
+      alert(
+        "✅ 캡처 완료! 총 " + messages.length + "개 메시지를 클립보드에 복사했어요.\n" +
+          "memories 앱의 \"새 대화 추가\"에 붙여넣어주세요."
+      );
       store.clear();
     };
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(json).then(finish).catch(() => {
-        prompt("클립보드 복사에 실패했어요. 아래 내용을 직접 복사하세요:", json);
+      navigator.clipboard.writeText(json).then(done).catch(() => {
+        window.prompt(
+          "⚠️ 클립보드 복사에 실패했어요. 아래 내용을 전체 선택(Ctrl/Cmd+A) 후 복사(Ctrl/Cmd+C)하세요:",
+          json
+        );
         store.clear();
       });
     } else {
-      prompt("복사된 내용을 붙여넣으세요 (Ctrl/Cmd+C 후 확인):", json);
+      window.prompt(
+        "복사된 내용을 전체 선택(Ctrl/Cmd+A) 후 복사(Ctrl/Cmd+C)하세요:",
+        json
+      );
       store.clear();
     }
   } else {
-    console.warn("[memories backup] 알 수 없는 모드:", mode);
+    alert("알 수 없는 모드입니다: " + mode);
   }
-})();
+})

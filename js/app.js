@@ -51,11 +51,18 @@ let currentDetailCardId = null;
 let editingMessages = []; // 새 대화 추가 모달에서 편집 중인 메시지 배열
 
 // ---------- 유틸 ----------
-function safeAvatarSrc(url) {
+function safeImgSrc(url) {
   if (typeof url === "string" && /^https?:\/\//.test(url.trim())) {
     return url.trim();
   }
   return "";
+}
+
+function parseImageUrls(text) {
+  return String(text || "")
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function toDateSort(display) {
@@ -73,7 +80,7 @@ function avatarImg(src, alt, className) {
   img.className = className || "avatar";
   img.alt = alt || "";
   img.referrerPolicy = "no-referrer";
-  img.src = safeAvatarSrc(src) || fallbackAvatarDataUri();
+  img.src = safeImgSrc(src) || fallbackAvatarDataUri();
   img.onerror = () => { img.src = fallbackAvatarDataUri(); };
   return img;
 }
@@ -199,8 +206,33 @@ function renderMessageRow(msg) {
   text.textContent = msg.text || "";
 
   contentCol.append(header, text);
+
+  if (Array.isArray(msg.images) && msg.images.length > 0) {
+    contentCol.appendChild(renderImageGrid(msg.images));
+  }
+
   row.append(avatarCol, contentCol);
   return row;
+}
+
+function renderImageGrid(images) {
+  const grid = document.createElement("div");
+  grid.className = "tweet-images";
+  images.forEach((url) => {
+    const src = safeImgSrc(url);
+    if (!src) return;
+    const link = document.createElement("a");
+    link.href = src;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    const img = document.createElement("img");
+    img.src = src;
+    img.loading = "lazy";
+    img.referrerPolicy = "no-referrer";
+    link.appendChild(img);
+    grid.appendChild(link);
+  });
+  return grid;
 }
 
 detailCloseBtn.addEventListener("click", () => {
@@ -251,12 +283,13 @@ importParseBtn.addEventListener("click", () => {
     handle: m.handle || "",
     dateDisplay: m.dateDisplay || "",
     text: m.text || "",
+    images: Array.isArray(m.images) ? m.images.filter(Boolean) : [],
   }));
   renderEditableRows();
 });
 
 addEmptyMessageBtn.addEventListener("click", () => {
-  editingMessages.push({ avatar: "", nickname: "", handle: "", dateDisplay: "", text: "" });
+  editingMessages.push({ avatar: "", nickname: "", handle: "", dateDisplay: "", text: "", images: [] });
   renderEditableRows();
 });
 
@@ -282,7 +315,7 @@ function renderEditRow(msg, index) {
   const avatarInput = makeInput("프로필 사진 URL", msg.avatar, "avatar-url");
   avatarInput.addEventListener("input", () => {
     editingMessages[index].avatar = avatarInput.value;
-    preview.src = safeAvatarSrc(avatarInput.value) || fallbackAvatarDataUri();
+    preview.src = safeImgSrc(avatarInput.value) || fallbackAvatarDataUri();
   });
 
   const nicknameInput = makeInput("닉네임", msg.nickname);
@@ -311,7 +344,15 @@ function renderEditRow(msg, index) {
   textArea.value = msg.text;
   textArea.addEventListener("input", () => { editingMessages[index].text = textArea.value; });
 
-  row.append(top, textArea, removeBtn);
+  const imagesArea = document.createElement("textarea");
+  imagesArea.placeholder = "첨부 이미지 URL (여러 개면 줄바꿈이나 쉼표로 구분)";
+  imagesArea.rows = 2;
+  imagesArea.value = (msg.images || []).join("\n");
+  imagesArea.addEventListener("input", () => {
+    editingMessages[index].images = parseImageUrls(imagesArea.value);
+  });
+
+  row.append(top, textArea, imagesArea, removeBtn);
   return row;
 }
 
@@ -337,6 +378,7 @@ newCardSaveBtn.addEventListener("click", async () => {
     dateDisplay: m.dateDisplay || "",
     dateSort: toDateSort(m.dateDisplay),
     text: m.text || "",
+    images: Array.isArray(m.images) ? m.images.filter(Boolean) : [],
   }));
 
   await addDoc(collection(db, "cards"), {

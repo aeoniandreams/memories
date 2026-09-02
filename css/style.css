@@ -325,6 +325,22 @@ h1 {
   word-break: break-word;
 }
 
+.tweet-images {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+}
+
+.tweet-images img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  display: block;
+}
+
 /* ---------- 새 대화 추가 폼 ---------- */
 .import-section {
   padding: 16px;
