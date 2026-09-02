@@ -30,10 +30,11 @@
 <div class="bm-wrap">
   <h1>대화 캡처 북마클릿</h1>
   <p>아래 두 버튼을 <b>브라우저 북마크바로 드래그</b>해서 등록하세요. (클릭이 아니라 드래그입니다)</p>
+  <p id="bm-status" style="color: var(--muted); font-size: 13px;">코드 준비 중...</p>
 
   <div class="bm-links">
-    <a id="bm-start" href="#" onclick="return false;">① 캡처 시작</a>
-    <a id="bm-finish" href="#" onclick="return false;">② 캡처 완료</a>
+    <a id="bm-start" href="#" onclick="return false;" style="opacity:.4; pointer-events:none;">① 캡처 시작</a>
+    <a id="bm-finish" href="#" onclick="return false;" style="opacity:.4; pointer-events:none;">② 캡처 완료</a>
   </div>
 
   <div class="bm-step">
@@ -75,8 +76,13 @@
   //  캡처 코드가 실행되지 않습니다. 그래서 코드를 통째로 북마클릿에 박아 넣습니다.
   //  이 fetch는 우리 사이트 안에서 우리 사이트의 파일을 읽는 것이라 CSP와 무관합니다.)
   async function buildLinks() {
-    const res = await fetch("js/bookmarklet.js");
+    // 캐시된 예전 버전을 받지 않도록 매번 새로 요청합니다.
+    const res = await fetch("js/bookmarklet.js?v=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("js/bookmarklet.js 요청 실패: " + res.status);
     const source = (await res.text()).trim();
+    if (!source.startsWith("(function")) {
+      throw new Error("예상치 못한 스크립트 내용입니다.");
+    }
 
     function makeCode(mode) {
       return "javascript:" + source + "('" + mode + "')";
@@ -85,15 +91,25 @@
     const startCode = makeCode("start");
     const finishCode = makeCode("finish");
 
-    document.getElementById("bm-start").href = startCode;
-    document.getElementById("bm-finish").href = finishCode;
+    const startLink = document.getElementById("bm-start");
+    const finishLink = document.getElementById("bm-finish");
+    startLink.href = startCode;
+    finishLink.href = finishCode;
+    startLink.style.opacity = "1";
+    finishLink.style.opacity = "1";
+    startLink.style.pointerEvents = "auto";
+    finishLink.style.pointerEvents = "auto";
+
     document.getElementById("code-start").textContent = startCode;
     document.getElementById("code-finish").textContent = finishCode;
+    document.getElementById("bm-status").textContent =
+      "✅ 준비 완료! (" + source.length + "자) 이제 위 두 버튼을 북마크바로 드래그하세요.";
   }
 
   buildLinks().catch((err) => {
     console.error(err);
-    alert("북마클릿 코드를 만드는 중 오류가 발생했어요. 페이지를 새로고침해보세요.");
+    document.getElementById("bm-status").textContent =
+      "⚠️ 코드를 만드는 중 오류가 발생했어요: " + err.message + " — 새로고침해보세요.";
   });
 </script>
 </body>
