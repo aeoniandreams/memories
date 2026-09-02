@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>memories — X 대화 백업</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>" />
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- 로그인 화면 -->
+<div id="login-view" class="view">
+  <form id="login-form" class="login-card">
+    <h1>memories</h1>
+    <p class="login-sub">X 대화 백업 보관함</p>
+    <input type="email" id="login-email" placeholder="이메일" autocomplete="username" required />
+    <input type="password" id="login-password" placeholder="비밀번호" autocomplete="current-password" required />
+    <button type="submit">로그인</button>
+    <p id="login-error" class="error-text" hidden></p>
+  </form>
+</div>
+
+<!-- 메인 앱 화면 -->
+<div id="app-view" class="view" hidden>
+  <header class="app-header">
+    <h1>memories</h1>
+    <div class="header-actions">
+      <button id="new-card-btn" class="btn-primary">＋ 새 대화 추가</button>
+      <button id="logout-btn" class="btn-ghost">로그아웃</button>
+    </div>
+  </header>
+
+  <main id="card-grid" class="card-grid" aria-live="polite"></main>
+  <p id="empty-state" class="empty-state" hidden>아직 백업된 대화가 없어요. "새 대화 추가"로 첫 대화를 백업해보세요.</p>
+</div>
+
+<!-- 대화 상세 보기 모달 -->
+<div id="detail-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button id="detail-close-btn" class="btn-ghost">← 닫기</button>
+      <button id="detail-delete-btn" class="btn-ghost danger">삭제</button>
+    </div>
+    <div id="detail-thread" class="thread"></div>
+  </div>
+</div>
+
+<!-- 새 대화 추가 / 편집 모달 -->
+<div id="new-card-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button id="new-card-close-btn" class="btn-ghost">← 취소</button>
+      <button id="new-card-save-btn" class="btn-primary">저장</button>
+    </div>
+
+    <section class="import-section">
+      <label for="import-textarea">
+        북마클릿으로 복사한 내용을 여기에 붙여넣으세요
+        (<a href="bookmarklet.html" target="_blank" rel="noopener">북마클릿 설치/사용법</a>)
+      </label>
+      <textarea id="import-textarea" rows="4" placeholder='[{"avatar":"...","nickname":"...","handle":"@...","dateDisplay":"2026.09.02","text":"..."}, ...]'></textarea>
+      <div class="import-actions">
+        <button id="import-parse-btn" class="btn-secondary">불러오기</button>
+        <button id="add-empty-message-btn" class="btn-secondary">＋ 메시지 직접 추가</button>
+      </div>
+      <p id="import-error" class="error-text" hidden></p>
+    </section>
+
+    <section id="editable-rows" class="editable-rows"></section>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>memories — 북마클릿 설치</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .bm-wrap { max-width: 640px; margin: 0 auto; padding: 32px 20px 80px; }
+  .bm-wrap h1 { margin-bottom: 4px; }
+  .bm-wrap p { line-height: 1.6; color: var(--text); }
+  .bm-links { display: flex; gap: 12px; margin: 20px 0; flex-wrap: wrap; }
+  .bm-links a {
+    display: inline-block;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    cursor: grab;
+  }
+  .bm-step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .bm-step h2 { font-size: 16px; margin: 0 0 6px; }
+  code { background: var(--border); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="bm-wrap">
+  <h1>대화 캡처 북마클릿</h1>
+  <p>아래 두 버튼을 <b>브라우저 북마크바로 드래그</b>해서 등록하세요. (클릭이 아니라 드래그입니다)</p>
+
+  <div class="bm-links">
+    <a id="bm-start" href="#" onclick="return false;">① 캡처 시작</a>
+    <a id="bm-finish" href="#" onclick="return false;">② 캡처 완료</a>
+  </div>
+
+  <div class="bm-step">
+    <h2>사용 순서</h2>
+    <p>
+      1. X에서 백업하고 싶은 대화(스레드/DM)를 엽니다.<br />
+      2. 북마크바의 <b>① 캡처 시작</b>을 클릭합니다.<br />
+      3. 대화 끝까지 천천히 스크롤합니다. (스크롤하는 동안 자동으로 계속 인식됩니다)<br />
+      4. 끝까지 내렸으면 <b>② 캡처 완료</b>를 클릭합니다. → 대화 내용이 클립보드에 복사됩니다.<br />
+      5. memories 앱을 열고 "새 대화 추가" → 붙여넣기 → 불러오기 → 확인 후 저장.
+    </p>
+  </div>
+
+  <div class="bm-step">
+    <h2>드래그가 안 될 때</h2>
+    <p>
+      북마크를 하나 새로 만든 뒤(주소 아무거나), 편집 화면에서 URL 칸에 아래 코드를 붙여넣어도 됩니다.
+    </p>
+    <p><b>① 캡처 시작</b><br /><code id="code-start" style="word-break:break-all;"></code></p>
+    <p><b>② 캡처 완료</b><br /><code id="code-finish" style="word-break:break-all;"></code></p>
+  </div>
+
+  <div class="bm-step">
+    <h2>참고</h2>
+    <p>
+      X가 화면 구조를 바꾸면 캡처가 안 될 수 있어요. 이때는 프로필 사진/닉네임/아이디 같은 항목이 비어있는 채로 들어올 수 있는데,
+      memories 앱의 "새 대화 추가" 화면에서 직접 채워 넣을 수 있습니다.
+    </p>
+  </div>
+
+  <p><a href="index.html">← 홈으로 돌아가기</a></p>
+</div>
+
+<script>
+  // GitHub Pages 배포 주소 기준으로 북마클릿 코드를 생성합니다.
+  const SCRIPT_URL = new URL("js/bookmarklet.js", location.href).href;
+
+  function loaderCode(mode) {
+    return (
+      "javascript:(function(){window.__xBackupMode='" + mode + "';" +
+      "var s=document.createElement('script');" +
+      "s.src='" + SCRIPT_URL + "?'+Date.now();" +
+      "document.body.appendChild(s);})();"
+    );
+  }
+
+  const startCode = loaderCode("start");
+  const finishCode = loaderCode("finish");
+
+  document.getElementById("bm-start").href = startCode;
+  document.getElementById("bm-finish").href = finishCode;
+  document.getElementById("code-start").textContent = startCode;
+  document.getElementById("code-finish").textContent = finishCode;
+</script>
+</body>
+</html>
