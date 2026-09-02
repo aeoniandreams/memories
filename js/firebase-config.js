@@ -4,10 +4,11 @@
 // 자세한 절차는 README.md의 "Firebase 설정하기"를 참고하세요.
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyDtW_TKNNefGa__3CPya5lLUdR3JkN9GeY",
+  authDomain: "memories-f5915.firebaseapp.com",
+  projectId: "memories-f5915",
+  storageBucket: "memories-f5915.firebasestorage.app",
+  messagingSenderId: "773653118179",
+  appId: "1:773653118179:web:9e80eee2b380c3800e59d6",
+  measurementId: "G-6QDYSKC8EH"
 };
