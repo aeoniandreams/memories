@@ -59,16 +59,17 @@
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
     let added = 0;
 
-    // X는 같은 사람이 연속으로 올린 스레드나 스크롤 중엔 프사/이름 중 일부만 누락되기도
-    // 합니다. 그래서 항목별로 비어있으면 바로 앞에서 인식한 작성자 정보를 이어받습니다.
+    // X는 같은 사람이 연속으로 올린 스레드나 스크롤 중엔 닉네임/아이디 중 일부만
+    // 누락되기도 합니다. 그래서 비어있으면 바로 앞에서 인식한 작성자 정보를 이어받습니다.
+    // (프사는 여기서 이어받지 않고, finish 시점에 "닉네임이 같은 가장 가까운 트윗"의
+    // 프사로 따로 채워 넣습니다 — 아래 backfillAvatarsByNickname 참고.)
     const existing = Array.from(store.values());
     let lastKnown = existing.length
       ? {
-          avatar: existing[existing.length - 1].avatar,
           nickname: existing[existing.length - 1].nickname,
           handle: existing[existing.length - 1].handle,
         }
-      : { avatar: "", nickname: "", handle: "" };
+      : { nickname: "", handle: "" };
 
     articles.forEach((article) => {
       try {
@@ -93,7 +94,7 @@
           return;
         }
 
-        let avatar = avatarNow;
+        const avatar = avatarNow;
 
         const nameContainer = article.querySelector('div[data-testid="User-Name"]');
         let nickname = "";
@@ -107,13 +108,9 @@
           if (nameLink) nickname = nameLink.textContent.trim();
         }
 
-        // 프사/닉네임/아이디는 서로 독립적으로 인식이 실패할 수 있어서, 각각 따로
-        // 비어있을 때만 직전 값을 이어받습니다 (예: 닉네임은 잡히는데 프사만 안 잡히는 경우 대응).
-        if (!avatar) avatar = lastKnown.avatar;
         if (!nickname) nickname = lastKnown.nickname;
         if (!handle) handle = lastKnown.handle;
         lastKnown = {
-          avatar: avatar || lastKnown.avatar,
           nickname: nickname || lastKnown.nickname,
           handle: handle || lastKnown.handle,
         };
@@ -141,6 +138,25 @@
     });
 
     return { added, total: articles.length };
+  }
+
+  // 프사가 끝까지 안 잡힌 메시지는, 닉네임이 같으면서 프사가 있는 메시지 중
+  // (앞이든 뒤든) 가장 가까운 것의 프사로 채워 넣습니다.
+  function backfillAvatarsByNickname(messages) {
+    messages.forEach((msg, i) => {
+      if (msg.avatar) return;
+      let bestIndex = -1;
+      let bestDistance = Infinity;
+      messages.forEach((other, j) => {
+        if (j === i || !other.avatar || other.nickname !== msg.nickname) return;
+        const distance = Math.abs(j - i);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestIndex = j;
+        }
+      });
+      if (bestIndex !== -1) msg.avatar = messages[bestIndex].avatar;
+    });
   }
 
   if (mode === "start") {
@@ -185,6 +201,7 @@
     const messages = Array.from(store.values())
       .sort((a, b) => a._order - b._order)
       .map(({ _order, ...rest }) => rest);
+    backfillAvatarsByNickname(messages);
     const json = JSON.stringify(messages, null, 2);
 
     const done = () => {
