@@ -37,9 +37,8 @@
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
     let added = 0;
 
-    // X는 같은 사람이 연속으로 올린 스레드에서 첫 트윗에만 프사/이름을 보여주고
-    // 뒤이은 트윗은 내용만 보여줍니다(연결선만 있음). 그래서 이 셋이 전부 비어있으면
-    // 바로 앞에서 인식한 작성자 정보를 그대로 이어받습니다.
+    // X는 같은 사람이 연속으로 올린 스레드나 스크롤 중엔 프사/이름 중 일부만 누락되기도
+    // 합니다. 그래서 항목별로 비어있으면 바로 앞에서 인식한 작성자 정보를 이어받습니다.
     const existing = Array.from(store.values());
     let lastKnown = existing.length
       ? {
@@ -76,13 +75,16 @@
           if (nameLink) nickname = nameLink.textContent.trim();
         }
 
-        if (!avatar && !nickname && !handle) {
-          avatar = lastKnown.avatar;
-          nickname = lastKnown.nickname;
-          handle = lastKnown.handle;
-        } else {
-          lastKnown = { avatar, nickname, handle };
-        }
+        // 프사/닉네임/아이디는 서로 독립적으로 인식이 실패할 수 있어서, 각각 따로
+        // 비어있을 때만 직전 값을 이어받습니다 (예: 닉네임은 잡히는데 프사만 안 잡히는 경우 대응).
+        if (!avatar) avatar = lastKnown.avatar;
+        if (!nickname) nickname = lastKnown.nickname;
+        if (!handle) handle = lastKnown.handle;
+        lastKnown = {
+          avatar: avatar || lastKnown.avatar,
+          nickname: nickname || lastKnown.nickname,
+          handle: handle || lastKnown.handle,
+        };
 
         const textEl = article.querySelector('div[data-testid="tweetText"]');
         const text = textEl ? textEl.innerText : "";
