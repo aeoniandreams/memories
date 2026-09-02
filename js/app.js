@@ -381,12 +381,22 @@ newCardSaveBtn.addEventListener("click", async () => {
     images: Array.isArray(m.images) ? m.images.filter(Boolean) : [],
   }));
 
-  await addDoc(collection(db, "cards"), {
-    messages,
-    firstDateSort: messages[0].dateSort || "",
-    createdAt: serverTimestamp(),
-  });
-
-  newCardModal.hidden = true;
-  loadCards();
+  newCardSaveBtn.disabled = true;
+  newCardSaveBtn.textContent = "저장 중...";
+  try {
+    await addDoc(collection(db, "cards"), {
+      messages,
+      firstDateSort: messages[0].dateSort || "",
+      createdAt: serverTimestamp(),
+    });
+    newCardModal.hidden = true;
+    loadCards();
+  } catch (err) {
+    console.error("[memories] 저장 실패", err);
+    importError.textContent = "저장에 실패했어요 (" + (err.code || err.message) + "). Firestore 보안 규칙이 게시됐는지 확인해주세요.";
+    importError.hidden = false;
+  } finally {
+    newCardSaveBtn.disabled = false;
+    newCardSaveBtn.textContent = "저장";
+  }
 });

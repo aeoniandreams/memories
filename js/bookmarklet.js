@@ -37,6 +37,18 @@
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
     let added = 0;
 
+    // X는 같은 사람이 연속으로 올린 스레드에서 첫 트윗에만 프사/이름을 보여주고
+    // 뒤이은 트윗은 내용만 보여줍니다(연결선만 있음). 그래서 이 셋이 전부 비어있으면
+    // 바로 앞에서 인식한 작성자 정보를 그대로 이어받습니다.
+    const existing = Array.from(store.values());
+    let lastKnown = existing.length
+      ? {
+          avatar: existing[existing.length - 1].avatar,
+          nickname: existing[existing.length - 1].nickname,
+          handle: existing[existing.length - 1].handle,
+        }
+      : { avatar: "", nickname: "", handle: "" };
+
     articles.forEach((article) => {
       try {
         const timeEl = article.querySelector("time");
@@ -50,7 +62,7 @@
         if (store.has(id)) return;
 
         const avatarImg = article.querySelector('img[src*="profile_images"]');
-        const avatar = avatarImg ? avatarImg.src : "";
+        let avatar = avatarImg ? avatarImg.src : "";
 
         const nameContainer = article.querySelector('div[data-testid="User-Name"]');
         let nickname = "";
@@ -62,6 +74,14 @@
           });
           const nameLink = nameContainer.querySelector("a");
           if (nameLink) nickname = nameLink.textContent.trim();
+        }
+
+        if (!avatar && !nickname && !handle) {
+          avatar = lastKnown.avatar;
+          nickname = lastKnown.nickname;
+          handle = lastKnown.handle;
+        } else {
+          lastKnown = { avatar, nickname, handle };
         }
 
         const textEl = article.querySelector('div[data-testid="tweetText"]');
