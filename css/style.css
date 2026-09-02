@@ -235,6 +235,10 @@ h1 {
 }
 
 /* ---------- 모달 (상세보기 / 새 대화 추가) ---------- */
+.modal-overlay[hidden] {
+  display: none;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
