@@ -33,6 +33,28 @@
     return urls;
   }
 
+  // X는 이모지를 실제 문자가 아니라 작은 <img alt="😀"> 아이콘으로 그려서, 그냥
+  // innerText로 읽으면 이모지가 통째로 사라집니다. 그래서 직접 노드를 순회하면서
+  // <img>는 alt(원래 이모지 문자)로, <br>은 줄바꿈으로 치환해 텍스트를 만듭니다.
+  function extractText(container) {
+    if (!container) return "";
+    let text = "";
+    container.childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.tagName === "IMG") {
+          text += node.getAttribute("alt") || "";
+        } else if (node.tagName === "BR") {
+          text += "\n";
+        } else {
+          text += extractText(node);
+        }
+      }
+    });
+    return text;
+  }
+
   function extractTweets() {
     const articles = document.querySelectorAll('article[data-testid="tweet"]');
     let added = 0;
@@ -58,10 +80,20 @@
         const idMatch = href ? href.match(/status\/(\d+)/) : null;
         const id = idMatch ? idMatch[1] : href || timeEl.getAttribute("datetime") + Math.random();
 
-        if (store.has(id)) return;
-
         const avatarImg = article.querySelector('img[src*="profile_images"]');
-        let avatar = avatarImg ? avatarImg.src : "";
+        const avatarNow = avatarImg ? avatarImg.src : "";
+
+        if (store.has(id)) {
+          // 이미 저장된 트윗이라도, 그때는 프사 이미지가 아직 안 뜬 상태였는데
+          // 지금은 로드됐을 수 있어서 비어있으면 다시 채워봅니다.
+          const existingEntry = store.get(id);
+          if (!existingEntry.avatar && avatarNow) {
+            existingEntry.avatar = avatarNow;
+          }
+          return;
+        }
+
+        let avatar = avatarNow;
 
         const nameContainer = article.querySelector('div[data-testid="User-Name"]');
         let nickname = "";
@@ -87,7 +119,7 @@
         };
 
         const textEl = article.querySelector('div[data-testid="tweetText"]');
-        const text = textEl ? textEl.innerText : "";
+        const text = extractText(textEl);
 
         const { dateDisplay, dateSort } = extractDate(timeEl);
         const images = extractImages(article);
@@ -115,7 +147,13 @@
     if (window[OBSERVER_KEY]) window[OBSERVER_KEY].disconnect();
     const result = extractTweets();
     const observer = new MutationObserver(() => extractTweets());
-    observer.observe(document.body, { childList: true, subtree: true });
+    // attributes: true로 프사 <img>의 src가 나중에(비동기로) 채워지는 경우도 감지합니다.
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["src"],
+    });
     window[OBSERVER_KEY] = observer;
 
     if (result.total === 0) {
