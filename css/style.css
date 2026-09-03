@@ -222,6 +222,9 @@ h1 {
 
 .card {
   background: var(--surface);
+  /* <button> 요소는 브라우저가 글자색을 기본값(검정)으로 고정해서 물려주기 때문에
+     명시적으로 되돌려주지 않으면 야간 모드에서도 검게 남습니다. */
+  color: inherit;
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 22px;
