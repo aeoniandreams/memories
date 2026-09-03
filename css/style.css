@@ -10,8 +10,9 @@
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
+/* OS 설정이 어두운 모드인데 사용자가 수동으로 "밝게"를 고르지 않았을 때 */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #15181c;
     --surface: #1e2126;
     --border: #2f3336;
@@ -23,13 +24,51 @@
   }
 }
 
+/* 사용자가 야간 모드 버튼으로 직접 "어둡게"를 골랐을 때 (OS 설정과 무관하게 적용) */
+:root[data-theme="dark"] {
+  --bg: #15181c;
+  --surface: #1e2126;
+  --border: #2f3336;
+  --text: #e7e9ea;
+  --muted: #8b98a5;
+  --accent: #1d9bf0;
+  --accent-hover: #4db5f5;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+  font-family: "Pretendard JP", "Pretendard", -apple-system, BlinkMacSystemFont,
+    "Hiragino Sans", "Yu Gothic", "Malgun Gothic", sans-serif;
+}
+
+/* 로그인 카드 안: 카드 오른쪽 위 구석에 작게 배치 */
+.login-card .theme-toggle-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* 앱 화면 헤더 안: 다른 헤더 버튼들과 같은 줄에 자연스럽게 배치 */
+.header-actions .theme-toggle-btn {
+  font-size: 16px;
+  padding: 9px 12px;
 }
 
 button, input, textarea, select {
@@ -55,6 +94,7 @@ h1 {
 }
 
 .login-card {
+  position: relative;
   width: 100%;
   max-width: 340px;
   background: var(--surface);

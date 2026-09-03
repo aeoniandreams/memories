@@ -42,6 +42,7 @@ const appView = document.getElementById("app-view");
 const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
+const themeToggleBtns = document.querySelectorAll(".theme-toggle-btn");
 
 const sortToggleBtn = document.getElementById("sort-toggle-btn");
 const tagFilterSelect = document.getElementById("tag-filter-select");
@@ -77,6 +78,33 @@ let loadedCards = []; // 홈 화면에 로드된 카드 목록 (정렬/필터 �
 let sortDirection = "desc"; // "desc" = 최신순, "asc" = 오래된순
 let filterTag = ""; // 빈 문자열이면 전체 태그
 let isAdmin = false;
+
+// ---------- 야간 모드 ----------
+function getEffectiveTheme() {
+  const attr = document.documentElement.getAttribute("data-theme");
+  if (attr === "dark" || attr === "light") return attr;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyThemeIcon() {
+  const icon = getEffectiveTheme() === "dark" ? "☀️" : "🌙";
+  themeToggleBtns.forEach((btn) => { btn.textContent = icon; });
+}
+
+themeToggleBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const next = getEffectiveTheme() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("memories-theme", next);
+    } catch (e) {
+      // 저장 실패해도(사생활 보호 모드 등) 이번 방문 동안은 계속 적용됩니다.
+    }
+    applyThemeIcon();
+  });
+});
+
+applyThemeIcon();
 
 // ---------- 유틸 ----------
 function safeImgSrc(url) {
@@ -372,7 +400,7 @@ async function renderImageGridInto(container, images) {
 
   const dims = await Promise.all(urls.map(getImageDimensions));
   const containerWidth = container.clientWidth || container.getBoundingClientRect().width || 300;
-  const GAP = 8;
+  const GAP = 5;
 
   if (urls.length === 1) {
     const ratio = dims[0].w / dims[0].h;
