@@ -252,8 +252,14 @@ h1 {
 }
 .card:hover { border-color: var(--accent); }
 
+.card-thumbs {
+  display: flex;
+  gap: 6px;
+}
+
 .card-thumb {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 160px;
   object-fit: cover;
   border-radius: 10px;
@@ -263,8 +269,8 @@ h1 {
 
 .card-tag-badge {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: 14px;
+  right: 14px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -482,6 +488,7 @@ h1 {
 .tweet-text {
   margin: 4px 0 0;
   font-size: 14px;
+  font-weight: 500;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;

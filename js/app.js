@@ -295,15 +295,23 @@ function renderCardGrid() {
 
     card.append(head, textEl);
 
-    const firstImageSrc = Array.isArray(first.images) ? safeImgSrc(first.images[0]) : "";
-    if (firstImageSrc) {
-      const thumb = document.createElement("img");
-      thumb.className = "card-thumb";
-      thumb.src = firstImageSrc;
-      thumb.loading = "lazy";
-      thumb.referrerPolicy = "no-referrer";
-      thumb.alt = "";
-      card.appendChild(thumb);
+    const thumbSrcs = (Array.isArray(first.images) ? first.images : [])
+      .map(safeImgSrc)
+      .filter(Boolean)
+      .slice(0, 2);
+    if (thumbSrcs.length > 0) {
+      const thumbRow = document.createElement("div");
+      thumbRow.className = "card-thumbs";
+      thumbSrcs.forEach((src) => {
+        const thumb = document.createElement("img");
+        thumb.className = "card-thumb";
+        thumb.src = src;
+        thumb.loading = "lazy";
+        thumb.referrerPolicy = "no-referrer";
+        thumb.alt = "";
+        thumbRow.appendChild(thumb);
+      });
+      card.appendChild(thumbRow);
     }
 
     if (Array.isArray(data.tags) && data.tags.includes(PUBLT_TAG)) {
