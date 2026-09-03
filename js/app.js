@@ -44,7 +44,6 @@ const emptyState = document.getElementById("empty-state");
 const detailModal = document.getElementById("detail-modal");
 const detailThread = document.getElementById("detail-thread");
 const detailCloseBtn = document.getElementById("detail-close-btn");
-const detailCloseBottomBtn = document.getElementById("detail-close-bottom-btn");
 const detailDeleteBtn = document.getElementById("detail-delete-btn");
 const detailAppendBtn = document.getElementById("detail-append-btn");
 
@@ -90,7 +89,8 @@ function isDuplicateMessage(a, b) {
 }
 
 function toDateSort(display) {
-  const m = String(display || "").trim().match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/);
+  // 끝의 온점(0000.00.00.)은 있어도 없어도 인식합니다.
+  const m = String(display || "").trim().match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})\.?$/);
   if (!m) return "";
   return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
 }
@@ -292,7 +292,6 @@ function closeDetail() {
 }
 
 detailCloseBtn.addEventListener("click", closeDetail);
-detailCloseBottomBtn.addEventListener("click", closeDetail);
 
 // 모달 바깥(어두운 배경) 클릭 시 닫기. 패널 안쪽 클릭은 여기까지 이벤트가
 // 버블링되어 오지만, target이 오버레이 자신일 때만 닫아서 안쪽 클릭은 무시합니다.
@@ -401,7 +400,7 @@ function renderEditRow(msg, index) {
   const handleInput = makeInput("@아이디", msg.handle);
   handleInput.addEventListener("input", () => { editingMessages[index].handle = handleInput.value; });
 
-  const dateInput = makeInput("0000.00.00", msg.dateDisplay);
+  const dateInput = makeInput("0000.00.00.", msg.dateDisplay);
   dateInput.addEventListener("input", () => { editingMessages[index].dateDisplay = dateInput.value; });
 
   fields.append(avatarInput, nicknameInput, handleInput, dateInput);

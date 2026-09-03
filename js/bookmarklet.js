@@ -21,7 +21,7 @@
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
-    return { dateDisplay: `${y}.${m}.${day}`, dateSort: `${y}-${m}-${day}` };
+    return { dateDisplay: `${y}.${m}.${day}.`, dateSort: `${y}-${m}-${day}` };
   }
 
   function extractImages(article) {
