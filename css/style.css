@@ -154,6 +154,15 @@ h1 {
 
 .btn-ghost.danger { color: var(--danger); }
 
+/* ---------- 툴바(정렬 전환 등) ---------- */
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 24px 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 /* ---------- 카드 그리드 ---------- */
 .card-grid {
   display: grid;
@@ -270,6 +279,20 @@ h1 {
   top: 0;
   background: var(--bg);
   z-index: 5;
+}
+
+.modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.append-mode-label {
+  margin: 12px 16px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--border);
+  font-size: 13px;
 }
 
 /* ---------- 스레드(대화 상세) ---------- */

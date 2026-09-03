@@ -12,6 +12,8 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  getDoc,
+  updateDoc,
   getDocs,
   query,
   orderBy,
@@ -22,6 +24,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// ⬇️ 관리자 이메일 입력란: 백업 생성/수정/삭제 권한을 줄 계정의 이메일을 여기에 넣으세요.
+// (예: "me@example.com") Firestore 콘솔의 규칙(firestore.rules)에도 똑같은 이메일을
+// 넣어야 실제로 다른 계정의 쓰기가 막힙니다 — 이 값은 화면 표시용일 뿐이라, 규칙 쪽을
+// 안 바꾸면 다른 계정도 브라우저 콘솔 등으로 우회해 쓸 수 있어요.
+const ADMIN_EMAIL = "관리자 이메일 입력란";
+
 // ---------- 엘리먼트 참조 ----------
 const loginView = document.getElementById("login-view");
 const appView = document.getElementById("app-view");
@@ -29,6 +37,7 @@ const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 
+const sortToggleBtn = document.getElementById("sort-toggle-btn");
 const cardGrid = document.getElementById("card-grid");
 const emptyState = document.getElementById("empty-state");
 
@@ -36,11 +45,13 @@ const detailModal = document.getElementById("detail-modal");
 const detailThread = document.getElementById("detail-thread");
 const detailCloseBtn = document.getElementById("detail-close-btn");
 const detailDeleteBtn = document.getElementById("detail-delete-btn");
+const detailAppendBtn = document.getElementById("detail-append-btn");
 
 const newCardBtn = document.getElementById("new-card-btn");
 const newCardModal = document.getElementById("new-card-modal");
 const newCardCloseBtn = document.getElementById("new-card-close-btn");
 const newCardSaveBtn = document.getElementById("new-card-save-btn");
+const appendModeLabel = document.getElementById("append-mode-label");
 const importTextarea = document.getElementById("import-textarea");
 const importParseBtn = document.getElementById("import-parse-btn");
 const importError = document.getElementById("import-error");
@@ -49,6 +60,10 @@ const editableRows = document.getElementById("editable-rows");
 
 let currentDetailCardId = null;
 let editingMessages = []; // 새 대화 추가 모달에서 편집 중인 메시지 배열
+let appendTargetCardId = null; // 설정되어 있으면 "새 카드 생성"이 아니라 이 카드에 이어붙임
+let loadedCards = []; // 홈 화면에 로드된 카드 목록 (정렬 전환 시 재요청 없이 재사용)
+let sortDirection = "desc"; // "desc" = 최신순, "asc" = 오래된순
+let isAdmin = false;
 
 // ---------- 유틸 ----------
 function safeImgSrc(url) {
@@ -100,12 +115,23 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     loginView.hidden = true;
     appView.hidden = false;
+    isAdmin = user.email === ADMIN_EMAIL;
+    applyAdminUI();
     loadCards();
   } else {
     loginView.hidden = false;
     appView.hidden = true;
+    isAdmin = false;
   }
 });
+
+// 관리자만 백업 생성/수정/삭제 가능. 화면에서 버튼을 숨기는 건 UX일 뿐이고,
+// 실제 권한 통제는 Firestore 보안 규칙(firestore.rules)이 해요.
+function applyAdminUI() {
+  newCardBtn.hidden = !isAdmin;
+  detailDeleteBtn.hidden = !isAdmin;
+  detailAppendBtn.hidden = !isAdmin;
+}
 
 loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -125,18 +151,28 @@ logoutBtn.addEventListener("click", () => signOut(auth));
 
 // ---------- 홈: 카드 목록 ----------
 async function loadCards() {
-  cardGrid.innerHTML = "";
   const q = query(collection(db, "cards"), orderBy("firstDateSort", "desc"));
   const snapshot = await getDocs(q);
+  loadedCards = snapshot.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }));
+  renderCardGrid();
+}
 
-  if (snapshot.empty) {
+function renderCardGrid() {
+  cardGrid.innerHTML = "";
+
+  if (loadedCards.length === 0) {
     emptyState.hidden = false;
     return;
   }
   emptyState.hidden = true;
 
-  snapshot.forEach((docSnap) => {
-    const data = docSnap.data();
+  const sorted = [...loadedCards].sort((a, b) => {
+    const aSort = (a.data.firstDateSort || "");
+    const bSort = (b.data.firstDateSort || "");
+    return sortDirection === "asc" ? aSort.localeCompare(bSort) : bSort.localeCompare(aSort);
+  });
+
+  sorted.forEach(({ id, data }) => {
     const first = (data.messages && data.messages[0]) || {};
     const card = document.createElement("button");
     card.className = "card";
@@ -162,10 +198,16 @@ async function loadCards() {
     textEl.textContent = first.text || "";
 
     card.append(head, textEl);
-    card.addEventListener("click", () => openDetail(docSnap.id, data));
+    card.addEventListener("click", () => openDetail(id, data));
     cardGrid.appendChild(card);
   });
 }
+
+sortToggleBtn.addEventListener("click", () => {
+  sortDirection = sortDirection === "desc" ? "asc" : "desc";
+  sortToggleBtn.textContent = sortDirection === "desc" ? "최신순 ▾" : "오래된순 ▾";
+  renderCardGrid();
+});
 
 // ---------- 상세보기 모달 ----------
 function openDetail(id, data) {
@@ -249,17 +291,33 @@ detailDeleteBtn.addEventListener("click", async () => {
   loadCards();
 });
 
-// ---------- 새 대화 추가 모달 ----------
-newCardBtn.addEventListener("click", () => {
+detailAppendBtn.addEventListener("click", () => {
+  if (!currentDetailCardId) return;
+  appendTargetCardId = currentDetailCardId;
   editingMessages = [];
   importTextarea.value = "";
   importError.hidden = true;
+  appendModeLabel.hidden = false;
+  renderEditableRows();
+  detailModal.hidden = true;
+  newCardModal.hidden = false;
+});
+
+// ---------- 새 대화 추가 모달 ----------
+newCardBtn.addEventListener("click", () => {
+  appendTargetCardId = null;
+  editingMessages = [];
+  importTextarea.value = "";
+  importError.hidden = true;
+  appendModeLabel.hidden = true;
   renderEditableRows();
   newCardModal.hidden = false;
 });
 
 newCardCloseBtn.addEventListener("click", () => {
   newCardModal.hidden = true;
+  appendTargetCardId = null;
+  appendModeLabel.hidden = true;
 });
 
 importParseBtn.addEventListener("click", () => {
@@ -384,12 +442,23 @@ newCardSaveBtn.addEventListener("click", async () => {
   newCardSaveBtn.disabled = true;
   newCardSaveBtn.textContent = "저장 중...";
   try {
-    await addDoc(collection(db, "cards"), {
-      messages,
-      firstDateSort: messages[0].dateSort || "",
-      createdAt: serverTimestamp(),
-    });
+    if (appendTargetCardId) {
+      const targetRef = doc(db, "cards", appendTargetCardId);
+      const targetSnap = await getDoc(targetRef);
+      const existingMessages = (targetSnap.data() && targetSnap.data().messages) || [];
+      await updateDoc(targetRef, {
+        messages: [...existingMessages, ...messages],
+      });
+    } else {
+      await addDoc(collection(db, "cards"), {
+        messages,
+        firstDateSort: messages[0].dateSort || "",
+        createdAt: serverTimestamp(),
+      });
+    }
     newCardModal.hidden = true;
+    appendTargetCardId = null;
+    appendModeLabel.hidden = true;
     loadCards();
   } catch (err) {
     console.error("[memories] 저장 실패", err);

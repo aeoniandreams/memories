@@ -32,6 +32,10 @@
     </div>
   </header>
 
+  <div class="toolbar">
+    <button id="sort-toggle-btn" class="btn-secondary" type="button">최신순 ▾</button>
+  </div>
+
   <main id="card-grid" class="card-grid" aria-live="polite"></main>
   <p id="empty-state" class="empty-state" hidden>아직 백업된 대화가 없어요. "새 대화 추가"로 첫 대화를 백업해보세요.</p>
 </div>
@@ -41,7 +45,10 @@
   <div class="modal-panel">
     <div class="modal-header">
       <button id="detail-close-btn" class="btn-ghost">← 닫기</button>
-      <button id="detail-delete-btn" class="btn-ghost danger">삭제</button>
+      <div class="modal-header-right">
+        <button id="detail-append-btn" class="btn-secondary">＋ 이어서 추가</button>
+        <button id="detail-delete-btn" class="btn-ghost danger">삭제</button>
+      </div>
     </div>
     <div id="detail-thread" class="thread"></div>
   </div>
@@ -54,6 +61,8 @@
       <button id="new-card-close-btn" class="btn-ghost">← 취소</button>
       <button id="new-card-save-btn" class="btn-primary">저장</button>
     </div>
+
+    <p id="append-mode-label" class="append-mode-label" hidden>📌 기존 대화 아래로 이어서 추가하는 중이에요.</p>
 
     <section class="import-section">
       <label for="import-textarea">
