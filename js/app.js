@@ -33,6 +33,7 @@ const ADMIN_EMAIL = "ae0niandreams@gmail.com"; // 관리자 이메일 입력란
 // ⬇️ 필터용 태그 입력란: 여기 적은 이름들이 태그 버튼으로 나타납니다.
 // 순서를 바꾸거나 문자열을 추가/삭제하면 그대로 반영돼요 (배포만 다시 하면 됩니다).
 const TAG_OPTIONS = ["퍼블트", "츄야윤", "츄앤명"];
+const PUBLT_TAG = "퍼블트"; // 이 태그가 붙은 카드에만 우측 상단에 "P" 뱃지를 표시합니다.
 
 const NO_TAG_FILTER_VALUE = "__no_tag__"; // 필터에서 "태그 없음"을 고르면 쓰이는 값
 
@@ -84,6 +85,8 @@ let isAdmin = false;
 // stroke="currentColor"라 버튼의 글자색(테마에 따라 자동으로 바뀜)을 그대로 따라갑니다.
 const SUN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`;
 const MOON_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+const PIN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`;
+const PENCIL_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.986L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`;
 
 function getEffectiveTheme() {
   const attr = document.documentElement.getAttribute("data-theme");
@@ -291,6 +294,26 @@ function renderCardGrid() {
     textEl.textContent = first.text || "";
 
     card.append(head, textEl);
+
+    const firstImageSrc = Array.isArray(first.images) ? safeImgSrc(first.images[0]) : "";
+    if (firstImageSrc) {
+      const thumb = document.createElement("img");
+      thumb.className = "card-thumb";
+      thumb.src = firstImageSrc;
+      thumb.loading = "lazy";
+      thumb.referrerPolicy = "no-referrer";
+      thumb.alt = "";
+      card.appendChild(thumb);
+    }
+
+    if (Array.isArray(data.tags) && data.tags.includes(PUBLT_TAG)) {
+      const badge = document.createElement("span");
+      badge.className = "card-tag-badge";
+      badge.textContent = "P";
+      badge.title = PUBLT_TAG;
+      card.appendChild(badge);
+    }
+
     card.addEventListener("click", () => openDetail(id, data));
     cardGrid.appendChild(card);
   });
@@ -514,7 +537,7 @@ detailAppendBtn.addEventListener("click", () => {
   importTextarea.value = "";
   importError.hidden = true;
   appendModeLabel.hidden = false;
-  appendModeLabel.textContent = "📌 기존 대화 아래로 이어서 추가하는 중이에요.";
+  appendModeLabel.innerHTML = PIN_ICON_SVG + " 기존 대화 아래로 이어서 추가하는 중이에요.";
   renderEditableRows();
   renderTagOptions();
   detailModal.hidden = true;
@@ -530,7 +553,7 @@ detailEditBtn.addEventListener("click", () => {
   importTextarea.value = "";
   importError.hidden = true;
   appendModeLabel.hidden = false;
-  appendModeLabel.textContent = "✏️ 기존 대화를 수정하는 중이에요. 메시지를 고치거나 지울 수 있고, 필요하면 붙여넣기로 더 추가할 수도 있어요.";
+  appendModeLabel.innerHTML = PENCIL_ICON_SVG + " 기존 대화를 수정하는 중이에요. 메시지를 고치거나 지울 수 있고, 필요하면 붙여넣기로 더 추가할 수도 있어요.";
   renderEditableRows();
   renderTagOptions();
   detailModal.hidden = true;
