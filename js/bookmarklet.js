@@ -123,6 +123,7 @@
 
         store.set(id, {
           _order: store.size,
+          id, // 트윗 고유 ID. 앱에서 "이어서 추가" 시 이미 저장된 트윗과 중복인지 판단하는 데 씁니다.
           avatar,
           nickname,
           handle,

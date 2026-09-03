@@ -24,11 +24,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ⬇️ 관리자 이메일 입력란: 백업 생성/수정/삭제 권한을 줄 계정의 이메일을 여기에 넣으세요.
-// (예: "me@example.com") Firestore 콘솔의 규칙(firestore.rules)에도 똑같은 이메일을
-// 넣어야 실제로 다른 계정의 쓰기가 막힙니다 — 이 값은 화면 표시용일 뿐이라, 규칙 쪽을
-// 안 바꾸면 다른 계정도 브라우저 콘솔 등으로 우회해 쓸 수 있어요.
-const ADMIN_EMAIL = "관리자 이메일 입력란";
+// ⬇️ 관리자 이메일 입력란: 백업 생성/수정/삭제 권한을 가진 계정의 이메일입니다.
+// 나중에 이메일이 바뀌면 이 값만 바꾸면 되는데, Firestore 콘솔의 규칙(firestore.rules)에
+// 있는 같은 이름의 "관리자 이메일 입력란" 값도 반드시 똑같이 바꿔야 합니다 — 이 값은
+// 화면에 버튼을 보여줄지만 결정하고, 실제 쓰기 권한 통제는 규칙 쪽이 하기 때문입니다.
+const ADMIN_EMAIL = "ae0niandreams@gmail.com"; // 관리자 이메일 입력란
 
 // ---------- 엘리먼트 참조 ----------
 const loginView = document.getElementById("login-view");
@@ -78,6 +78,14 @@ function parseImageUrls(text) {
     .split(/[\n,]/)
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+// "이어서 추가" 시 이미 있는 트윗과 겹치는지 판단합니다.
+// id가 둘 다 있으면 id로 비교(북마클릿이 넣어준 트윗 고유 ID라 가장 정확함),
+// 하나라도 id가 없으면(수동 추가 등) 아이디/날짜/본문이 같은지로 대신 판단합니다.
+function isDuplicateMessage(a, b) {
+  if (a.id && b.id) return a.id === b.id;
+  return a.handle === b.handle && a.dateDisplay === b.dateDisplay && a.text === b.text;
 }
 
 function toDateSort(display) {
@@ -336,6 +344,7 @@ importParseBtn.addEventListener("click", () => {
     return;
   }
   editingMessages = parsed.map((m) => ({
+    id: m.id || "", // 북마클릿이 넣어준 트윗 고유 ID (있으면 "이어서 추가" 시 중복 판단에 씀)
     avatar: m.avatar || "",
     nickname: m.nickname || "",
     handle: m.handle || "",
@@ -347,7 +356,7 @@ importParseBtn.addEventListener("click", () => {
 });
 
 addEmptyMessageBtn.addEventListener("click", () => {
-  editingMessages.push({ avatar: "", nickname: "", handle: "", dateDisplay: "", text: "", images: [] });
+  editingMessages.push({ id: "", avatar: "", nickname: "", handle: "", dateDisplay: "", text: "", images: [] });
   renderEditableRows();
 });
 
@@ -430,6 +439,7 @@ newCardSaveBtn.addEventListener("click", async () => {
     return;
   }
   const messages = editingMessages.map((m) => ({
+    id: m.id || "",
     avatar: m.avatar || "",
     nickname: m.nickname || "",
     handle: m.handle || "",
@@ -446,9 +456,16 @@ newCardSaveBtn.addEventListener("click", async () => {
       const targetRef = doc(db, "cards", appendTargetCardId);
       const targetSnap = await getDoc(targetRef);
       const existingMessages = (targetSnap.data() && targetSnap.data().messages) || [];
+      const newOnes = messages.filter(
+        (m) => !existingMessages.some((e) => isDuplicateMessage(m, e))
+      );
+      const skipped = messages.length - newOnes.length;
       await updateDoc(targetRef, {
-        messages: [...existingMessages, ...messages],
+        messages: [...existingMessages, ...newOnes],
       });
+      if (skipped > 0) {
+        alert(skipped + "개는 이미 저장되어 있는 트윗이라 제외하고 추가했어요.");
+      }
     } else {
       await addDoc(collection(db, "cards"), {
         messages,

@@ -3,15 +3,14 @@ rules_version = "2";
 // Firebase 콘솔 > Firestore Database > 규칙(Rules) 탭에 이 내용을 그대로 붙여넣고 게시(Publish)하세요.
 // 로그인한 사용자는 모두 백업을 볼 수 있고, 그중 관리자 이메일 계정만 생성/수정/삭제할 수 있습니다.
 //
-// ⬇️ 관리자 이메일 입력란: 아래 "관리자 이메일 입력란"을 실제 관리자 계정 이메일로 바꿔주세요.
-// (js/app.js 상단의 ADMIN_EMAIL과 반드시 똑같은 값이어야 합니다. 이 값을 안 바꾸면
-// 어떤 계정도 관리자로 인식되지 않아 아무도 쓰기를 할 수 없습니다 — 안전한 기본값입니다.)
+// ⬇️ 관리자 이메일 입력란: 이 이메일 계정만 백업을 생성/수정/삭제할 수 있습니다.
+// 나중에 이 값을 바꾸면, js/app.js 상단의 ADMIN_EMAIL도 반드시 똑같이 바꿔주세요.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /cards/{cardId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
-        && request.auth.token.email == "관리자 이메일 입력란";
+        && request.auth.token.email == "ae0niandreams@gmail.com"; // 관리자 이메일 입력란
     }
   }
 }
