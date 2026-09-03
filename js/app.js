@@ -30,6 +30,10 @@ const db = getFirestore(app);
 // 화면에 버튼을 보여줄지만 결정하고, 실제 쓰기 권한 통제는 규칙 쪽이 하기 때문입니다.
 const ADMIN_EMAIL = "ae0niandreams@gmail.com"; // 관리자 이메일 입력란
 
+// ⬇️ 필터용 태그 입력란: 여기 적은 이름들이 태그 버튼으로 나타납니다.
+// 순서를 바꾸거나 문자열을 추가/삭제하면 그대로 반영돼요 (배포만 다시 하면 됩니다).
+const TAG_OPTIONS = ["일상", "여행", "중요"];
+
 // ---------- 엘리먼트 참조 ----------
 const loginView = document.getElementById("login-view");
 const appView = document.getElementById("app-view");
@@ -54,9 +58,7 @@ const newCardModal = document.getElementById("new-card-modal");
 const newCardCloseBtn = document.getElementById("new-card-close-btn");
 const newCardSaveBtn = document.getElementById("new-card-save-btn");
 const appendModeLabel = document.getElementById("append-mode-label");
-const tagInput = document.getElementById("tag-input");
-const tagAddBtn = document.getElementById("tag-add-btn");
-const tagChips = document.getElementById("tag-chips");
+const tagOptionsContainer = document.getElementById("tag-options");
 const importTextarea = document.getElementById("import-textarea");
 const importParseBtn = document.getElementById("import-parse-btn");
 const importError = document.getElementById("import-error");
@@ -173,26 +175,17 @@ async function loadCards() {
   const q = query(collection(db, "cards"), orderBy("firstDateSort", "desc"));
   const snapshot = await getDocs(q);
   loadedCards = snapshot.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }));
-  renderTagFilterOptions();
   renderCardGrid();
 }
 
-function getAllTags() {
-  const set = new Set();
-  loadedCards.forEach(({ data }) => (data.tags || []).forEach((t) => set.add(t)));
-  return Array.from(set).sort((a, b) => a.localeCompare(b));
-}
-
+// 필터 드롭다운은 TAG_OPTIONS 고정 목록을 그대로 보여줍니다. 페이지 로드 시 한 번만 채우면 됩니다.
 function renderTagFilterOptions() {
-  const tags = getAllTags();
-  if (filterTag && !tags.includes(filterTag)) filterTag = ""; // 더 이상 존재하지 않는 태그면 필터 해제
-
   tagFilterSelect.innerHTML = "";
   const allOpt = document.createElement("option");
   allOpt.value = "";
   allOpt.textContent = "전체 태그";
   tagFilterSelect.appendChild(allOpt);
-  tags.forEach((t) => {
+  TAG_OPTIONS.forEach((t) => {
     const opt = document.createElement("option");
     opt.value = t;
     opt.textContent = t;
@@ -200,6 +193,7 @@ function renderTagFilterOptions() {
   });
   tagFilterSelect.value = filterTag;
 }
+renderTagFilterOptions();
 
 tagFilterSelect.addEventListener("change", () => {
   filterTag = tagFilterSelect.value;
@@ -270,10 +264,11 @@ function openDetail(id, data) {
   currentDetailCardId = id;
   currentDetailData = data;
   detailThread.innerHTML = "";
+  // 이미지 크기 계산 시 실제 너비를 읽어야 해서, 먼저 화면에 보이게 한 뒤 내용을 채웁니다.
+  detailModal.hidden = false;
   (data.messages || []).forEach((msg) => {
     detailThread.appendChild(renderMessageRow(msg));
   });
-  detailModal.hidden = false;
 }
 
 function renderMessageRow(msg) {
@@ -307,31 +302,142 @@ function renderMessageRow(msg) {
   contentCol.append(header, text);
 
   if (Array.isArray(msg.images) && msg.images.length > 0) {
-    contentCol.appendChild(renderImageGrid(msg.images));
+    const grid = document.createElement("div");
+    grid.className = "tweet-images";
+    contentCol.appendChild(grid);
+    // 이미지 원본 크기를 읽어와야 배치를 계산할 수 있어서 비동기로 채웁니다.
+    renderImageGridInto(grid, msg.images);
   }
 
   row.append(avatarCol, contentCol);
   return row;
 }
 
-function renderImageGrid(images) {
-  const grid = document.createElement("div");
-  grid.className = "tweet-images";
-  images.forEach((url) => {
-    const src = safeImgSrc(url);
-    if (!src) return;
-    const link = document.createElement("a");
-    link.href = src;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    const img = document.createElement("img");
-    img.src = src;
-    img.loading = "lazy";
-    img.referrerPolicy = "no-referrer";
-    link.appendChild(img);
-    grid.appendChild(link);
+// 이미지 URL마다 원본 가로/세로 크기를 한 번만 읽어와 재사용합니다.
+const imageDimCache = new Map();
+function getImageDimensions(url) {
+  if (imageDimCache.has(url)) return Promise.resolve(imageDimCache.get(url));
+  return new Promise((resolve) => {
+    const probe = new Image();
+    probe.onload = () => {
+      const dim = { w: probe.naturalWidth || 1, h: probe.naturalHeight || 1 };
+      imageDimCache.set(url, dim);
+      resolve(dim);
+    };
+    probe.onerror = () => {
+      const dim = { w: 1, h: 1 };
+      imageDimCache.set(url, dim);
+      resolve(dim);
+    };
+    probe.src = url;
   });
-  return grid;
+}
+
+function makeImageLink(url) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  const img = document.createElement("img");
+  img.src = url;
+  img.loading = "lazy";
+  img.referrerPolicy = "no-referrer";
+  img.style.borderRadius = "10px";
+  img.style.display = "block";
+  link.appendChild(img);
+  return { link, img };
+}
+
+function styleGridCellImg(img) {
+  img.style.width = "100%";
+  img.style.height = "100%";
+  img.style.objectFit = "cover";
+}
+
+// X 트윗의 사진 배치를 재현합니다: 1장은 긴 변이 대화창 너비의 70%,
+// 2장은 각자 비율을 지킨 채 같은 높이로 나란히 폭을 꽉 채움,
+// 3장은 왼쪽 큰 사진 + 오른쪽 위아래 2장, 4장은 2x2. (크롭이 필요하면 object-fit: cover로 처리)
+async function renderImageGridInto(container, images) {
+  const urls = images.map(safeImgSrc).filter(Boolean);
+  if (urls.length === 0) return;
+
+  const dims = await Promise.all(urls.map(getImageDimensions));
+  const containerWidth = container.clientWidth || container.getBoundingClientRect().width || 300;
+  const GAP = 8;
+
+  if (urls.length === 1) {
+    const ratio = dims[0].w / dims[0].h;
+    const { link, img } = makeImageLink(urls[0]);
+    const longSide = containerWidth * 0.7;
+    if (ratio >= 1) {
+      img.style.width = longSide + "px";
+      img.style.height = "auto";
+    } else {
+      img.style.height = longSide + "px";
+      img.style.width = "auto";
+    }
+    container.style.display = "block";
+    container.appendChild(link);
+    return;
+  }
+
+  if (urls.length === 2) {
+    const r0 = dims[0].w / dims[0].h;
+    const r1 = dims[1].w / dims[1].h;
+    const rowHeight = (containerWidth - GAP) / (r0 + r1);
+    container.style.display = "flex";
+    container.style.gap = GAP + "px";
+    urls.forEach((url, i) => {
+      const ratio = dims[i].w / dims[i].h;
+      const { link, img } = makeImageLink(url);
+      img.style.height = rowHeight + "px";
+      img.style.width = rowHeight * ratio + "px";
+      container.appendChild(link);
+    });
+    return;
+  }
+
+  if (urls.length === 3) {
+    container.style.display = "grid";
+    container.style.gridTemplateColumns = "1fr 1fr";
+    container.style.gridTemplateRows = "1fr 1fr";
+    container.style.gap = GAP + "px";
+    container.style.aspectRatio = "1.7 / 1";
+
+    const { link: leftLink, img: leftImg } = makeImageLink(urls[0]);
+    leftLink.style.gridColumn = "1 / 2";
+    leftLink.style.gridRow = "1 / 3";
+    styleGridCellImg(leftImg);
+    container.appendChild(leftLink);
+
+    [1, 2].forEach((i) => {
+      const { link, img } = makeImageLink(urls[i]);
+      link.style.gridColumn = "2 / 3";
+      link.style.gridRow = i === 1 ? "1 / 2" : "2 / 3";
+      styleGridCellImg(img);
+      container.appendChild(link);
+    });
+    return;
+  }
+
+  // 4장(그 이상이면 앞 4장을 2x2로, 나머지는 그 아래 한 줄씩 자연스럽게 이어붙입니다)
+  container.style.display = "grid";
+  container.style.gridTemplateColumns = "1fr 1fr";
+  container.style.gap = GAP + "px";
+  if (urls.length === 4) container.style.aspectRatio = "1 / 1";
+
+  urls.slice(0, 4).forEach((url) => {
+    const { link, img } = makeImageLink(url);
+    styleGridCellImg(img);
+    container.appendChild(link);
+  });
+  urls.slice(4).forEach((url) => {
+    const { link, img } = makeImageLink(url);
+    link.style.gridColumn = "1 / 3";
+    img.style.width = "100%";
+    img.style.height = "auto";
+    container.appendChild(link);
+  });
 }
 
 function closeDetail() {
@@ -367,7 +473,7 @@ detailAppendBtn.addEventListener("click", () => {
   appendModeLabel.hidden = false;
   appendModeLabel.textContent = "📌 기존 대화 아래로 이어서 추가하는 중이에요.";
   renderEditableRows();
-  renderTagChips();
+  renderTagOptions();
   detailModal.hidden = true;
   newCardModal.hidden = false;
 });
@@ -383,7 +489,7 @@ detailEditBtn.addEventListener("click", () => {
   appendModeLabel.hidden = false;
   appendModeLabel.textContent = "✏️ 기존 대화를 수정하는 중이에요. 메시지를 고치거나 지울 수 있고, 필요하면 붙여넣기로 더 추가할 수도 있어요.";
   renderEditableRows();
-  renderTagChips();
+  renderTagOptions();
   detailModal.hidden = true;
   newCardModal.hidden = false;
 });
@@ -398,7 +504,7 @@ newCardBtn.addEventListener("click", () => {
   importError.hidden = true;
   appendModeLabel.hidden = true;
   renderEditableRows();
-  renderTagChips();
+  renderTagOptions();
   newCardModal.hidden = false;
 });
 
@@ -409,44 +515,23 @@ newCardCloseBtn.addEventListener("click", () => {
   appendModeLabel.hidden = true;
 });
 
-// ---------- 태그 편집 ----------
-function renderTagChips() {
-  tagChips.innerHTML = "";
-  editingTags.forEach((tag, index) => {
-    const chip = document.createElement("span");
-    chip.className = "tag-chip";
-    const label = document.createElement("span");
-    label.textContent = tag;
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.textContent = "×";
-    removeBtn.addEventListener("click", () => {
-      editingTags.splice(index, 1);
-      renderTagChips();
+// ---------- 태그 편집 (미리 정해둔 TAG_OPTIONS 중에서 골라서 켜고 끔) ----------
+function renderTagOptions() {
+  tagOptionsContainer.innerHTML = "";
+  TAG_OPTIONS.forEach((tag) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tag-option" + (editingTags.includes(tag) ? " selected" : "");
+    btn.textContent = tag;
+    btn.addEventListener("click", () => {
+      const i = editingTags.indexOf(tag);
+      if (i === -1) editingTags.push(tag);
+      else editingTags.splice(i, 1);
+      renderTagOptions();
     });
-    chip.append(label, removeBtn);
-    tagChips.appendChild(chip);
+    tagOptionsContainer.appendChild(btn);
   });
 }
-
-function addTagFromInput() {
-  const tag = tagInput.value.trim();
-  if (!tag || editingTags.includes(tag)) {
-    tagInput.value = "";
-    return;
-  }
-  editingTags.push(tag);
-  tagInput.value = "";
-  renderTagChips();
-}
-
-tagAddBtn.addEventListener("click", addTagFromInput);
-tagInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    addTagFromInput();
-  }
-});
 
 importParseBtn.addEventListener("click", () => {
   importError.hidden = true;
