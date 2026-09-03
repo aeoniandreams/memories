@@ -67,8 +67,13 @@ body {
 
 /* 앱 화면 헤더 안: 다른 헤더 버튼들과 같은 줄에 자연스럽게 배치 */
 .header-actions .theme-toggle-btn {
-  font-size: 16px;
   padding: 9px 12px;
+}
+
+.theme-toggle-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 button, input, textarea, select {
@@ -431,7 +436,7 @@ h1 {
 
 .tweet-text {
   margin: 4px 0 0;
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
