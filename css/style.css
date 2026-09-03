@@ -300,6 +300,13 @@ h1 {
   padding: 4px 0 40px;
 }
 
+.detail-bottom-close {
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px 40px;
+  border-top: 1px solid var(--border);
+}
+
 .message-row {
   display: flex;
   gap: 12px;

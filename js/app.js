@@ -44,6 +44,7 @@ const emptyState = document.getElementById("empty-state");
 const detailModal = document.getElementById("detail-modal");
 const detailThread = document.getElementById("detail-thread");
 const detailCloseBtn = document.getElementById("detail-close-btn");
+const detailCloseBottomBtn = document.getElementById("detail-close-bottom-btn");
 const detailDeleteBtn = document.getElementById("detail-delete-btn");
 const detailAppendBtn = document.getElementById("detail-append-btn");
 
@@ -285,9 +286,18 @@ function renderImageGrid(images) {
   return grid;
 }
 
-detailCloseBtn.addEventListener("click", () => {
+function closeDetail() {
   detailModal.hidden = true;
   currentDetailCardId = null;
+}
+
+detailCloseBtn.addEventListener("click", closeDetail);
+detailCloseBottomBtn.addEventListener("click", closeDetail);
+
+// 모달 바깥(어두운 배경) 클릭 시 닫기. 패널 안쪽 클릭은 여기까지 이벤트가
+// 버블링되어 오지만, target이 오버레이 자신일 때만 닫아서 안쪽 클릭은 무시합니다.
+detailModal.addEventListener("click", (e) => {
+  if (e.target === detailModal) closeDetail();
 });
 
 detailDeleteBtn.addEventListener("click", async () => {
