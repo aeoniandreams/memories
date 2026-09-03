@@ -33,6 +33,7 @@
   </header>
 
   <div class="toolbar">
+    <select id="tag-filter-select" class="btn-secondary"></select>
     <button id="sort-toggle-btn" class="btn-secondary" type="button">최신순 ▾</button>
   </div>
 
@@ -47,6 +48,7 @@
       <button id="detail-close-btn" class="btn-ghost">←</button>
       <div class="modal-header-right">
         <button id="detail-append-btn" class="btn-secondary">＋ 이어서 추가</button>
+        <button id="detail-edit-btn" class="btn-secondary">수정</button>
         <button id="detail-delete-btn" class="btn-ghost danger">삭제</button>
       </div>
     </div>
@@ -63,6 +65,15 @@
     </div>
 
     <p id="append-mode-label" class="append-mode-label" hidden>📌 기존 대화 아래로 이어서 추가하는 중이에요.</p>
+
+    <section class="tag-editor">
+      <label for="tag-input">태그 (필터에서 사용, 카드에는 표시되지 않아요)</label>
+      <div class="tag-editor-row">
+        <input type="text" id="tag-input" placeholder="태그 입력 후 추가" />
+        <button id="tag-add-btn" class="btn-secondary" type="button">추가</button>
+      </div>
+      <div id="tag-chips" class="tag-chips"></div>
+    </section>
 
     <section class="import-section">
       <label for="import-textarea">

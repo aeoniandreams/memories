@@ -38,6 +38,7 @@ const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 
 const sortToggleBtn = document.getElementById("sort-toggle-btn");
+const tagFilterSelect = document.getElementById("tag-filter-select");
 const cardGrid = document.getElementById("card-grid");
 const emptyState = document.getElementById("empty-state");
 
@@ -46,12 +47,16 @@ const detailThread = document.getElementById("detail-thread");
 const detailCloseBtn = document.getElementById("detail-close-btn");
 const detailDeleteBtn = document.getElementById("detail-delete-btn");
 const detailAppendBtn = document.getElementById("detail-append-btn");
+const detailEditBtn = document.getElementById("detail-edit-btn");
 
 const newCardBtn = document.getElementById("new-card-btn");
 const newCardModal = document.getElementById("new-card-modal");
 const newCardCloseBtn = document.getElementById("new-card-close-btn");
 const newCardSaveBtn = document.getElementById("new-card-save-btn");
 const appendModeLabel = document.getElementById("append-mode-label");
+const tagInput = document.getElementById("tag-input");
+const tagAddBtn = document.getElementById("tag-add-btn");
+const tagChips = document.getElementById("tag-chips");
 const importTextarea = document.getElementById("import-textarea");
 const importParseBtn = document.getElementById("import-parse-btn");
 const importError = document.getElementById("import-error");
@@ -59,10 +64,14 @@ const addEmptyMessageBtn = document.getElementById("add-empty-message-btn");
 const editableRows = document.getElementById("editable-rows");
 
 let currentDetailCardId = null;
+let currentDetailData = null;
 let editingMessages = []; // 새 대화 추가 모달에서 편집 중인 메시지 배열
+let editingTags = []; // 새 대화 추가 모달에서 편집 중인 카드 태그 배열
 let appendTargetCardId = null; // 설정되어 있으면 "새 카드 생성"이 아니라 이 카드에 이어붙임
-let loadedCards = []; // 홈 화면에 로드된 카드 목록 (정렬 전환 시 재요청 없이 재사용)
+let editTargetCardId = null; // 설정되어 있으면 이 카드의 메시지 전체를 편집 내용으로 교체
+let loadedCards = []; // 홈 화면에 로드된 카드 목록 (정렬/필터 전환 시 재요청 없이 재사용)
 let sortDirection = "desc"; // "desc" = 최신순, "asc" = 오래된순
+let filterTag = ""; // 빈 문자열이면 전체 태그
 let isAdmin = false;
 
 // ---------- 유틸 ----------
@@ -140,6 +149,7 @@ function applyAdminUI() {
   newCardBtn.hidden = !isAdmin;
   detailDeleteBtn.hidden = !isAdmin;
   detailAppendBtn.hidden = !isAdmin;
+  detailEditBtn.hidden = !isAdmin;
 }
 
 loginForm.addEventListener("submit", async (e) => {
@@ -163,19 +173,56 @@ async function loadCards() {
   const q = query(collection(db, "cards"), orderBy("firstDateSort", "desc"));
   const snapshot = await getDocs(q);
   loadedCards = snapshot.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }));
+  renderTagFilterOptions();
   renderCardGrid();
 }
+
+function getAllTags() {
+  const set = new Set();
+  loadedCards.forEach(({ data }) => (data.tags || []).forEach((t) => set.add(t)));
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
+
+function renderTagFilterOptions() {
+  const tags = getAllTags();
+  if (filterTag && !tags.includes(filterTag)) filterTag = ""; // 더 이상 존재하지 않는 태그면 필터 해제
+
+  tagFilterSelect.innerHTML = "";
+  const allOpt = document.createElement("option");
+  allOpt.value = "";
+  allOpt.textContent = "전체 태그";
+  tagFilterSelect.appendChild(allOpt);
+  tags.forEach((t) => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    tagFilterSelect.appendChild(opt);
+  });
+  tagFilterSelect.value = filterTag;
+}
+
+tagFilterSelect.addEventListener("change", () => {
+  filterTag = tagFilterSelect.value;
+  renderCardGrid();
+});
 
 function renderCardGrid() {
   cardGrid.innerHTML = "";
 
-  if (loadedCards.length === 0) {
+  const filtered = filterTag
+    ? loadedCards.filter(({ data }) => Array.isArray(data.tags) && data.tags.includes(filterTag))
+    : loadedCards;
+
+  if (filtered.length === 0) {
+    emptyState.textContent = filterTag
+      ? "이 태그가 붙은 대화가 없어요."
+      : '아직 백업된 대화가 없어요. "새 대화 추가"로 첫 대화를 백업해보세요.';
     emptyState.hidden = false;
     return;
   }
   emptyState.hidden = true;
 
-  const sorted = [...loadedCards].sort((a, b) => {
+  const sorted = [...filtered].sort((a, b) => {
     const aSort = (a.data.firstDateSort || "");
     const bSort = (b.data.firstDateSort || "");
     return sortDirection === "asc" ? aSort.localeCompare(bSort) : bSort.localeCompare(aSort);
@@ -221,6 +268,7 @@ sortToggleBtn.addEventListener("click", () => {
 // ---------- 상세보기 모달 ----------
 function openDetail(id, data) {
   currentDetailCardId = id;
+  currentDetailData = data;
   detailThread.innerHTML = "";
   (data.messages || []).forEach((msg) => {
     detailThread.appendChild(renderMessageRow(msg));
@@ -311,11 +359,31 @@ detailDeleteBtn.addEventListener("click", async () => {
 detailAppendBtn.addEventListener("click", () => {
   if (!currentDetailCardId) return;
   appendTargetCardId = currentDetailCardId;
+  editTargetCardId = null;
   editingMessages = [];
+  editingTags = [...(currentDetailData.tags || [])];
   importTextarea.value = "";
   importError.hidden = true;
   appendModeLabel.hidden = false;
+  appendModeLabel.textContent = "📌 기존 대화 아래로 이어서 추가하는 중이에요.";
   renderEditableRows();
+  renderTagChips();
+  detailModal.hidden = true;
+  newCardModal.hidden = false;
+});
+
+detailEditBtn.addEventListener("click", () => {
+  if (!currentDetailCardId) return;
+  editTargetCardId = currentDetailCardId;
+  appendTargetCardId = null;
+  editingMessages = (currentDetailData.messages || []).map((m) => ({ ...m }));
+  editingTags = [...(currentDetailData.tags || [])];
+  importTextarea.value = "";
+  importError.hidden = true;
+  appendModeLabel.hidden = false;
+  appendModeLabel.textContent = "✏️ 기존 대화를 수정하는 중이에요. 메시지를 고치거나 지울 수 있고, 필요하면 붙여넣기로 더 추가할 수도 있어요.";
+  renderEditableRows();
+  renderTagChips();
   detailModal.hidden = true;
   newCardModal.hidden = false;
 });
@@ -323,18 +391,61 @@ detailAppendBtn.addEventListener("click", () => {
 // ---------- 새 대화 추가 모달 ----------
 newCardBtn.addEventListener("click", () => {
   appendTargetCardId = null;
+  editTargetCardId = null;
   editingMessages = [];
+  editingTags = [];
   importTextarea.value = "";
   importError.hidden = true;
   appendModeLabel.hidden = true;
   renderEditableRows();
+  renderTagChips();
   newCardModal.hidden = false;
 });
 
 newCardCloseBtn.addEventListener("click", () => {
   newCardModal.hidden = true;
   appendTargetCardId = null;
+  editTargetCardId = null;
   appendModeLabel.hidden = true;
+});
+
+// ---------- 태그 편집 ----------
+function renderTagChips() {
+  tagChips.innerHTML = "";
+  editingTags.forEach((tag, index) => {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip";
+    const label = document.createElement("span");
+    label.textContent = tag;
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "×";
+    removeBtn.addEventListener("click", () => {
+      editingTags.splice(index, 1);
+      renderTagChips();
+    });
+    chip.append(label, removeBtn);
+    tagChips.appendChild(chip);
+  });
+}
+
+function addTagFromInput() {
+  const tag = tagInput.value.trim();
+  if (!tag || editingTags.includes(tag)) {
+    tagInput.value = "";
+    return;
+  }
+  editingTags.push(tag);
+  tagInput.value = "";
+  renderTagChips();
+}
+
+tagAddBtn.addEventListener("click", addTagFromInput);
+tagInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    addTagFromInput();
+  }
 });
 
 importParseBtn.addEventListener("click", () => {
@@ -352,15 +463,19 @@ importParseBtn.addEventListener("click", () => {
     importError.hidden = false;
     return;
   }
-  editingMessages = parsed.map((m) => ({
-    id: m.id || "", // 북마클릿이 넣어준 트윗 고유 ID (있으면 "이어서 추가" 시 중복 판단에 씀)
-    avatar: m.avatar || "",
-    nickname: m.nickname || "",
-    handle: m.handle || "",
-    dateDisplay: m.dateDisplay || "",
-    text: m.text || "",
-    images: Array.isArray(m.images) ? m.images.filter(Boolean) : [],
-  }));
+  // 기존 편집 중인 메시지(이어서 추가/수정 모드에서 이미 불러온 것) 뒤에 이어붙입니다.
+  editingMessages = editingMessages.concat(
+    parsed.map((m) => ({
+      id: m.id || "", // 북마클릿이 넣어준 트윗 고유 ID (있으면 "이어서 추가" 시 중복 판단에 씀)
+      avatar: m.avatar || "",
+      nickname: m.nickname || "",
+      handle: m.handle || "",
+      dateDisplay: m.dateDisplay || "",
+      text: m.text || "",
+      images: Array.isArray(m.images) ? m.images.filter(Boolean) : [],
+    }))
+  );
+  importTextarea.value = "";
   renderEditableRows();
 });
 
@@ -461,7 +576,14 @@ newCardSaveBtn.addEventListener("click", async () => {
   newCardSaveBtn.disabled = true;
   newCardSaveBtn.textContent = "저장 중...";
   try {
-    if (appendTargetCardId) {
+    if (editTargetCardId) {
+      const targetRef = doc(db, "cards", editTargetCardId);
+      await updateDoc(targetRef, {
+        messages,
+        firstDateSort: messages[0].dateSort || "",
+        tags: editingTags,
+      });
+    } else if (appendTargetCardId) {
       const targetRef = doc(db, "cards", appendTargetCardId);
       const targetSnap = await getDoc(targetRef);
       const existingMessages = (targetSnap.data() && targetSnap.data().messages) || [];
@@ -471,6 +593,7 @@ newCardSaveBtn.addEventListener("click", async () => {
       const skipped = messages.length - newOnes.length;
       await updateDoc(targetRef, {
         messages: [...existingMessages, ...newOnes],
+        tags: editingTags,
       });
       if (skipped > 0) {
         alert(skipped + "개는 이미 저장되어 있는 트윗이라 제외하고 추가했어요.");
@@ -479,11 +602,13 @@ newCardSaveBtn.addEventListener("click", async () => {
       await addDoc(collection(db, "cards"), {
         messages,
         firstDateSort: messages[0].dateSort || "",
+        tags: editingTags,
         createdAt: serverTimestamp(),
       });
     }
     newCardModal.hidden = true;
     appendTargetCardId = null;
+    editTargetCardId = null;
     appendModeLabel.hidden = true;
     loadCards();
   } catch (err) {
