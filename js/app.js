@@ -32,7 +32,9 @@ const ADMIN_EMAIL = "ae0niandreams@gmail.com"; // 관리자 이메일 입력란
 
 // ⬇️ 필터용 태그 입력란: 여기 적은 이름들이 태그 버튼으로 나타납니다.
 // 순서를 바꾸거나 문자열을 추가/삭제하면 그대로 반영돼요 (배포만 다시 하면 됩니다).
-const TAG_OPTIONS = ["일상", "여행", "중요"];
+const TAG_OPTIONS = ["퍼블트", "츄야윤", "츄앤명"];
+
+const NO_TAG_FILTER_VALUE = "__no_tag__"; // 필터에서 "태그 없음"을 고르면 쓰이는 값
 
 // ---------- 엘리먼트 참조 ----------
 const loginView = document.getElementById("login-view");
@@ -191,6 +193,10 @@ function renderTagFilterOptions() {
     opt.textContent = t;
     tagFilterSelect.appendChild(opt);
   });
+  const noTagOpt = document.createElement("option");
+  noTagOpt.value = NO_TAG_FILTER_VALUE;
+  noTagOpt.textContent = "태그 없음";
+  tagFilterSelect.appendChild(noTagOpt);
   tagFilterSelect.value = filterTag;
 }
 renderTagFilterOptions();
@@ -203,9 +209,12 @@ tagFilterSelect.addEventListener("change", () => {
 function renderCardGrid() {
   cardGrid.innerHTML = "";
 
-  const filtered = filterTag
-    ? loadedCards.filter(({ data }) => Array.isArray(data.tags) && data.tags.includes(filterTag))
-    : loadedCards;
+  const filtered = loadedCards.filter(({ data }) => {
+    const tags = Array.isArray(data.tags) ? data.tags : [];
+    if (filterTag === "") return true;
+    if (filterTag === NO_TAG_FILTER_VALUE) return tags.length === 0;
+    return tags.includes(filterTag);
+  });
 
   if (filtered.length === 0) {
     emptyState.textContent = filterTag
