@@ -44,12 +44,25 @@
 
 * { box-sizing: border-box; }
 
+/* 모바일 브라우저(특히 iOS Safari)는 화면을 가로로 돌리거나 좁은 화면일 때
+   "읽기 편하게" 글자 크기를 자동으로 키우는 경우가 있어서, 지정한 font-size가
+   그대로 적용되지 않을 수 있습니다. 이걸 막아서 항상 CSS에 적은 크기 그대로
+   보이게 합니다. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  /* Pretendard JP 로딩이 실패하는 경우를 대비해, 각 플랫폼의 한글 시스템 폰트를
+     순서대로 넣어뒀습니다 (macOS/iOS: Apple SD Gothic Neo, Windows: Malgun Gothic,
+     Android 등 그 외: Noto Sans KR). */
   font-family: "Pretendard JP", "Pretendard", -apple-system, BlinkMacSystemFont,
-    "Hiragino Sans", "Yu Gothic", "Malgun Gothic", sans-serif;
+    "Apple SD Gothic Neo", "Hiragino Sans", "Yu Gothic", "Malgun Gothic",
+    "Noto Sans KR", sans-serif;
 }
 
 /* 로그인 카드 안: 카드 오른쪽 위 구석에 작게 배치 */

@@ -519,6 +519,19 @@ function renderMessageRow(msg, commentKey, comments) {
       viewStack.appendChild(makeTweetCommentViewBtn(commentKey, role, entry))
     );
     row.appendChild(viewStack);
+
+    // .tweet-comment-view-stack은 position:absolute라서, 트윗 내용(텍스트/이미지)이
+    // 짧으면 버튼이 여러 개일 때 .message-row 아래로 넘쳐서 다음 트윗 위에 겹쳐
+    // 그려지고(클릭도 다음 트윗 쪽이 가로채 버림), 그 결과 코멘트가 4개 이상일 때부터
+    // 아래쪽 버튼을 못 누르는 문제가 있었습니다. 버튼 스택 높이만큼 min-height를
+    // 줘서 트윗 한 칸이 절대 그보다 작아지지 않게 막습니다 (CSS 값과 맞춰야 함:
+    // 버튼 30px, 버튼 사이 간격 4px, 스택 top 20px, 아래 여백 20px).
+    const STACK_BTN = 30;
+    const STACK_GAP = 4;
+    const STACK_TOP = 20;
+    const STACK_BOTTOM = 20;
+    const stackHeight = viewEntries.length * STACK_BTN + (viewEntries.length - 1) * STACK_GAP;
+    row.style.minHeight = STACK_TOP + stackHeight + STACK_BOTTOM + "px";
   }
 
   return row;
