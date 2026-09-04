@@ -586,8 +586,9 @@ h1 {
 }
 
 /* 우측: 코멘트 보기 버튼. 말풍선(message-circle) 모양으로 채워진 바탕 위에
-   코멘트 종류 아이콘(message-circle/wine/coffee)을 겹쳐 그립니다. 바탕색은
-   사이트 배경색과 비슷하되(--surface) 완전히 같지는 않아서 버튼 모양이 드러납니다. */
+   코멘트 종류 아이콘(message-circle/wine/coffee)을 겹쳐 그립니다. 바탕색(--border)은
+   기본 모드에선 배경색보다 살짝 어둡고 야간 모드에선 살짝 밝아서, 튀지 않으면서도
+   버튼 모양이 은은하게 드러납니다. */
 .tweet-comment-view-stack {
   position: absolute;
   right: 10px;
@@ -610,7 +611,7 @@ h1 {
 .tweet-comment-view-btn .bubble-shape {
   position: absolute;
   inset: 0;
-  color: var(--surface);
+  color: var(--border);
 }
 .tweet-comment-view-btn .bubble-shape svg {
   width: 100%;
@@ -672,6 +673,58 @@ h1 {
 }
 .tweet-comment-editor-textarea:focus {
   outline: none;
+}
+
+/* 코멘트 보기/작성 패널. 모바일(기본값)에서는 다른 모달처럼 화면 전체를 어둡게 덮고
+   가운데에 뜨는 방식이고, 데스크탑(아래 media query)에서는 배경을 덮지 않고 대화창
+   오른쪽 바깥 공간에 떠 있는 방식으로 바뀝니다. */
+.tweet-comment-panel[hidden] {
+  display: none;
+}
+
+.tweet-comment-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  z-index: 101;
+  padding: 24px 12px;
+}
+
+.tweet-comment-panel-card {
+  background: var(--bg);
+  width: 100%;
+  max-width: 400px;
+  max-height: calc(100vh - 48px);
+  border-radius: 16px;
+  overflow-y: auto;
+}
+
+.tweet-comment-panel-body {
+  padding-bottom: 8px;
+}
+
+/* 데스크탑: 대화창(.modal-panel, max-width 620px)이 화면 중앙에 뜨는 걸 기준으로,
+   그 오른쪽에 16px 띄워서 320px 폭 패널을 붙입니다. 패널이 화면 오른쪽 밖으로
+   잘리지 않으려면 화면 폭이 대략 (620/2 + 16 + 320) * 2 = 1292px는 넘어야 해서,
+   여유를 두고 1360px부터 이 배치를 적용합니다. 그보다 좁으면(작은 노트북 등) 위의
+   모바일과 같은 가운데 모달 형태로 자연스럽게 대체됩니다. */
+@media (min-width: 1360px) {
+  .tweet-comment-panel {
+    position: fixed;
+    inset: auto;
+    top: 24px;
+    left: calc(50% + 326px);
+    background: transparent;
+    padding: 0;
+    display: block;
+  }
+  .tweet-comment-panel-card {
+    width: 320px;
+    max-width: 320px;
+  }
 }
 
 /* ---------- 새 대화 추가 폼 ---------- */

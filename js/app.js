@@ -58,11 +58,10 @@ const detailDeleteBtn = document.getElementById("detail-delete-btn");
 const detailAppendBtn = document.getElementById("detail-append-btn");
 const detailEditBtn = document.getElementById("detail-edit-btn");
 
-const tweetCommentEditorModal = document.getElementById("tweet-comment-editor-modal");
-const tweetCommentEditorCloseBtn = document.getElementById("tweet-comment-editor-close-btn");
-const tweetCommentEditorSaveBtn = document.getElementById("tweet-comment-editor-save-btn");
-const tweetCommentEditorTextarea = document.getElementById("tweet-comment-editor-textarea");
-const tweetCommentTypeOptions = document.getElementById("tweet-comment-type-options");
+const tweetCommentPanel = document.getElementById("tweet-comment-panel");
+const tweetCommentPanelBackBtn = document.getElementById("tweet-comment-panel-back-btn");
+const tweetCommentPanelActionBtn = document.getElementById("tweet-comment-panel-action-btn");
+const tweetCommentPanelBody = document.getElementById("tweet-comment-panel-body");
 
 const newCardBtn = document.getElementById("new-card-btn");
 const newCardModal = document.getElementById("new-card-modal");
@@ -86,9 +85,10 @@ let loadedCards = []; // 홈 화면에 로드된 카드 목록 (정렬/필터 �
 let sortDirection = "desc"; // "desc" = 최신순, "asc" = 오래된순
 let filterTag = ""; // 빈 문자열이면 전체 태그
 let isAdmin = false;
-let currentTweetComments = new Map(); // messageKey -> { user?: {type, text}, admin?: {type, text} } (상세보기 열 때마다 다시 불러옴)
-let editingCommentKey = null; // 코멘트 작성 창에서 지금 편집 중인 메시지의 key
-let editingCommentAdminType = "message-circle"; // 관리자가 코멘트 작성 시 고른 아이콘 종류
+let currentTweetComments = new Map(); // messageKey -> { user?: [{id,type,text}], admin?: [{id,type,text}] } (상세보기 열 때마다 다시 불러옴)
+// 코멘트 패널(우측 보기/좌측 작성)의 현재 상태.
+// mode: "view"(보기) | "edit"(기존 코멘트 수정) | "compose"(새 코멘트 작성)
+let tweetCommentPanelState = null;
 
 // ---------- 야간 모드 ----------
 // Lucide(lucide.dev, MIT 라이선스) 아이콘의 SVG를 그대로 가져다 씁니다.
@@ -111,8 +111,9 @@ const MESSAGE_CIRCLE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox
 const WINE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8"/><path d="M7 10h10"/><path d="M12 15v7"/><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/></svg>`;
 // 코멘트 종류 3가지 중 하나: coffee (관리자용 선택지)
 const COFFEE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/></svg>`;
-// 좌측 "코멘트 작성" 버튼 아이콘
-const MESSAGE_CIRCLE_PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`;
+// 좌측 "코멘트 작성" 버튼 아이콘. 다른 message-circle류 아이콘과 달리 말풍선 꼬리가
+// 반대쪽(오른쪽)을 향하도록 전체를 좌우 반전했습니다 (십자가는 대칭이라 모양이 그대로 유지됨).
+const MESSAGE_CIRCLE_PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1);"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`;
 
 // 코멘트에 저장된 type 문자열로 어떤 아이콘을 보여줄지 결정합니다.
 const COMMENT_TYPE_ICONS = {
@@ -186,6 +187,11 @@ function simpleHash(str) {
 function getMessageCommentKey(msg, index) {
   if (msg.id) return msg.id;
   return "gen_" + simpleHash(`${msg.handle}|${msg.dateDisplay}|${msg.text}|${index}`);
+}
+
+// 트윗 코멘트는 한 트윗에 여러 개가 쌓일 수 있어서, 각 코멘트마다 구분용 id가 필요합니다.
+function genCommentId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
 // "이어서 추가" 시 이미 있는 트윗과 겹치는지 판단합니다.
@@ -439,7 +445,8 @@ function renderMessageRow(msg, commentKey, comments) {
   addCommentBtn.className = "tweet-comment-add-btn";
   addCommentBtn.innerHTML = MESSAGE_CIRCLE_PLUS_ICON_SVG;
   addCommentBtn.setAttribute("aria-label", "코멘트 작성");
-  addCommentBtn.addEventListener("click", () => openTweetCommentEditor(commentKey, comments));
+  // 항상 "새" 코멘트 작성 창을 엽니다 (기존 코멘트가 있어도 그대로 두고 하나 더 추가).
+  addCommentBtn.addEventListener("click", () => openTweetCommentCompose(commentKey));
   row.appendChild(addCommentBtn);
 
   const avatarCol = document.createElement("div");
@@ -478,11 +485,19 @@ function renderMessageRow(msg, commentKey, comments) {
 
   row.append(avatarCol, contentCol);
 
-  const viewEntries = [comments && comments.user, comments && comments.admin].filter(Boolean);
+  // 코멘트는 여러 개 있을 수 있어서(유저 여러 개 + 관리자 여러 개), 있는 만큼 위에서부터
+  // 아래로 쌓아서 버튼을 만듭니다. 새로 추가한 코멘트는 그 역할(user/admin)의 배열 맨
+  // 뒤에 붙으므로, 자연히 기존 버튼들 아래에 새 버튼이 추가되는 순서가 됩니다.
+  const viewEntries = [];
+  (comments && comments.user ? comments.user : []).forEach((entry) => viewEntries.push({ role: "user", entry }));
+  (comments && comments.admin ? comments.admin : []).forEach((entry) => viewEntries.push({ role: "admin", entry }));
+
   if (viewEntries.length > 0) {
     const viewStack = document.createElement("div");
     viewStack.className = "tweet-comment-view-stack";
-    viewEntries.forEach((entry) => viewStack.appendChild(makeTweetCommentViewBtn(entry)));
+    viewEntries.forEach(({ role, entry }) =>
+      viewStack.appendChild(makeTweetCommentViewBtn(commentKey, role, entry))
+    );
     row.appendChild(viewStack);
   }
 
@@ -490,7 +505,7 @@ function renderMessageRow(msg, commentKey, comments) {
 }
 
 // 코멘트 종류(아이콘)별로 말풍선 모양 배경 위에 해당 아이콘을 겹쳐 그린 "보기" 버튼입니다.
-function makeTweetCommentViewBtn(commentEntry) {
+function makeTweetCommentViewBtn(commentKey, role, commentEntry) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "tweet-comment-view-btn";
@@ -505,7 +520,7 @@ function makeTweetCommentViewBtn(commentEntry) {
   icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
 
   btn.append(bubble, icon);
-  btn.addEventListener("click", () => openCommentModal(commentEntry.text));
+  btn.addEventListener("click", () => openTweetCommentView(commentKey, role, commentEntry.id));
   return btn;
 }
 
@@ -685,61 +700,128 @@ commentModal.addEventListener("click", (e) => {
   if (e.target === commentModal) closeCommentModal();
 });
 
-// ---------- 트윗 코멘트 작성/수정 ----------
+// ---------- 트윗 코멘트 보기/작성/수정 ----------
 // 관리자가 아닌 사용자는 항상 "wine" 아이콘으로 저장되고, 관리자는 message-circle/coffee
 // 중 하나를 골라 저장합니다. (본인 역할의 코멘트만 쓸 수 있게 firestore.rules에서 막아둡니다.)
-function openTweetCommentEditor(commentKey, existingComments) {
-  editingCommentKey = commentKey;
-  const mine = isAdmin ? existingComments && existingComments.admin : existingComments && existingComments.user;
-  tweetCommentEditorTextarea.value = (mine && mine.text) || "";
-  editingCommentAdminType = (mine && mine.type) || "message-circle";
-
-  tweetCommentTypeOptions.hidden = !isAdmin;
-  if (isAdmin) renderCommentTypeOptions();
-
-  tweetCommentEditorModal.hidden = false;
+// 한 트윗에 코멘트가 여러 개 쌓일 수 있어서, 역할(user/admin)별 배열로 저장합니다.
+function findCommentEntry(commentKey, role, entryId) {
+  const commentDoc = currentTweetComments.get(commentKey);
+  if (!commentDoc || !role || !entryId) return null;
+  const arr = commentDoc[role] || [];
+  return arr.find((e) => e.id === entryId) || null;
 }
 
-function renderCommentTypeOptions() {
-  tweetCommentTypeOptions.innerHTML = "";
-  [
-    ["message-circle", MESSAGE_CIRCLE_ICON_SVG],
-    ["coffee", COFFEE_ICON_SVG],
-  ].forEach(([type, svg]) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "tweet-comment-type-btn" + (type === editingCommentAdminType ? " selected" : "");
-    btn.innerHTML = svg;
-    btn.setAttribute("aria-label", type);
-    btn.addEventListener("click", () => {
-      editingCommentAdminType = type;
-      renderCommentTypeOptions();
+function openTweetCommentView(commentKey, role, entryId) {
+  tweetCommentPanelState = { commentKey, role, entryId, mode: "view" };
+  renderTweetCommentPanel();
+  tweetCommentPanel.hidden = false;
+}
+
+function openTweetCommentCompose(commentKey) {
+  tweetCommentPanelState = { commentKey, role: null, entryId: null, mode: "compose", adminType: "message-circle" };
+  renderTweetCommentPanel();
+  tweetCommentPanel.hidden = false;
+}
+
+function closeTweetCommentPanel() {
+  tweetCommentPanel.hidden = true;
+  tweetCommentPanelState = null;
+}
+
+function renderTweetCommentPanel() {
+  const state = tweetCommentPanelState;
+  tweetCommentPanelBody.innerHTML = "";
+
+  if (state.mode === "view") {
+    const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
+    const p = document.createElement("p");
+    p.className = "comment-modal-text";
+    p.textContent = entry ? entry.text : "";
+    tweetCommentPanelBody.appendChild(p);
+
+    const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
+    tweetCommentPanelActionBtn.hidden = !canEdit;
+    tweetCommentPanelActionBtn.textContent = "수정";
+    return;
+  }
+
+  // edit(기존 코멘트 수정) / compose(새 코멘트 작성)
+  const entry = state.mode === "edit" ? findCommentEntry(state.commentKey, state.role, state.entryId) : null;
+  if (isAdmin) {
+    if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
+    const typeBox = document.createElement("div");
+    typeBox.className = "tweet-comment-type-options";
+    [
+      ["message-circle", MESSAGE_CIRCLE_ICON_SVG],
+      ["coffee", COFFEE_ICON_SVG],
+    ].forEach(([type, svg]) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "tweet-comment-type-btn" + (type === state.adminType ? " selected" : "");
+      btn.innerHTML = svg;
+      btn.setAttribute("aria-label", type);
+      btn.addEventListener("click", () => {
+        state.adminType = type;
+        renderTweetCommentPanel();
+      });
+      typeBox.appendChild(btn);
     });
-    tweetCommentTypeOptions.appendChild(btn);
-  });
+    tweetCommentPanelBody.appendChild(typeBox);
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.id = "tweet-comment-panel-textarea";
+  textarea.className = "tweet-comment-editor-textarea";
+  textarea.rows = 5;
+  textarea.placeholder = "이 트윗에 대한 코멘트를 입력하세요";
+  textarea.value = entry ? entry.text : "";
+  tweetCommentPanelBody.appendChild(textarea);
+
+  tweetCommentPanelActionBtn.hidden = false;
+  tweetCommentPanelActionBtn.textContent = "저장";
 }
 
-function closeTweetCommentEditor() {
-  tweetCommentEditorModal.hidden = true;
-  editingCommentKey = null;
-}
-
-tweetCommentEditorCloseBtn.addEventListener("click", closeTweetCommentEditor);
-tweetCommentEditorModal.addEventListener("click", (e) => {
-  if (e.target === tweetCommentEditorModal) closeTweetCommentEditor();
+tweetCommentPanelBackBtn.addEventListener("click", closeTweetCommentPanel);
+tweetCommentPanel.addEventListener("click", (e) => {
+  if (e.target === tweetCommentPanel) closeTweetCommentPanel();
 });
 
-tweetCommentEditorSaveBtn.addEventListener("click", async () => {
-  if (!editingCommentKey || !currentDetailCardId) return;
-  const text = tweetCommentEditorTextarea.value.trim();
-  const role = isAdmin ? "admin" : "user";
-  const payload = {
-    [role]: text ? { type: isAdmin ? editingCommentAdminType : "wine", text } : null,
-    updatedAt: serverTimestamp(),
-  };
+tweetCommentPanelActionBtn.addEventListener("click", async () => {
+  const state = tweetCommentPanelState;
+  if (!state || !currentDetailCardId) return;
+
+  if (state.mode === "view") {
+    state.mode = "edit";
+    renderTweetCommentPanel();
+    return;
+  }
+
+  const textarea = document.getElementById("tweet-comment-panel-textarea");
+  const text = textarea.value.trim();
+  const role = state.mode === "edit" ? state.role : isAdmin ? "admin" : "user";
+  const type = isAdmin ? state.adminType : "wine";
+
+  const commentDoc = currentTweetComments.get(state.commentKey) || {};
+  const arr = Array.isArray(commentDoc[role]) ? commentDoc[role].slice() : [];
+
+  if (state.mode === "edit") {
+    const idx = arr.findIndex((e) => e.id === state.entryId);
+    if (idx !== -1) {
+      if (text) arr[idx] = { ...arr[idx], type, text };
+      else arr.splice(idx, 1); // 내용을 비우고 저장하면 코멘트를 삭제합니다.
+    }
+  } else {
+    if (!text) return; // 새 코멘트는 빈 채로 저장하지 않습니다.
+    arr.push({ id: genCommentId(), type, text });
+  }
+
   try {
-    await setDoc(doc(db, "cards", currentDetailCardId, "tweetComments", editingCommentKey), payload, { merge: true });
-    closeTweetCommentEditor();
+    await setDoc(
+      doc(db, "cards", currentDetailCardId, "tweetComments", state.commentKey),
+      { [role]: arr, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+    closeTweetCommentPanel();
     // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
     openDetail(currentDetailCardId, currentDetailData);
   } catch (e) {
