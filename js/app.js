@@ -78,6 +78,9 @@ const editableRows = document.getElementById("editable-rows");
 
 let currentDetailCardId = null;
 let currentDetailData = null;
+// 대화창이 열려 있을 때 휴대폰의 뒤로가기를 누르면 사이트를 나가는 대신 대화창만
+// 닫히도록, 열 때 히스토리 항목을 하나 쌓아둡니다 (아래 openDetail/leaveDetailModal 참고).
+let detailHistoryPushed = false;
 let editingMessages = []; // 새 대화 추가 모달에서 편집 중인 메시지 배열
 let editingTags = []; // 새 대화 추가 모달에서 편집 중인 카드 태그 배열
 let appendTargetCardId = null; // 설정되어 있으면 "새 카드 생성"이 아니라 이 카드에 이어붙임
@@ -441,6 +444,8 @@ async function openDetail(id, data) {
   detailThread.innerHTML = "";
   // 이미지 크기 계산 시 실제 너비를 읽어야 해서, 먼저 화면에 보이게 한 뒤 내용을 채웁니다.
   detailModal.hidden = false;
+  history.pushState({ memoriesDetailOpen: true }, "");
+  detailHistoryPushed = true;
 
   currentTweetComments = new Map();
   try {
@@ -715,10 +720,33 @@ async function renderImageGridInto(container, images) {
   });
 }
 
-function closeDetail() {
+// 버튼(닫기/삭제/이어서 추가/수정)으로 대화창을 나갈 때는 여기를 거칩니다.
+// openDetail에서 쌓아둔 히스토리 항목을 함께 정리해서, 나중에 뒤로가기를 눌렀을 때
+// 이미 닫힌 대화창 때문에 한 번 더 눌러야 하는 일이 없게 합니다.
+function leaveDetailModal() {
   detailModal.hidden = true;
+  if (detailHistoryPushed) {
+    detailHistoryPushed = false;
+    history.back();
+  }
+}
+
+function closeDetail() {
+  leaveDetailModal();
   currentDetailCardId = null;
 }
+
+// 휴대폰의 뒤로가기(브라우저 popstate)를 누르면, 대화창이 열려 있는 동안엔
+// 사이트를 나가는 대신 대화창만 닫습니다. 대화창이 닫혀 있는(홈 화면) 상태에서
+// 뒤로가기를 누르면 여기서 할 일이 없어서 브라우저 기본 동작(사이트 나가기)이
+// 그대로 진행됩니다.
+window.addEventListener("popstate", () => {
+  if (!detailModal.hidden) {
+    detailHistoryPushed = false;
+    detailModal.hidden = true;
+    currentDetailCardId = null;
+  }
+});
 
 detailCloseBtn.addEventListener("click", closeDetail);
 
@@ -900,7 +928,7 @@ detailDeleteBtn.addEventListener("click", async () => {
   if (!currentDetailCardId) return;
   if (!confirm("이 대화 백업을 삭제할까요? 되돌릴 수 없어요.")) return;
   await deleteDoc(doc(db, "cards", currentDetailCardId));
-  detailModal.hidden = true;
+  leaveDetailModal();
   currentDetailCardId = null;
   loadCards();
 });
@@ -917,7 +945,7 @@ detailAppendBtn.addEventListener("click", () => {
   appendModeLabel.innerHTML = PIN_ICON_SVG + " 기존 대화 아래로 이어서 추가하는 중이에요.";
   renderEditableRows();
   renderTagOptions();
-  detailModal.hidden = true;
+  leaveDetailModal();
   newCardModal.hidden = false;
 });
 
@@ -933,7 +961,7 @@ detailEditBtn.addEventListener("click", () => {
   appendModeLabel.innerHTML = PENCIL_ICON_SVG + " 기존 대화를 수정하는 중이에요. 메시지를 고치거나 지울 수 있고, 필요하면 붙여넣기로 더 추가할 수도 있어요.";
   renderEditableRows();
   renderTagOptions();
-  detailModal.hidden = true;
+  leaveDetailModal();
   newCardModal.hidden = false;
 });
 
