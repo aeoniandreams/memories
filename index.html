@@ -6,6 +6,14 @@
 <title>memories — X 대화 백업</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%231d9bf0%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z%22/><path d=%22M16.5 18.5c-3-1.5-3-3.5-3-4a1.5 1.5 0 0 1 3 0 1.5 1.5 0 0 1 3 0c0 .5 0 2.5-3 4Z%22/></svg>" />
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/pretendard-jp@1.3.9/dist/web/static/pretendard-jp.css" />
+<!-- 실제로 쓰는 굵기(400/500/600/700)만 미리 받아둡니다. 브라우저가 CSS를 다 해석한
+     뒤에야 "이 폰트가 필요하네" 하고 뒤늦게 요청을 시작하면, 느린 모바일 네트워크에서
+     특정 굵기 하나만 요청이 늦게 가거나 실패해서 그 부분만 시스템 기본 폰트로 보이는
+     경우가 있어서, 미리 우선순위 높게 요청해두면 그 문제를 줄일 수 있습니다. -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://cdn.jsdelivr.net/npm/pretendard-jp@1.3.9/dist/web/static/woff2/PretendardJP-Regular.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://cdn.jsdelivr.net/npm/pretendard-jp@1.3.9/dist/web/static/woff2/PretendardJP-Medium.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://cdn.jsdelivr.net/npm/pretendard-jp@1.3.9/dist/web/static/woff2/PretendardJP-SemiBold.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="https://cdn.jsdelivr.net/npm/pretendard-jp@1.3.9/dist/web/static/woff2/PretendardJP-Bold.woff2" />
 <link rel="stylesheet" href="css/style.css" />
 <script>
   // 저장된 테마를 CSS/본문이 그려지기 전에 미리 적용해서 화면이 잠깐 반대 테마로 번쩍이는 걸 막습니다.
