@@ -77,6 +77,18 @@
   </div>
 </div>
 
+<!-- 트윗 코멘트 작성/수정 -->
+<div id="tweet-comment-editor-modal" class="modal-overlay" hidden>
+  <div class="modal-panel comment-modal-panel">
+    <div class="modal-header">
+      <button id="tweet-comment-editor-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+      <button id="tweet-comment-editor-save-btn" class="btn-primary">저장</button>
+    </div>
+    <div id="tweet-comment-type-options" class="tweet-comment-type-options" hidden></div>
+    <textarea id="tweet-comment-editor-textarea" class="tweet-comment-editor-textarea" rows="4" placeholder="이 트윗에 대한 코멘트를 입력하세요"></textarea>
+  </div>
+</div>
+
 <!-- 새 대화 추가 / 편집 모달 -->
 <div id="new-card-modal" class="modal-overlay" hidden>
   <div class="modal-panel">
