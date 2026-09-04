@@ -87,6 +87,8 @@ const SUN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
 const MOON_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
 const PIN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`;
 const PENCIL_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.986L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`;
+const MESSAGE_SQUARE_MORE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="8" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1" fill="currentColor" stroke="none"/></svg>`;
+const PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`;
 
 function getEffectiveTheme() {
   const attr = document.documentElement.getAttribute("data-theme");
@@ -123,11 +125,18 @@ function safeImgSrc(url) {
   return "";
 }
 
-function parseImageUrls(text) {
-  return String(text || "")
-    .split(/[\n,]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+// 트윗의 images 필드를 항상 {url, comment} 형태로 맞춰줍니다.
+// 북마클릿이 캡처한 값이나 예전에 저장된 카드는 문자열 배열(["url", ...])이라
+// 그런 경우엔 comment를 빈 문자열로 채워서 통일합니다.
+function normalizeImages(images) {
+  if (!Array.isArray(images)) return [];
+  return images
+    .map((img) => {
+      if (typeof img === "string") return { url: img, comment: "" };
+      if (img && typeof img === "object") return { url: img.url || "", comment: img.comment || "" };
+      return { url: "", comment: "" };
+    })
+    .filter((img) => img.url);
 }
 
 // "이어서 추가" 시 이미 있는 트윗과 겹치는지 판단합니다.
@@ -295,8 +304,8 @@ function renderCardGrid() {
 
     card.append(head, textEl);
 
-    const thumbSrcs = (Array.isArray(first.images) ? first.images : [])
-      .map(safeImgSrc)
+    const thumbSrcs = normalizeImages(first.images)
+      .map((img) => safeImgSrc(img.url))
       .filter(Boolean)
       .slice(0, 2);
     if (thumbSrcs.length > 0) {
@@ -407,18 +416,35 @@ function getImageDimensions(url) {
   });
 }
 
-function makeImageLink(url) {
+// 코멘트가 있는 이미지에만 우측 하단에 동그란 버튼을 붙입니다. 클릭하면 코멘트 창이 열려요.
+function makeImageLink(image) {
   const link = document.createElement("a");
-  link.href = url;
+  link.className = "image-link";
+  link.href = image.url;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   const img = document.createElement("img");
-  img.src = url;
+  img.src = image.url;
   img.loading = "lazy";
   img.referrerPolicy = "no-referrer";
   img.style.borderRadius = "10px";
   img.style.display = "block";
   link.appendChild(img);
+
+  if (image.comment) {
+    const commentBtn = document.createElement("button");
+    commentBtn.type = "button";
+    commentBtn.className = "image-comment-btn";
+    commentBtn.innerHTML = MESSAGE_SQUARE_MORE_ICON_SVG;
+    commentBtn.setAttribute("aria-label", "이미지 코멘트 보기");
+    commentBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openCommentModal(image.comment);
+    });
+    link.appendChild(commentBtn);
+  }
+
   return { link, img };
 }
 
@@ -432,16 +458,16 @@ function styleGridCellImg(img) {
 // 2장은 각자 비율을 지킨 채 같은 높이로 나란히 폭을 꽉 채움,
 // 3장은 왼쪽 큰 사진 + 오른쪽 위아래 2장, 4장은 2x2. (크롭이 필요하면 object-fit: cover로 처리)
 async function renderImageGridInto(container, images) {
-  const urls = images.map(safeImgSrc).filter(Boolean);
-  if (urls.length === 0) return;
+  const normalized = normalizeImages(images);
+  if (normalized.length === 0) return;
 
-  const dims = await Promise.all(urls.map(getImageDimensions));
+  const dims = await Promise.all(normalized.map((im) => getImageDimensions(im.url)));
   const containerWidth = container.clientWidth || container.getBoundingClientRect().width || 300;
   const GAP = 5;
 
-  if (urls.length === 1) {
+  if (normalized.length === 1) {
     const ratio = dims[0].w / dims[0].h;
-    const { link, img } = makeImageLink(urls[0]);
+    const { link, img } = makeImageLink(normalized[0]);
     const longSide = containerWidth * 0.7;
     if (ratio >= 1) {
       img.style.width = longSide + "px";
@@ -455,15 +481,15 @@ async function renderImageGridInto(container, images) {
     return;
   }
 
-  if (urls.length === 2) {
+  if (normalized.length === 2) {
     const r0 = dims[0].w / dims[0].h;
     const r1 = dims[1].w / dims[1].h;
     const rowHeight = (containerWidth - GAP) / (r0 + r1);
     container.style.display = "flex";
     container.style.gap = GAP + "px";
-    urls.forEach((url, i) => {
+    normalized.forEach((image, i) => {
       const ratio = dims[i].w / dims[i].h;
-      const { link, img } = makeImageLink(url);
+      const { link, img } = makeImageLink(image);
       img.style.height = rowHeight + "px";
       img.style.width = rowHeight * ratio + "px";
       container.appendChild(link);
@@ -471,21 +497,21 @@ async function renderImageGridInto(container, images) {
     return;
   }
 
-  if (urls.length === 3) {
+  if (normalized.length === 3) {
     container.style.display = "grid";
     container.style.gridTemplateColumns = "1fr 1fr";
     container.style.gridTemplateRows = "1fr 1fr";
     container.style.gap = GAP + "px";
     container.style.aspectRatio = "1.7 / 1";
 
-    const { link: leftLink, img: leftImg } = makeImageLink(urls[0]);
+    const { link: leftLink, img: leftImg } = makeImageLink(normalized[0]);
     leftLink.style.gridColumn = "1 / 2";
     leftLink.style.gridRow = "1 / 3";
     styleGridCellImg(leftImg);
     container.appendChild(leftLink);
 
     [1, 2].forEach((i) => {
-      const { link, img } = makeImageLink(urls[i]);
+      const { link, img } = makeImageLink(normalized[i]);
       link.style.gridColumn = "2 / 3";
       link.style.gridRow = i === 1 ? "1 / 2" : "2 / 3";
       styleGridCellImg(img);
@@ -498,15 +524,15 @@ async function renderImageGridInto(container, images) {
   container.style.display = "grid";
   container.style.gridTemplateColumns = "1fr 1fr";
   container.style.gap = GAP + "px";
-  if (urls.length === 4) container.style.aspectRatio = "1 / 1";
+  if (normalized.length === 4) container.style.aspectRatio = "1 / 1";
 
-  urls.slice(0, 4).forEach((url) => {
-    const { link, img } = makeImageLink(url);
+  normalized.slice(0, 4).forEach((image) => {
+    const { link, img } = makeImageLink(image);
     styleGridCellImg(img);
     container.appendChild(link);
   });
-  urls.slice(4).forEach((url) => {
-    const { link, img } = makeImageLink(url);
+  normalized.slice(4).forEach((image) => {
+    const { link, img } = makeImageLink(image);
     link.style.gridColumn = "1 / 3";
     img.style.width = "100%";
     img.style.height = "auto";
@@ -525,6 +551,25 @@ detailCloseBtn.addEventListener("click", closeDetail);
 // 버블링되어 오지만, target이 오버레이 자신일 때만 닫아서 안쪽 클릭은 무시합니다.
 detailModal.addEventListener("click", (e) => {
   if (e.target === detailModal) closeDetail();
+});
+
+// ---------- 이미지 코멘트 보기 ----------
+const commentModal = document.getElementById("comment-modal");
+const commentModalText = document.getElementById("comment-modal-text");
+const commentModalCloseBtn = document.getElementById("comment-modal-close-btn");
+
+function openCommentModal(comment) {
+  commentModalText.textContent = comment;
+  commentModal.hidden = false;
+}
+
+function closeCommentModal() {
+  commentModal.hidden = true;
+}
+
+commentModalCloseBtn.addEventListener("click", closeCommentModal);
+commentModal.addEventListener("click", (e) => {
+  if (e.target === commentModal) closeCommentModal();
 });
 
 detailDeleteBtn.addEventListener("click", async () => {
@@ -556,7 +601,7 @@ detailEditBtn.addEventListener("click", () => {
   if (!currentDetailCardId) return;
   editTargetCardId = currentDetailCardId;
   appendTargetCardId = null;
-  editingMessages = (currentDetailData.messages || []).map((m) => ({ ...m }));
+  editingMessages = (currentDetailData.messages || []).map((m) => ({ ...m, images: normalizeImages(m.images) }));
   editingTags = [...(currentDetailData.tags || [])];
   importTextarea.value = "";
   importError.hidden = true;
@@ -631,7 +676,7 @@ importParseBtn.addEventListener("click", () => {
       handle: m.handle || "",
       dateDisplay: m.dateDisplay || "",
       text: m.text || "",
-      images: Array.isArray(m.images) ? m.images.filter(Boolean) : [],
+      images: normalizeImages(m.images),
     }))
   );
   importTextarea.value = "";
@@ -694,16 +739,69 @@ function renderEditRow(msg, index) {
   textArea.value = msg.text;
   textArea.addEventListener("input", () => { editingMessages[index].text = textArea.value; });
 
-  const imagesArea = document.createElement("textarea");
-  imagesArea.placeholder = "첨부 이미지 URL (여러 개면 줄바꿈이나 쉼표로 구분)";
-  imagesArea.rows = 2;
-  imagesArea.value = (msg.images || []).join("\n");
-  imagesArea.addEventListener("input", () => {
-    editingMessages[index].images = parseImageUrls(imagesArea.value);
-  });
+  const imagesEditor = renderImagesEditor(index);
 
-  row.append(top, textArea, imagesArea, removeBtn);
+  row.append(top, textArea, imagesEditor, removeBtn);
   return row;
+}
+
+// 메시지 하나(index번째)의 첨부 이미지들을 URL + 코멘트 쌍으로 편집하는 영역을 만듭니다.
+function renderImagesEditor(index) {
+  const wrap = document.createElement("div");
+  wrap.className = "images-editor";
+
+  function rerender() {
+    wrap.innerHTML = "";
+    const images = editingMessages[index].images || [];
+
+    images.forEach((image, imgIndex) => {
+      const imgRow = document.createElement("div");
+      imgRow.className = "image-edit-row";
+
+      const urlInput = document.createElement("input");
+      urlInput.type = "text";
+      urlInput.placeholder = "이미지 URL";
+      urlInput.value = image.url || "";
+      urlInput.addEventListener("input", () => {
+        editingMessages[index].images[imgIndex].url = urlInput.value;
+      });
+
+      const commentInput = document.createElement("textarea");
+      commentInput.className = "image-comment-textarea";
+      commentInput.placeholder = "이 이미지에 대한 코멘트 (선택, 붙여넣기 가능)";
+      commentInput.rows = 2;
+      commentInput.value = image.comment || "";
+      commentInput.addEventListener("input", () => {
+        editingMessages[index].images[imgIndex].comment = commentInput.value;
+      });
+
+      const removeImgBtn = document.createElement("button");
+      removeImgBtn.type = "button";
+      removeImgBtn.className = "edit-row-remove";
+      removeImgBtn.textContent = "이 이미지 삭제";
+      removeImgBtn.addEventListener("click", () => {
+        editingMessages[index].images.splice(imgIndex, 1);
+        rerender();
+      });
+
+      imgRow.append(urlInput, commentInput, removeImgBtn);
+      wrap.appendChild(imgRow);
+    });
+
+    const addImageBtn = document.createElement("button");
+    addImageBtn.type = "button";
+    addImageBtn.className = "btn-secondary";
+    addImageBtn.innerHTML = PLUS_ICON_SVG + " 이미지 추가";
+    addImageBtn.addEventListener("click", () => {
+      if (!editingMessages[index].images) editingMessages[index].images = [];
+      editingMessages[index].images.push({ url: "", comment: "" });
+      rerender();
+    });
+    wrap.appendChild(addImageBtn);
+  }
+
+  rerender();
+  return wrap;
 }
 
 function makeInput(placeholder, value, extraClass) {
@@ -729,7 +827,9 @@ newCardSaveBtn.addEventListener("click", async () => {
     dateDisplay: m.dateDisplay || "",
     dateSort: toDateSort(m.dateDisplay),
     text: m.text || "",
-    images: Array.isArray(m.images) ? m.images.filter(Boolean) : [],
+    images: (Array.isArray(m.images) ? m.images : [])
+      .filter((img) => img && img.url && img.url.trim())
+      .map((img) => ({ url: img.url.trim(), comment: (img.comment || "").trim() })),
   }));
 
   newCardSaveBtn.disabled = true;

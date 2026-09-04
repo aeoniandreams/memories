@@ -505,6 +505,45 @@ h1 {
 
 .tweet-images a {
   display: block;
+  position: relative;
+}
+
+/* 코멘트가 있는 이미지에만 렌더링됩니다 (js/app.js 참고). 아웃라인만 있고
+   배경은 투명하며, 아이콘도 아웃라인과 같은 색(테마에 따라 자동 전환)입니다. */
+.image-comment-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--text);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.image-comment-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.comment-modal-panel {
+  max-width: 400px;
+}
+
+.comment-modal-text {
+  margin: 0;
+  padding: 8px 20px 28px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .tweet-images img {
@@ -600,4 +639,42 @@ h1 {
   color: var(--danger);
   font-size: 12px;
   cursor: pointer;
+}
+
+.images-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.image-edit-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.image-edit-row input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* 코멘트는 주로 다른 곳에서 복사해서 붙여넣는 용도라, textarea 자체가 항상
+   배경 없이 투명하고 글자색만 테마를 따라가도록 합니다(붙여넣어도 서식이 안 남음).
+   .edit-row textarea 규칙보다 우선하도록 .edit-row를 붙여 명시도를 맞췄습니다. */
+.edit-row .image-comment-textarea {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text);
+  resize: vertical;
+  min-height: 40px;
 }
