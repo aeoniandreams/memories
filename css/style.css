@@ -560,22 +560,33 @@ h1 {
   .tweet-text { font-size: 12px; }
 
   /* 좌측 코멘트 작성 버튼을 20px -> 16px(아이콘 18px -> 14px)로 줄이고, 그만큼
-     .message-row의 왼쪽 여백도 44px -> 32px로 줄여서, 그 공간을 대부분
+     .message-row의 왼쪽 여백도 44px -> 30px로 줄여서, 그 공간을 대부분
      닉네임/아이디/날짜/대화 내용 쪽(.content-col)이 넓게 쓰도록 넘깁니다.
-     단, 버튼과 프사 사이(8px), 우측 코멘트 보기 버튼과 대화 내용 사이(8px)에는
-     같은 크기의 여백을 남겨서 서로 붙어 보이지 않게 했습니다. */
+     버튼과 프사 사이(왼쪽)는 8px, 우측 코멘트 보기 버튼과 대화 내용 사이는
+     그보다 좁은 4px 간격만 남겼습니다 (8px이었을 땐 아이디·날짜가 한 줄에
+     안 들어가고 줄바꿈됐어서 좁혔습니다). 버튼/버튼 묶음과 대화창(.message-row)
+     모서리 사이 여백도 2px씩 살짝 줄였습니다(왼쪽 8px->6px, 오른쪽 10px->8px). */
   .message-row {
-    padding-left: 32px;
-    padding-right: 48px;
+    padding-left: 30px;
+    padding-right: 42px;
   }
   .tweet-comment-add-btn {
-    left: 8px;
+    left: 6px;
     width: 16px;
     height: 16px;
   }
   .tweet-comment-add-btn svg {
     width: 14px;
     height: 14px;
+  }
+  .tweet-comment-view-stack {
+    right: 8px;
+  }
+
+  /* 홈 화면 카드 썸네일: 대화 내용(.card-text)만 살짝 줄입니다. 닉네임(.card-nickname,
+     14.5px)과 아이디/날짜(.card-meta, 13px)는 요청대로 그대로 둡니다. */
+  .card-text {
+    font-size: 13px;
   }
 }
 
