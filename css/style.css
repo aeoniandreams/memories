@@ -571,7 +571,7 @@ h1 {
      버튼(.tweet-comment-add-btn)의 위치(left)만 0px로 옮겨서 상자 모서리에 거의
      붙였습니다 — 버튼<->프사는 그만큼 28px로 더 넓어졌습니다. */
   .message-row {
-    gap: 10px;
+    gap: 8px;
     padding-left: 44px;
     padding-right: 40px;
   }
