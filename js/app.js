@@ -87,7 +87,7 @@ const SUN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
 const MOON_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
 const PIN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>`;
 const PENCIL_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.986L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`;
-const MESSAGE_SQUARE_MORE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="8" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1" fill="currentColor" stroke="none"/></svg>`;
+const MESSAGE_SQUARE_MORE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="8" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1" fill="currentColor" stroke="none"/></svg>`;
 const PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`;
 
 function getEffectiveTheme() {
@@ -304,21 +304,38 @@ function renderCardGrid() {
 
     card.append(head, textEl);
 
-    const thumbSrcs = normalizeImages(first.images)
-      .map((img) => safeImgSrc(img.url))
-      .filter(Boolean)
+    const thumbImages = normalizeImages(first.images)
+      .filter((img) => safeImgSrc(img.url))
       .slice(0, 2);
-    if (thumbSrcs.length > 0) {
+    if (thumbImages.length > 0) {
       const thumbRow = document.createElement("div");
       thumbRow.className = "card-thumbs";
-      thumbSrcs.forEach((src) => {
+      thumbImages.forEach((thumbImage) => {
+        const thumbWrap = document.createElement("div");
+        thumbWrap.className = "card-thumb-wrap";
         const thumb = document.createElement("img");
         thumb.className = "card-thumb";
-        thumb.src = src;
+        thumb.src = thumbImage.url;
         thumb.loading = "lazy";
         thumb.referrerPolicy = "no-referrer";
         thumb.alt = "";
-        thumbRow.appendChild(thumb);
+        thumbWrap.appendChild(thumb);
+
+        if (thumbImage.comment) {
+          const commentBtn = document.createElement("button");
+          commentBtn.type = "button";
+          commentBtn.className = "image-comment-btn";
+          commentBtn.innerHTML = MESSAGE_SQUARE_MORE_ICON_SVG;
+          commentBtn.setAttribute("aria-label", "이미지 코멘트 보기");
+          commentBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openCommentModal(thumbImage.comment);
+          });
+          thumbWrap.appendChild(commentBtn);
+        }
+
+        thumbRow.appendChild(thumbWrap);
       });
       card.appendChild(thumbRow);
     }
