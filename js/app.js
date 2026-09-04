@@ -414,6 +414,25 @@ sortToggleBtn.addEventListener("click", () => {
   renderCardGrid();
 });
 
+// 예전 버전엔 역할(user/admin)당 코멘트를 하나만 {type, text} 객체로 저장했습니다.
+// 지금은 여러 개를 배열([{id,type,text}, ...])로 저장하는데, 이미 저장되어 있던
+// 예전 형식 문서를 만나면 배열로 바꿔줘야 합니다 (안 그러면 .forEach가 배열이 아닌
+// 객체에서 호출되어 에러가 나고, 그 트윗부터 이후 메시지 전체가 안 그려집니다).
+function normalizeCommentField(field) {
+  if (Array.isArray(field)) return field;
+  if (field && typeof field === "object" && field.text) {
+    return [{ id: genCommentId(), type: field.type || "message-circle", text: field.text }];
+  }
+  return [];
+}
+
+function normalizeCommentDoc(data) {
+  return {
+    user: normalizeCommentField(data && data.user),
+    admin: normalizeCommentField(data && data.admin),
+  };
+}
+
 // ---------- 상세보기 모달 ----------
 async function openDetail(id, data) {
   currentDetailCardId = id;
@@ -425,7 +444,7 @@ async function openDetail(id, data) {
   currentTweetComments = new Map();
   try {
     const snap = await getDocs(collection(db, "cards", id, "tweetComments"));
-    snap.forEach((d) => currentTweetComments.set(d.id, d.data()));
+    snap.forEach((d) => currentTweetComments.set(d.id, normalizeCommentDoc(d.data())));
   } catch (e) {
     console.error("트윗 코멘트를 불러오지 못했습니다.", e);
   }
