@@ -515,8 +515,8 @@ h1 {
 
 /* 코멘트가 있는 이미지에만 렌더링됩니다 (js/app.js 참고). 아웃라인만 있고
    배경은 투명하며, 아이콘도 아웃라인과 같은 색(테마에 따라 자동 전환)입니다.
-   box-shadow로 배경색(var(--bg))과 같은 색의 얇은 링을 둘러서, 버튼 자체는
-   투명하게 유지하면서도 사진 색에 묻히지 않게 합니다. */
+   버튼 테두리(var(--text)) 바깥쪽과 안쪽 모두에 배경색(var(--bg)) 링을 둘러서,
+   버튼 자체는 투명하게 유지하면서도 사진 색에 묻히지 않게 합니다. */
 .image-comment-btn {
   position: absolute;
   bottom: 8px;
@@ -526,7 +526,7 @@ h1 {
   border-radius: 50%;
   background: transparent;
   border: 2px solid var(--text);
-  box-shadow: 0 0 0 2px var(--bg);
+  box-shadow: 0 0 0 2px var(--bg), inset 0 0 0 2px var(--bg);
   color: var(--text);
   display: flex;
   align-items: center;
