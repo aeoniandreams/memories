@@ -67,12 +67,16 @@
   </div>
 
   <!-- 트윗 코멘트 보기/작성/수정. 데스크탑에서는 위 대화창 옆 우측 공간에 뜨고,
-       모바일에서는 다른 모달처럼 어두워진 화면 위에 뜹니다 (css의 media query 참고). -->
+       모바일(가로/세로 공통)에서는 화면 아래에서 올라오는 바텀시트 형태로 뜹니다
+       (css의 media query 참고). -->
   <div id="tweet-comment-panel" class="tweet-comment-panel" hidden>
     <div class="tweet-comment-panel-card">
       <div class="modal-header">
         <button id="tweet-comment-panel-back-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
-        <button id="tweet-comment-panel-action-btn" class="btn-secondary" hidden></button>
+        <div class="modal-header-right">
+          <button id="tweet-comment-panel-action-btn" class="btn-secondary" hidden></button>
+          <button id="tweet-comment-panel-delete-btn" class="btn-ghost danger" hidden>삭제</button>
+        </div>
       </div>
       <div id="tweet-comment-panel-body" class="tweet-comment-panel-body"></div>
     </div>

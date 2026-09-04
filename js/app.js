@@ -61,6 +61,7 @@ const detailEditBtn = document.getElementById("detail-edit-btn");
 const tweetCommentPanel = document.getElementById("tweet-comment-panel");
 const tweetCommentPanelBackBtn = document.getElementById("tweet-comment-panel-back-btn");
 const tweetCommentPanelActionBtn = document.getElementById("tweet-comment-panel-action-btn");
+const tweetCommentPanelDeleteBtn = document.getElementById("tweet-comment-panel-delete-btn");
 const tweetCommentPanelBody = document.getElementById("tweet-comment-panel-body");
 
 const newCardBtn = document.getElementById("new-card-btn");
@@ -539,7 +540,21 @@ function makeTweetCommentViewBtn(commentKey, role, commentEntry) {
   icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
 
   btn.append(bubble, icon);
-  btn.addEventListener("click", () => openTweetCommentView(commentKey, role, commentEntry.id));
+  btn.addEventListener("click", () => {
+    // 이미 이 코멘트를 보여주고 있는 패널이 열려 있으면, 뒤로가기 없이 바로 닫습니다.
+    const state = tweetCommentPanelState;
+    const alreadyOpen =
+      !tweetCommentPanel.hidden &&
+      state &&
+      state.commentKey === commentKey &&
+      state.role === role &&
+      state.entryId === commentEntry.id;
+    if (alreadyOpen) {
+      closeTweetCommentPanel();
+    } else {
+      openTweetCommentView(commentKey, role, commentEntry.id);
+    }
+  });
   return btn;
 }
 
@@ -761,6 +776,7 @@ function renderTweetCommentPanel() {
     const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
     tweetCommentPanelActionBtn.hidden = !canEdit;
     tweetCommentPanelActionBtn.textContent = "수정";
+    tweetCommentPanelDeleteBtn.hidden = !canEdit;
     return;
   }
 
@@ -798,6 +814,7 @@ function renderTweetCommentPanel() {
 
   tweetCommentPanelActionBtn.hidden = false;
   tweetCommentPanelActionBtn.textContent = "저장";
+  tweetCommentPanelDeleteBtn.hidden = true; // 수정/작성 중에는 삭제 버튼을 숨깁니다.
 }
 
 tweetCommentPanelBackBtn.addEventListener("click", closeTweetCommentPanel);
@@ -834,9 +851,27 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     arr.push({ id: genCommentId(), type, text });
   }
 
+  await persistCommentRoleArray(state.commentKey, role, arr, "코멘트 저장에 실패했습니다: ");
+});
+
+tweetCommentPanelDeleteBtn.addEventListener("click", async () => {
+  const state = tweetCommentPanelState;
+  if (!state || state.mode !== "view" || !currentDetailCardId) return;
+  if (!confirm("이 코멘트를 삭제할까요? 되돌릴 수 없어요.")) return;
+
+  const commentDoc = currentTweetComments.get(state.commentKey) || {};
+  const arr = (Array.isArray(commentDoc[state.role]) ? commentDoc[state.role] : []).filter(
+    (e) => e.id !== state.entryId
+  );
+
+  await persistCommentRoleArray(state.commentKey, state.role, arr, "코멘트 삭제에 실패했습니다: ");
+});
+
+// 코멘트 배열을 저장하고, 성공하면 패널을 닫은 뒤 상세 화면을 다시 불러와 반영합니다.
+async function persistCommentRoleArray(commentKey, role, arr, errorPrefix) {
   try {
     await setDoc(
-      doc(db, "cards", currentDetailCardId, "tweetComments", state.commentKey),
+      doc(db, "cards", currentDetailCardId, "tweetComments", commentKey),
       { [role]: arr, updatedAt: serverTimestamp() },
       { merge: true }
     );
@@ -844,9 +879,9 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
     openDetail(currentDetailCardId, currentDetailData);
   } catch (e) {
-    alert("코멘트 저장에 실패했습니다: " + e.message);
+    alert(errorPrefix + e.message);
   }
-});
+}
 
 detailDeleteBtn.addEventListener("click", async () => {
   if (!currentDetailCardId) return;

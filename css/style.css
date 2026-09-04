@@ -177,6 +177,13 @@ h1 {
   gap: 8px;
 }
 
+/* [hidden] 속성은 브라우저 기본값이 display:none인데, 아래 display:inline-flex가
+   그걸 덮어써서 .hidden = true를 줘도 버튼이 계속 보이는 문제가 있었습니다
+   (예: 코멘트 수정 권한이 없어도 "수정" 버튼이 보이던 문제). 이 규칙으로 막습니다. */
+.btn-primary[hidden], .btn-secondary[hidden], .btn-ghost[hidden] {
+  display: none;
+}
+
 .btn-primary, .btn-secondary, .btn-ghost {
   border: none;
   border-radius: 999px;
@@ -595,7 +602,7 @@ h1 {
   top: 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tweet-comment-view-btn {
@@ -675,8 +682,8 @@ h1 {
   outline: none;
 }
 
-/* 코멘트 보기/작성 패널. 모바일(기본값)에서는 다른 모달처럼 화면 전체를 어둡게 덮고
-   가운데에 뜨는 방식이고, 데스크탑(아래 media query)에서는 배경을 덮지 않고 대화창
+/* 코멘트 보기/작성 패널. 모바일(기본값, 가로/세로 모두)에서는 화면 아래에서 올라오는
+   바텀시트 형태이고, 데스크탑(아래 media query)에서는 배경을 덮지 않고 대화창
    오른쪽 바깥 공간에 떠 있는 방식으로 바뀝니다. */
 .tweet-comment-panel[hidden] {
   display: none;
@@ -688,17 +695,16 @@ h1 {
   background: rgba(0, 0, 0, 0.4);
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: flex-end;
   z-index: 101;
-  padding: 24px 12px;
 }
 
 .tweet-comment-panel-card {
   background: var(--bg);
   width: 100%;
-  max-width: 400px;
-  max-height: calc(100vh - 48px);
-  border-radius: 16px;
+  max-width: 600px;
+  max-height: 70vh;
+  border-radius: 16px 16px 0 0;
   overflow-y: auto;
 }
 
@@ -724,6 +730,8 @@ h1 {
   .tweet-comment-panel-card {
     width: 320px;
     max-width: 320px;
+    max-height: calc(100vh - 48px);
+    border-radius: 16px;
   }
 }
 
