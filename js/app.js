@@ -389,7 +389,7 @@ function renderCardGrid() {
           commentBtn.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            openCommentModal(thumbImage.comment);
+            openThumbCommentModal(thumbImage.comment);
           });
           thumbWrap.appendChild(commentBtn);
         }
@@ -756,7 +756,8 @@ detailModal.addEventListener("click", (e) => {
   if (e.target === detailModal) closeDetail();
 });
 
-// ---------- 이미지 코멘트 보기 ----------
+// ---------- 이미지 코멘트 보기 (대화 상세 화면 안, 트윗 이미지용) ----------
+// 코멘트 패널과 같은 레이아웃(데스크탑: 대화창 옆, 모바일: 바텀시트)을 씁니다.
 const commentModal = document.getElementById("comment-modal");
 const commentModalText = document.getElementById("comment-modal-text");
 const commentModalCloseBtn = document.getElementById("comment-modal-close-btn");
@@ -773,6 +774,26 @@ function closeCommentModal() {
 commentModalCloseBtn.addEventListener("click", closeCommentModal);
 commentModal.addEventListener("click", (e) => {
   if (e.target === commentModal) closeCommentModal();
+});
+
+// ---------- 이미지 코멘트 보기 (홈 화면 카드 썸네일용) ----------
+// 옆에 뜰 대화창이 없는 상황이라, 원래 방식(배경을 어둡게 덮고 가운데 뜨는 모달)을 씁니다.
+const thumbCommentModal = document.getElementById("thumb-comment-modal");
+const thumbCommentModalText = document.getElementById("thumb-comment-modal-text");
+const thumbCommentModalCloseBtn = document.getElementById("thumb-comment-modal-close-btn");
+
+function openThumbCommentModal(comment) {
+  thumbCommentModalText.textContent = comment;
+  thumbCommentModal.hidden = false;
+}
+
+function closeThumbCommentModal() {
+  thumbCommentModal.hidden = true;
+}
+
+thumbCommentModalCloseBtn.addEventListener("click", closeThumbCommentModal);
+thumbCommentModal.addEventListener("click", (e) => {
+  if (e.target === thumbCommentModal) closeThumbCommentModal();
 });
 
 // ---------- 트윗 코멘트 보기/작성/수정 ----------

@@ -615,6 +615,11 @@ h1 {
   height: 14px;
 }
 
+/* 홈 화면 카드 썸네일의 이미지 코멘트 보기 전용(#thumb-comment-modal). */
+.comment-modal-panel {
+  max-width: 400px;
+}
+
 .comment-modal-text {
   margin: 0;
   padding: 8px 20px 28px;

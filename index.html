@@ -90,15 +90,26 @@
   </div>
 </div>
 
-<!-- 이미지 코멘트 보기. 트윗 코멘트 패널(#tweet-comment-panel)과 완전히 같은 레이아웃
-     클래스를 씁니다: 데스크탑에서는 대화창 옆에, 모바일에서는 아래에서 올라오는
-     바텀시트로 뜹니다. -->
+<!-- 이미지 코멘트 보기 (대화 상세 화면 안, 트윗에 붙은 이미지용). 트윗 코멘트
+     패널(#tweet-comment-panel)과 완전히 같은 레이아웃 클래스를 씁니다: 데스크탑에서는
+     대화창 옆에, 모바일에서는 아래에서 올라오는 바텀시트로 뜹니다. -->
 <div id="comment-modal" class="tweet-comment-panel" hidden>
   <div class="tweet-comment-panel-card">
     <div class="modal-header">
       <button id="comment-modal-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
     </div>
     <p id="comment-modal-text" class="comment-modal-text"></p>
+  </div>
+</div>
+
+<!-- 이미지 코멘트 보기 (홈 화면 카드 썸네일용). 옆에 뜰 "대화창" 자체가 없는
+     상황이라, 원래 방식대로 배경을 어둡게 덮고 화면 가운데에 뜨는 모달을 씁니다. -->
+<div id="thumb-comment-modal" class="modal-overlay" hidden>
+  <div class="modal-panel comment-modal-panel">
+    <div class="modal-header">
+      <button id="thumb-comment-modal-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+    </div>
+    <p id="thumb-comment-modal-text" class="comment-modal-text"></p>
   </div>
 </div>
 
