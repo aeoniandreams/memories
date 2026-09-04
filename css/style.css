@@ -568,16 +568,15 @@ h1 {
      자체는 이 padding이 아니라 .content-col 안에 있습니다.
      현재 간격: 오른쪽 버튼 묶음과 상자 모서리 사이는 4px, 버튼 묶음<->대화 내용은
      6px(상자 오른쪽 여백 40px: 40-(4+30)=6). 왼쪽은 상자 여백(44px)은 그대로 두고
-     버튼(.tweet-comment-add-btn)의 위치(left)만 2px -> 아주 살짝 왼쪽으로
-     옮겼습니다 — 그래서 버튼<->상자 모서리는 4px->2px로 좁아지고, 버튼<->프사는
-     그만큼 24px->26px로 넓어졌습니다. */
+     버튼(.tweet-comment-add-btn)의 위치(left)만 0px로 옮겨서 상자 모서리에 거의
+     붙였습니다 — 버튼<->프사는 그만큼 28px로 더 넓어졌습니다. */
   .message-row {
     gap: 10px;
     padding-left: 44px;
     padding-right: 40px;
   }
   .tweet-comment-add-btn {
-    left: 2px;
+    left: 0;
     width: 16px;
     height: 16px;
   }
