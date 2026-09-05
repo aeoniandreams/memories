@@ -776,10 +776,12 @@ h1 {
   padding: 8px 20px 20px;
 }
 
+/* 손잡이(왼쪽)와 내용(입력칸+삭제 버튼, 오른쪽)을 나란히 놓습니다. */
 .comment-block-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 6px;
   border-radius: 8px;
 }
 
@@ -793,16 +795,21 @@ h1 {
   outline-offset: 2px;
 }
 
-.comment-block-handle-bar {
+.comment-block-content {
+  flex: 1;
+  min-width: 0;
   display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .comment-block-drag-handle {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 18px;
+  width: 18px;
+  height: 30px;
   color: var(--muted);
   cursor: grab;
 }
@@ -814,14 +821,14 @@ h1 {
   height: 16px;
 }
 
-.comment-block-row .tweet-comment-editor-textarea {
+.comment-block-content .tweet-comment-editor-textarea {
   margin-top: 0;
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 8px;
 }
 
-.comment-block-row input {
+.comment-block-content input {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 9px;
@@ -830,7 +837,7 @@ h1 {
   color: var(--text);
 }
 
-.comment-block-row .edit-row-remove {
+.comment-block-content .edit-row-remove {
   align-self: flex-end;
 }
 
@@ -915,7 +922,12 @@ h1 {
 }
 
 .tweet-comment-panel-card {
-  background: var(--bg);
+  /* 헤더(.modal-header)는 --modal-bg를 쓰는데 본문은 --bg를 쓰고 있어서,
+     야간 모드에서만 두 값이 달라(--modal-bg: #1e2126, --bg: #15181c)
+     헤더와 본문 색이 미묘하게 어긋나 보였습니다(기본 모드는 --modal-bg가
+     --bg와 같은 값이라 안 보였음). 대화창(.modal-panel)과 같은 색을 쓰도록
+     맞췄습니다. */
+  background: var(--modal-bg);
   width: 100%;
   max-width: 600px;
   max-height: 70vh;
