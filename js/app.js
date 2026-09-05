@@ -510,12 +510,14 @@ function renderMessageRow(msg, commentKey, comments) {
 
   row.append(avatarCol, contentCol);
 
-  // 코멘트는 여러 개 있을 수 있어서(유저 여러 개 + 관리자 여러 개), 있는 만큼 위에서부터
-  // 아래로 쌓아서 버튼을 만듭니다. 새로 추가한 코멘트는 그 역할(user/admin)의 배열 맨
-  // 뒤에 붙으므로, 자연히 기존 버튼들 아래에 새 버튼이 추가되는 순서가 됩니다.
+  // 코멘트는 여러 개 있을 수 있어서(유저 여러 개 + 관리자 여러 개), 작성 시각
+  // (createdAt) 순으로 정렬해 위에서부터 아래로 쌓습니다 — 역할(user/admin)과
+  // 무관하게 나중에 쓰인 코멘트일수록 아래에 오도록. createdAt이 없는(이전
+  // 버전에서 저장된) 코멘트는 가장 오래된 것으로 취급합니다.
   const viewEntries = [];
   (comments && comments.user ? comments.user : []).forEach((entry) => viewEntries.push({ role: "user", entry }));
   (comments && comments.admin ? comments.admin : []).forEach((entry) => viewEntries.push({ role: "admin", entry }));
+  viewEntries.sort((a, b) => (a.entry.createdAt || 0) - (b.entry.createdAt || 0));
 
   if (viewEntries.length > 0) {
     const viewStack = document.createElement("div");
@@ -910,7 +912,7 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     }
   } else {
     if (!text) return; // 새 코멘트는 빈 채로 저장하지 않습니다.
-    arr.push({ id: genCommentId(), type, text });
+    arr.push({ id: genCommentId(), type, text, createdAt: Date.now() });
   }
 
   await persistCommentRoleArray(state.commentKey, role, arr, "코멘트 저장에 실패했습니다: ");
