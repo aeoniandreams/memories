@@ -833,6 +833,8 @@ const commentModalActionBtn = document.getElementById("comment-modal-action-btn"
 let commentModalState = null;
 
 function openCommentModal(comment, options = {}) {
+  // 트윗 코멘트 작성/보기 창과 겹쳐서 뜨지 않도록, 열려 있으면 먼저 닫습니다.
+  closeTweetCommentPanel();
   commentModalState = { text: comment || "", canEdit: !!options.canEdit, onSave: options.onSave || null, mode: "view", key: options.key || null };
   renderCommentModalBody();
   commentModal.hidden = false;
@@ -1035,12 +1037,15 @@ function createCommentBlockImageView(urls) {
 }
 
 function openTweetCommentView(commentKey, role, entryId) {
+  // 이미지 설명 창과 겹쳐서 뜨지 않도록, 열려 있으면 먼저 닫습니다.
+  closeCommentModal();
   tweetCommentPanelState = { commentKey, role, entryId, mode: "view" };
   renderTweetCommentPanel();
   tweetCommentPanel.hidden = false;
 }
 
 function openTweetCommentCompose(commentKey) {
+  closeCommentModal();
   tweetCommentPanelState = { commentKey, role: null, entryId: null, mode: "compose", adminType: "message-circle" };
   renderTweetCommentPanel();
   tweetCommentPanel.hidden = false;
