@@ -1147,9 +1147,8 @@ function renderTweetCommentPanel() {
     // 손잡이(grip)를 드래그해서 블록 순서를 바꿉니다. draggable은 손잡이에만
     // 걸어서(입력칸을 드래그로 오해하지 않게) 시작하고, 드래그 중 보이는
     // 유령 이미지는 setDragImage로 손잡이가 아니라 블록 전체(row)가 되도록
-    // 합니다.
-    const handleBar = document.createElement("div");
-    handleBar.className = "comment-block-handle-bar";
+    // 합니다. 작성창 위가 아니라 왼쪽 옆에 오도록, row를 가로 방향으로 두고
+    // 손잡이와 내용(입력칸+삭제 버튼)을 나란히 놓습니다.
     const handle = document.createElement("span");
     handle.className = "comment-block-drag-handle";
     handle.innerHTML = GRIP_ICON_SVG;
@@ -1164,8 +1163,7 @@ function renderTweetCommentPanel() {
     handle.addEventListener("dragend", () => {
       row.classList.remove("dragging");
     });
-    handleBar.appendChild(handle);
-    row.appendChild(handleBar);
+    row.appendChild(handle);
 
     row.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -1185,6 +1183,9 @@ function renderTweetCommentPanel() {
       renderTweetCommentPanel();
     });
 
+    const content = document.createElement("div");
+    content.className = "comment-block-content";
+
     if (block.type === "image") {
       const urlInput = document.createElement("input");
       urlInput.type = "text";
@@ -1193,7 +1194,7 @@ function renderTweetCommentPanel() {
       urlInput.addEventListener("input", () => {
         block.urls = urlInput.value.split(",").map((u) => u.trim()).filter(Boolean);
       });
-      row.appendChild(urlInput);
+      content.appendChild(urlInput);
     } else {
       const textarea = document.createElement("textarea");
       textarea.className = "tweet-comment-editor-textarea";
@@ -1201,7 +1202,7 @@ function renderTweetCommentPanel() {
       textarea.placeholder = "이 트윗에 대한 코멘트를 입력하세요";
       textarea.value = block.text || "";
       textarea.addEventListener("input", () => { block.text = textarea.value; });
-      row.appendChild(textarea);
+      content.appendChild(textarea);
     }
 
     const removeBtn = document.createElement("button");
@@ -1212,8 +1213,9 @@ function renderTweetCommentPanel() {
       commentComposeBlocks.splice(blockIndex, 1);
       renderTweetCommentPanel();
     });
-    row.appendChild(removeBtn);
+    content.appendChild(removeBtn);
 
+    row.appendChild(content);
     blockList.appendChild(row);
   });
   tweetCommentPanelBody.appendChild(blockList);
