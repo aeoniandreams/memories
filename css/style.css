@@ -675,6 +675,14 @@ h1 {
   gap: 4px;
 }
 
+/* 말풍선(bubble-shape)과 그 위 아이콘(bubble-icon)을 겹쳐 그릴 때, 예전엔
+   absolute + top:46%(퍼센트) + transform으로 위치를 맞췄습니다. 46%는
+   30px의 13.8px처럼 소수점 값이 되는데, 이 소수점을 실제 화면 픽셀에
+   맞추는 반올림 방식이 브라우저/화면 배율(특히 모바일의 높은 DPR과
+   데스크탑의 낮은 DPR)에 따라 달라져서, 데스크탑에서만 아이콘이 살짝
+   안 맞아 보이는 원인이 됐습니다. absolute+퍼센트 대신 grid로 두 요소를
+   같은 칸에 완전히 겹쳐서 그 칸의 정중앙에 정렬하면, 화면 배율과 무관하게
+   항상 같은 결과가 나옵니다. */
 .tweet-comment-view-btn {
   position: relative;
   width: 30px;
@@ -683,11 +691,11 @@ h1 {
   border: none;
   background: transparent;
   cursor: pointer;
+  display: grid;
 }
 
 .tweet-comment-view-btn .bubble-shape {
-  position: absolute;
-  inset: 0;
+  grid-area: 1 / 1;
   color: var(--border);
 }
 .tweet-comment-view-btn .bubble-shape svg {
@@ -697,10 +705,8 @@ h1 {
 }
 
 .tweet-comment-view-btn .bubble-icon {
-  position: absolute;
-  top: 46%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  grid-area: 1 / 1;
+  place-self: center;
   color: var(--text);
 }
 .tweet-comment-view-btn .bubble-icon svg {
@@ -829,6 +835,11 @@ h1 {
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 8px;
+  /* JS(autoResizeTextarea)가 내용물 분량에 맞춰 높이를 직접 조절하니,
+     사용자가 손으로 늘리는 resize 손잡이와 그 전까지 보일 스크롤바는
+     숨겨서 "내용만큼 자연스럽게 늘어나는 칸"처럼 보이게 합니다. */
+  resize: none;
+  overflow: hidden;
 }
 
 /* 이미지 URL 입력칸: 내용물(URL 개수/길이)에 따라 세로로 늘어나야 해서

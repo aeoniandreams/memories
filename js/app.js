@@ -804,13 +804,19 @@ function closeDetail() {
 // 뒤로가기를 누르면 여기서 할 일이 없어서 브라우저 기본 동작(사이트 나가기)이
 // 그대로 진행됩니다.
 window.addEventListener("popstate", () => {
-  if (!detailModal.hidden) {
-    detailHistoryPushed = false;
-    detailModal.hidden = true;
-    closeCommentModal();
-    closeTweetCommentPanel();
-    currentDetailCardId = null;
+  if (detailModal.hidden) return;
+  // 코멘트를 쓰거나 고치는 중에 폰 뒤로가기를 누르면, 확인 없이 바로
+  // 나가는 대신 먼저 물어봅니다. 취소하면 방금 소비된 히스토리 항목을
+  // 다시 쌓아서(pushState) 뒤로가기가 없었던 것처럼 되돌립니다.
+  if (isEditingTweetComment() && !confirm("정말 뒤로 가시겠어요? 작성 중인 코멘트는 되돌릴 수 없습니다.")) {
+    history.pushState({ memoriesDetailOpen: true }, "");
+    return;
   }
+  detailHistoryPushed = false;
+  detailModal.hidden = true;
+  closeCommentModal();
+  closeTweetCommentPanel();
+  currentDetailCardId = null;
 });
 
 detailCloseBtn.addEventListener("click", closeDetail);
@@ -1067,6 +1073,27 @@ function closeTweetCommentPanel() {
   setActiveTweetCommentViewBtn(null);
 }
 
+// 코멘트를 새로 쓰거나 고치는 중(저장 전)인지 확인합니다. 그냥 보기만 하는
+// 중이면 잃을 내용이 없으니 확인 없이 바로 나가도 됩니다.
+function isEditingTweetComment() {
+  return (
+    !tweetCommentPanel.hidden &&
+    !!tweetCommentPanelState &&
+    (tweetCommentPanelState.mode === "edit" || tweetCommentPanelState.mode === "compose")
+  );
+}
+
+// 코멘트 작성/수정 창을 "나가려는" 시도(뒤로가기 버튼, 바깥 클릭, 폰 뒤로가기)를
+// 여기서 공통으로 처리합니다. 편집 중이면 확인창을 띄우고, 취소하면 아무 일도
+// 안 일어나게(false 반환) 해서 작성하던 내용이 실수로 사라지지 않게 합니다.
+function tryLeaveTweetCommentPanel() {
+  if (isEditingTweetComment() && !confirm("정말 뒤로 가시겠어요? 작성 중인 코멘트는 되돌릴 수 없습니다.")) {
+    return false;
+  }
+  closeTweetCommentPanel();
+  return true;
+}
+
 function renderTweetCommentPanel() {
   const state = tweetCommentPanelState;
   tweetCommentPanelBody.innerHTML = "";
@@ -1263,8 +1290,13 @@ function renderTweetCommentPanel() {
       textarea.rows = 3;
       textarea.placeholder = "이 트윗에 대한 코멘트를 입력하세요";
       textarea.value = block.text || "";
-      textarea.addEventListener("input", () => { block.text = textarea.value; });
+      textarea.addEventListener("input", () => {
+        block.text = textarea.value;
+        autoResizeTextarea(textarea);
+      });
       content.appendChild(textarea);
+      // 이미지 URL 칸과 마찬가지로, 문서에 실제로 붙은 다음 높이를 맞춥니다.
+      pendingAutoResizeInputs.push(textarea);
     }
 
     const removeBtn = document.createElement("button");
@@ -1290,9 +1322,9 @@ function renderTweetCommentPanel() {
   tweetCommentPanelDeleteBtn.hidden = true; // 수정/작성 중에는 삭제 버튼을 숨깁니다.
 }
 
-tweetCommentPanelBackBtn.addEventListener("click", closeTweetCommentPanel);
+tweetCommentPanelBackBtn.addEventListener("click", tryLeaveTweetCommentPanel);
 tweetCommentPanel.addEventListener("click", (e) => {
-  if (e.target === tweetCommentPanel) closeTweetCommentPanel();
+  if (e.target === tweetCommentPanel) tryLeaveTweetCommentPanel();
 });
 
 tweetCommentPanelActionBtn.addEventListener("click", async () => {
