@@ -698,7 +698,7 @@ h1 {
 
 .tweet-comment-view-btn .bubble-icon {
   position: absolute;
-  top: 46%;
+  top: calc(46% + 2px);
   left: 50%;
   transform: translate(-50%, -50%);
   color: var(--text);
