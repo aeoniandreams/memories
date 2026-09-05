@@ -980,6 +980,13 @@ function getCommentBlocks(entry) {
   return [{ type: "text", text: (entry && entry.text) || "" }];
 }
 
+// textarea 높이를 내용물 분량에 맞게 늘립니다(한 줄 고정 대신 자동으로
+// 커지는 입력칸을 만들 때 공통으로 씁니다).
+function autoResizeTextarea(el) {
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
 // 이미지 블록의 URL 목록을 꺼냅니다. urls(배열, 여러 장)가 없으면 예전
 // 한 장짜리 형식(url 문자열 하나)도 자연스럽게 배열로 바꿔줍니다.
 function getBlockImageUrls(block) {
@@ -1145,6 +1152,7 @@ function renderTweetCommentPanel() {
 
   const blockList = document.createElement("div");
   blockList.className = "comment-block-list";
+  const pendingAutoResizeInputs = [];
   commentComposeBlocks.forEach((block, blockIndex) => {
     const row = document.createElement("div");
     row.className = "comment-block-row";
@@ -1154,6 +1162,8 @@ function renderTweetCommentPanel() {
     // 유령 이미지는 setDragImage로 손잡이가 아니라 블록 전체(row)가 되도록
     // 합니다. 작성창 위가 아니라 왼쪽 옆에 오도록, row를 가로 방향으로 두고
     // 손잡이와 내용(입력칸+삭제 버튼)을 나란히 놓습니다.
+    row.dataset.blockIndex = blockIndex;
+
     const handle = document.createElement("span");
     handle.className = "comment-block-drag-handle";
     handle.innerHTML = GRIP_ICON_SVG;
@@ -1168,6 +1178,46 @@ function renderTweetCommentPanel() {
     handle.addEventListener("dragend", () => {
       row.classList.remove("dragging");
     });
+
+    // 모바일 터치는 HTML5 드래그 앤 드롭 이벤트가 안 뜨기 때문에, 손잡이를
+    // 손가락으로 누르고 움직이는 동안 그 아래에 있는 블록을 직접 찾아서
+    // (elementFromPoint) 같은 방식으로 순서를 바꿉니다.
+    let touchFromIndex = null;
+    let touchOverRow = null;
+    handle.addEventListener("touchstart", () => {
+      touchFromIndex = blockIndex;
+      touchOverRow = null;
+      row.classList.add("dragging");
+    }, { passive: true });
+    handle.addEventListener("touchmove", (e) => {
+      if (touchFromIndex === null) return;
+      e.preventDefault(); // 손잡이를 움직이는 동안은 페이지 스크롤 대신 순서 바꾸기로 씁니다.
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const targetRow = target && target.closest(".comment-block-row");
+      if (touchOverRow && touchOverRow !== targetRow) touchOverRow.classList.remove("drag-over");
+      if (targetRow && targetRow !== row) {
+        targetRow.classList.add("drag-over");
+        touchOverRow = targetRow;
+      } else {
+        touchOverRow = null;
+      }
+    }, { passive: false });
+    handle.addEventListener("touchend", () => {
+      const fromIndex = touchFromIndex;
+      const overRow = touchOverRow;
+      touchFromIndex = null;
+      touchOverRow = null;
+      row.classList.remove("dragging");
+      if (overRow) overRow.classList.remove("drag-over");
+      if (fromIndex === null || !overRow) return;
+      const toIndex = Number(overRow.dataset.blockIndex);
+      if (Number.isNaN(toIndex) || toIndex === fromIndex) return;
+      const [moved] = commentComposeBlocks.splice(fromIndex, 1);
+      commentComposeBlocks.splice(toIndex, 0, moved);
+      renderTweetCommentPanel();
+    });
+
     row.appendChild(handle);
 
     row.addEventListener("dragover", (e) => {
@@ -1192,14 +1242,21 @@ function renderTweetCommentPanel() {
     content.className = "comment-block-content";
 
     if (block.type === "image") {
-      const urlInput = document.createElement("input");
-      urlInput.type = "text";
+      // 한 줄짜리 input 대신 textarea를 써서, URL을 여러 개(쉼표 구분) 넣어
+      // 줄바꿈이 되거나 길어지면 내용물 분량만큼 칸이 늘어나게 합니다.
+      const urlInput = document.createElement("textarea");
+      urlInput.className = "comment-block-image-input";
+      urlInput.rows = 1;
       urlInput.placeholder = "이미지 URL (여러 장은 쉼표로 구분)";
       urlInput.value = (block.urls || []).join(", ");
       urlInput.addEventListener("input", () => {
         block.urls = urlInput.value.split(",").map((u) => u.trim()).filter(Boolean);
+        autoResizeTextarea(urlInput);
       });
       content.appendChild(urlInput);
+      // scrollHeight는 실제 화면에 붙어야 정확히 계산되니, blockList 전체가
+      // 문서에 붙은 다음 한 번 맞춰줍니다(아래 tweetCommentPanelBody.appendChild 이후).
+      pendingAutoResizeInputs.push(urlInput);
     } else {
       const textarea = document.createElement("textarea");
       textarea.className = "tweet-comment-editor-textarea";
@@ -1224,6 +1281,9 @@ function renderTweetCommentPanel() {
     blockList.appendChild(row);
   });
   tweetCommentPanelBody.appendChild(blockList);
+  // scrollHeight는 문서에 실제로 붙어 레이아웃이 계산된 뒤에야 정확하니,
+  // 위에서 blockList를 붙인 다음 이미지 URL 입력칸들의 높이를 맞춥니다.
+  pendingAutoResizeInputs.forEach(autoResizeTextarea);
 
   tweetCommentPanelActionBtn.hidden = false;
   tweetCommentPanelActionBtn.textContent = "저장";

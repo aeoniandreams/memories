@@ -812,6 +812,9 @@ h1 {
   height: 30px;
   color: var(--muted);
   cursor: grab;
+  /* 손잡이를 터치로 누르고 움직이는 동안 브라우저의 기본 스크롤 제스처가
+     끼어들지 않게 막습니다(모바일 터치 드래그 재정렬용). */
+  touch-action: none;
 }
 .comment-block-drag-handle:active {
   cursor: grabbing;
@@ -828,13 +831,21 @@ h1 {
   border-radius: 8px;
 }
 
-.comment-block-content input {
+/* 이미지 URL 입력칸: 내용물(URL 개수/길이)에 따라 세로로 늘어나야 해서
+   input이 아니라 textarea를 쓰고, JS(autoResizeTextarea)가 매번 높이를
+   scrollHeight에 맞춥니다. resize 손잡이나 스크롤바가 따로 안 보이게
+   막아서 "늘어나는 한 칸"처럼 보이게 합니다. */
+.comment-block-image-input {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 9px;
   font-size: 13px;
+  font-family: inherit;
   background: var(--bg);
   color: var(--text);
+  resize: none;
+  overflow: hidden;
+  min-height: 32px;
 }
 
 .comment-block-content .edit-row-remove {
