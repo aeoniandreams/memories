@@ -759,36 +759,29 @@ h1 {
 }
 
 .tweet-comment-panel {
-  /* 배경(어둡게 덮는 막)만 담당합니다. 예전에는 이 요소에 height:100dvh를 주고
-     flex(align-items:flex-end)로 카드를 바닥에 붙이는 방식을 썼는데, 일부
-     모바일 브라우저에서 주소창이 나타났다 사라지며 뷰포트 높이가 바뀌는 순간
-     이 height 값이 실제 화면과 어긋나서 카드가 화면 맨 아래까지 닿지 못하고
-     카드의 아래쪽 테두리(밑변)와 그 밑의 어두운 배경이 같이 보이는 문제가
-     있었습니다(내용이 길어서 카드를 끝까지 스크롤해봐야 드러남). inset:0은
-     top/bottom을 각각 뷰포트 경계에 직접 고정하므로 이 문제가 없어서, 배경은
-     inset:0만 쓰고, 카드는 아래에서 바닥(bottom:0)에 직접 고정하는 방식으로
-     바꿨습니다. */
   position: fixed;
   inset: 0;
+  /* 일부 모바일 브라우저는 주소창이 나타났다 사라지면서 뷰포트 높이가 계속
+     바뀌는데, inset:0만으로는 이 순간에 fixed 요소의 높이 계산이 실제 화면과
+     어긋나서 패널이 화면 중간에 붕 뜬 것처럼 보이는 경우가 있습니다. 그 순간의
+     실제 보이는 높이를 따라가는 100dvh를 명시해서 이 문제를 줄입니다
+     (100dvh를 모르는 구형 브라우저는 100vh로 자동 대체됨). */
+  height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
   z-index: 101;
 }
 
 .tweet-comment-panel-card {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin: 0 auto;
   background: var(--bg);
   width: 100%;
   max-width: 600px;
   max-height: 70vh;
   border-radius: 16px 16px 0 0;
   overflow-y: auto;
-  /* 아이폰 등 화면 하단에 홈 인디케이터가 있는 기기에서 카드 맨 아래 내용이
-     그 밑에 가려지지 않도록 안전영역만큼 여백을 더합니다. */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .tweet-comment-panel-body {
@@ -806,19 +799,18 @@ h1 {
     inset: auto;
     top: 24px;
     left: calc(50% + 326px);
+    /* 모바일 전용으로 넣어둔 height: 100dvh를 데스크탑에서는 다시 풀어줍니다
+       (안 그러면 화면 전체 높이의 안 보이는 상자가 남아서 클릭을 가로챌 수 있음). */
+    height: auto;
     background: transparent;
     padding: 0;
+    display: block;
   }
   .tweet-comment-panel-card {
-    /* 모바일 전용으로 넣어둔 하단 고정(bottom:0)을 데스크탑에서는 풀어줍니다.
-       그대로 두면 화면 하단에 안 보이는 상자가 남아 클릭을 가로챌 수 있습니다. */
-    position: static;
-    margin: 0;
     width: 320px;
     max-width: 320px;
     max-height: calc(100vh - 48px);
     border-radius: 16px;
-    padding-bottom: 0;
   }
 }
 
