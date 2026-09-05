@@ -114,6 +114,13 @@
   </div>
 </div>
 
+<!-- 이미지 원본 크게 보기 (대화 이미지, 코멘트 이미지 공통). 새 탭으로 이동하는
+     대신 화면 가운데에 어두운 배경과 함께 이미지만 원래 비율로 띄웁니다. -->
+<div id="image-viewer-modal" class="modal-overlay image-viewer-modal" hidden>
+  <button id="image-viewer-close-btn" class="image-viewer-close-btn" aria-label="닫기"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+  <img id="image-viewer-img" class="image-viewer-img" alt="" />
+</div>
+
 <!-- 새 대화 추가 / 편집 모달 -->
 <div id="new-card-modal" class="modal-overlay" hidden>
   <div class="modal-panel">

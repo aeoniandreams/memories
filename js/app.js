@@ -625,11 +625,10 @@ function getImageDimensions(url) {
 
 // 코멘트가 있는 이미지에만 우측 하단에 동그란 버튼을 붙입니다. 클릭하면 코멘트 창이 열려요.
 function makeImageLink(image, msgIndex) {
-  const link = document.createElement("a");
+  const link = document.createElement("button");
+  link.type = "button";
   link.className = "image-link";
-  link.href = image.url;
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
+  link.addEventListener("click", () => openImageViewer(image.url));
   const img = document.createElement("img");
   img.src = image.url;
   img.loading = "lazy";
@@ -885,6 +884,30 @@ thumbCommentModal.addEventListener("click", (e) => {
   if (e.target === thumbCommentModal) closeThumbCommentModal();
 });
 
+// ---------- 이미지 원본 크게 보기 (대화 이미지 / 코멘트 이미지 공통) ----------
+// 예전엔 이미지를 누르면 새 탭이 열려서 원본 그대로였는데, 화면이 큰 원본을
+// 그대로 띄우다 보니 오히려 화질이 낮아 보인다는 문제가 있었습니다. 이제는
+// 새 탭 대신 앱 안에서 화면 정중앙에 원래 비율 그대로(뷰포트의 90%까지만
+// 줄여서) 보여줍니다.
+const imageViewerModal = document.getElementById("image-viewer-modal");
+const imageViewerImg = document.getElementById("image-viewer-img");
+const imageViewerCloseBtn = document.getElementById("image-viewer-close-btn");
+
+function openImageViewer(url) {
+  imageViewerImg.src = url;
+  imageViewerModal.hidden = false;
+}
+
+function closeImageViewer() {
+  imageViewerModal.hidden = true;
+  imageViewerImg.src = "";
+}
+
+imageViewerCloseBtn.addEventListener("click", closeImageViewer);
+imageViewerModal.addEventListener("click", (e) => {
+  if (e.target === imageViewerModal) closeImageViewer();
+});
+
 // ---------- 트윗 코멘트 보기/작성/수정 ----------
 // 관리자가 아닌 사용자는 항상 "wine" 아이콘으로 저장되고, 관리자는 message-circle/coffee
 // 중 하나를 골라 저장합니다. (본인 역할의 코멘트만 쓸 수 있게 firestore.rules에서 막아둡니다.)
@@ -919,6 +942,7 @@ function createCommentBlockImageView(urls) {
   const img = document.createElement("img");
   img.className = "tweet-comment-block-image";
   img.alt = "";
+  img.addEventListener("click", () => openImageViewer(urls[current]));
   wrap.appendChild(img);
 
   let current = 0;

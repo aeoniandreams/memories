@@ -400,6 +400,44 @@ h1 {
   overflow-y: auto;
 }
 
+/* 이미지 원본 크게 보기. .modal-overlay(어두운 배경 + 화면 전체 덮기)는 그대로
+   쓰되, 세로로도 정중앙에 오도록 align-items만 center로 바꾸고, 다른 모달들
+   (코멘트 패널 포함) 위에 뜰 수 있도록 z-index를 더 높입니다. 이미지 자체는
+   패널 안에 또 패널을 두는 대신, 배경색/여백 없이 이미지만 원래 비율 그대로
+   화면에 맞춰 보여줍니다. */
+.image-viewer-modal {
+  align-items: center;
+  z-index: 110;
+}
+
+.image-viewer-img {
+  display: block;
+  max-width: 90vw;
+  max-height: 90vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.image-viewer-close-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: var(--comment-btn-bg);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.image-viewer-close-btn svg { width: 18px; height: 18px; }
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -540,9 +578,18 @@ h1 {
   margin-top: 8px;
 }
 
-.tweet-images a {
+/* 예전엔 <a target="_blank">로 새 탭에서 원본 이미지를 열었는데, 이제는
+   클릭하면 앱 안에서 이미지 뷰어(#image-viewer-modal)가 뜨는 버튼입니다.
+   그래서 태그 대신 클래스로 선택하고, 버튼 기본 스타일을 지웠습니다. */
+.tweet-images .image-link {
   display: inline-block;
   position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* 코멘트가 있는 이미지에만 렌더링됩니다 (js/app.js 참고). 버튼 배경은 반대 테마의
@@ -760,6 +807,7 @@ h1 {
   width: 100%;
   height: auto;
   border-radius: 8px;
+  cursor: pointer; /* 클릭하면 원본 크기로 보는 이미지 뷰어가 뜹니다. */
 }
 
 /* 캐러셀 화살표/배지: image-comment-btn과 같은 배색 규칙을 그대로 씁니다
@@ -836,11 +884,11 @@ h1 {
 }
 
 /* 데스크탑: 대화창(.modal-panel, max-width 620px)이 화면 중앙에 뜨는 걸 기준으로,
-   그 오른쪽에 16px 띄워서 320px 폭 패널을 붙입니다. 패널이 화면 오른쪽 밖으로
-   잘리지 않으려면 화면 폭이 대략 (620/2 + 16 + 320) * 2 = 1292px는 넘어야 해서,
-   여유를 두고 1360px부터 이 배치를 적용합니다. 그보다 좁으면(작은 노트북 등) 위의
+   그 오른쪽에 16px 띄워서 400px 폭 패널을 붙입니다. 패널이 화면 오른쪽 밖으로
+   잘리지 않으려면 화면 폭이 대략 (620/2 + 16 + 400) * 2 = 1452px는 넘어야 해서,
+   여유를 두고 1520px부터 이 배치를 적용합니다. 그보다 좁으면(작은 노트북 등) 위의
    모바일과 같은 가운데 모달 형태로 자연스럽게 대체됩니다. */
-@media (min-width: 1360px) {
+@media (min-width: 1520px) {
   .tweet-comment-panel {
     position: fixed;
     inset: auto;
@@ -854,8 +902,8 @@ h1 {
     display: block;
   }
   .tweet-comment-panel-card {
-    width: 320px;
-    max-width: 320px;
+    width: 400px;
+    max-width: 400px;
     max-height: calc(100vh - 48px);
     border-radius: 16px;
   }
@@ -1003,7 +1051,7 @@ h1 {
    구분할 수 없습니다. 그래서 너비(480px 이하)에 더해 (hover: none)과
    (pointer: coarse) 조건을 같이 걸었습니다 — 이 둘은 "정밀한 마우스 없이 손가락
    터치로만 조작하는 기기"를 뜻해서, 마우스가 있는 데스크탑은 창을 아무리 좁혀도
-   해당되지 않습니다. 코멘트 패널의 데스크탑/모바일 전환 기준(1360px, 너비만 봄)과는
+   해당되지 않습니다. 코멘트 패널의 데스크탑/모바일 전환 기준(1520px, 너비만 봄)과는
    별개입니다. */
 @media (max-width: 480px) and (hover: none) and (pointer: coarse) {
   .avatar-col {
