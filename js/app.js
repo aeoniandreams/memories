@@ -93,6 +93,9 @@ let currentTweetComments = new Map(); // messageKey -> { user?: [{id,type,text}]
 // 코멘트 패널(우측 보기/좌측 작성)의 현재 상태.
 // mode: "view"(보기) | "edit"(기존 코멘트 수정) | "compose"(새 코멘트 작성)
 let tweetCommentPanelState = null;
+// 코멘트 작성/수정 중인 블록 목록. [{type:"text", text} | {type:"image", url}]
+// 순서대로 나열되며, 저장 시 이 배열이 그대로 entry.content가 됩니다.
+let commentComposeBlocks = [];
 
 // ---------- 야간 모드 ----------
 // Lucide(lucide.dev, MIT 라이선스) 아이콘의 SVG를 그대로 가져다 씁니다.
@@ -881,6 +884,13 @@ function findCommentEntry(commentKey, role, entryId) {
   return arr.find((e) => e.id === entryId) || null;
 }
 
+// 코멘트 하나를 텍스트/이미지 블록 배열로 정규화합니다. 예전 형식(문자열 text만
+// 있고 content가 없는 코멘트)도 텍스트 블록 하나짜리로 자연스럽게 변환됩니다.
+function getCommentBlocks(entry) {
+  if (entry && Array.isArray(entry.content)) return entry.content;
+  return [{ type: "text", text: (entry && entry.text) || "" }];
+}
+
 function openTweetCommentView(commentKey, role, entryId) {
   tweetCommentPanelState = { commentKey, role, entryId, mode: "view" };
   renderTweetCommentPanel();
@@ -904,10 +914,22 @@ function renderTweetCommentPanel() {
 
   if (state.mode === "view") {
     const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
-    const p = document.createElement("p");
-    p.className = "comment-modal-text";
-    p.textContent = entry ? entry.text : "";
-    tweetCommentPanelBody.appendChild(p);
+    getCommentBlocks(entry).forEach((block) => {
+      if (block.type === "image") {
+        if (!block.url) return;
+        const img = document.createElement("img");
+        img.className = "tweet-comment-block-image";
+        img.src = block.url;
+        img.alt = "";
+        tweetCommentPanelBody.appendChild(img);
+      } else {
+        if (!block.text) return;
+        const p = document.createElement("p");
+        p.className = "comment-modal-text";
+        p.textContent = block.text;
+        tweetCommentPanelBody.appendChild(p);
+      }
+    });
 
     const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
     tweetCommentPanelActionBtn.hidden = !canEdit;
@@ -918,6 +940,13 @@ function renderTweetCommentPanel() {
 
   // edit(기존 코멘트 수정) / compose(새 코멘트 작성)
   const entry = state.mode === "edit" ? findCommentEntry(state.commentKey, state.role, state.entryId) : null;
+  if (!state.blocksInitialized) {
+    // 블록 배열은 여기서 한 번만 초기화합니다. 관리자 타입 선택 등 다른 조작으로
+    // 같은 편집 세션 안에서 다시 렌더링될 때 입력하던 내용이 지워지면 안 되니까요.
+    commentComposeBlocks = getCommentBlocks(entry).map((b) => ({ ...b }));
+    state.blocksInitialized = true;
+  }
+
   if (isAdmin) {
     if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
     const typeBox = document.createElement("div");
@@ -940,13 +969,63 @@ function renderTweetCommentPanel() {
     tweetCommentPanelBody.appendChild(typeBox);
   }
 
-  const textarea = document.createElement("textarea");
-  textarea.id = "tweet-comment-panel-textarea";
-  textarea.className = "tweet-comment-editor-textarea";
-  textarea.rows = 5;
-  textarea.placeholder = "이 트윗에 대한 코멘트를 입력하세요";
-  textarea.value = entry ? entry.text : "";
-  tweetCommentPanelBody.appendChild(textarea);
+  const toolbar = document.createElement("div");
+  toolbar.className = "comment-block-toolbar";
+  const addTextBtn = document.createElement("button");
+  addTextBtn.type = "button";
+  addTextBtn.className = "btn-secondary";
+  addTextBtn.innerHTML = PLUS_ICON_SVG + " 텍스트";
+  addTextBtn.addEventListener("click", () => {
+    commentComposeBlocks.push({ type: "text", text: "" });
+    renderTweetCommentPanel();
+  });
+  const addImageBtn = document.createElement("button");
+  addImageBtn.type = "button";
+  addImageBtn.className = "btn-secondary";
+  addImageBtn.innerHTML = PLUS_ICON_SVG + " 이미지";
+  addImageBtn.addEventListener("click", () => {
+    commentComposeBlocks.push({ type: "image", url: "" });
+    renderTweetCommentPanel();
+  });
+  toolbar.append(addTextBtn, addImageBtn);
+  tweetCommentPanelBody.appendChild(toolbar);
+
+  const blockList = document.createElement("div");
+  blockList.className = "comment-block-list";
+  commentComposeBlocks.forEach((block, blockIndex) => {
+    const row = document.createElement("div");
+    row.className = "comment-block-row";
+
+    if (block.type === "image") {
+      const urlInput = document.createElement("input");
+      urlInput.type = "text";
+      urlInput.placeholder = "이미지 URL";
+      urlInput.value = block.url || "";
+      urlInput.addEventListener("input", () => { block.url = urlInput.value; });
+      row.appendChild(urlInput);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.className = "tweet-comment-editor-textarea";
+      textarea.rows = 3;
+      textarea.placeholder = "이 트윗에 대한 코멘트를 입력하세요";
+      textarea.value = block.text || "";
+      textarea.addEventListener("input", () => { block.text = textarea.value; });
+      row.appendChild(textarea);
+    }
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "edit-row-remove";
+    removeBtn.textContent = "이 블록 삭제";
+    removeBtn.addEventListener("click", () => {
+      commentComposeBlocks.splice(blockIndex, 1);
+      renderTweetCommentPanel();
+    });
+    row.appendChild(removeBtn);
+
+    blockList.appendChild(row);
+  });
+  tweetCommentPanelBody.appendChild(blockList);
 
   tweetCommentPanelActionBtn.hidden = false;
   tweetCommentPanelActionBtn.textContent = "저장";
@@ -968,8 +1047,11 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     return;
   }
 
-  const textarea = document.getElementById("tweet-comment-panel-textarea");
-  const text = textarea.value.trim();
+  // 빈 텍스트 블록/URL 없는 이미지 블록은 저장하지 않고 걸러냅니다.
+  const content = commentComposeBlocks
+    .map((b) => (b.type === "image" ? { type: "image", url: (b.url || "").trim() } : { type: "text", text: (b.text || "").trim() }))
+    .filter((b) => (b.type === "image" ? !!b.url : !!b.text));
+
   const role = state.mode === "edit" ? state.role : isAdmin ? "admin" : "user";
   const type = isAdmin ? state.adminType : "wine";
 
@@ -979,12 +1061,18 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
   if (state.mode === "edit") {
     const idx = arr.findIndex((e) => e.id === state.entryId);
     if (idx !== -1) {
-      if (text) arr[idx] = { ...arr[idx], type, text };
-      else arr.splice(idx, 1); // 내용을 비우고 저장하면 코멘트를 삭제합니다.
+      if (content.length) {
+        // 예전 형식의 text 필드가 남아있으면 Firestore가 undefined 값을 거부하니
+        // 새 객체를 만들 때 아예 제외합니다(구조 분해로 빼고 나머지만 사용).
+        const { text, ...rest } = arr[idx];
+        arr[idx] = { ...rest, type, content };
+      } else {
+        arr.splice(idx, 1); // 내용을 비우고 저장하면 코멘트를 삭제합니다.
+      }
     }
   } else {
-    if (!text) return; // 새 코멘트는 빈 채로 저장하지 않습니다.
-    arr.push({ id: genCommentId(), type, text, createdAt: Date.now() });
+    if (!content.length) return; // 새 코멘트는 빈 채로 저장하지 않습니다.
+    arr.push({ id: genCommentId(), type, content, createdAt: Date.now() });
   }
 
   await persistCommentRoleArray(state.commentKey, role, arr, "코멘트 저장에 실패했습니다: ");

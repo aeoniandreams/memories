@@ -702,6 +702,55 @@ h1 {
   outline: none;
 }
 
+/* 코멘트 작성/수정 중 텍스트·이미지 블록을 추가하는 상단 버튼 줄 */
+.comment-block-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px 0;
+}
+
+/* 블록(텍스트/이미지) 목록. 블록마다 입력칸 + 삭제 버튼이 한 묶음입니다. */
+.comment-block-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 20px 20px;
+}
+
+.comment-block-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-block-row .tweet-comment-editor-textarea {
+  margin-top: 0;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.comment-block-row input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.comment-block-row .edit-row-remove {
+  align-self: flex-end;
+}
+
+/* 코멘트 보기 화면에서 이미지 블록을 렌더링할 때 */
+.tweet-comment-block-image {
+  display: block;
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 8px 20px 12px;
+}
+
 /* 코멘트 보기/작성 패널. 모바일(기본값, 가로/세로 모두)에서는 화면 아래에서 올라오는
    바텀시트 형태이고, 데스크탑(아래 media query)에서는 배경을 덮지 않고 대화창
    오른쪽 바깥 공간에 떠 있는 방식으로 바뀝니다. */
