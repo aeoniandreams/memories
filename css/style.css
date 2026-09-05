@@ -408,6 +408,9 @@ h1 {
 .image-viewer-modal {
   align-items: center;
   z-index: 110;
+  /* 다른 모달(.modal-overlay 기본값 40%)보다 더 어둡게: 이미지 자체가
+     주인공이라 배경이 최대한 눈에 덜 띄도록 80%로 올렸습니다. */
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .image-viewer-img {
@@ -704,6 +707,15 @@ h1 {
   width: 13px;
   height: 13px;
   display: block;
+}
+
+/* 이 버튼으로 연 코멘트 창이 열려 있는 동안: 말풍선 배경을 테마 색으로,
+   아이콘은 흰색으로 바꿔서 "지금 이 코멘트를 보고 있다"를 표시합니다. */
+.tweet-comment-view-btn.is-open .bubble-shape {
+  color: var(--accent);
+}
+.tweet-comment-view-btn.is-open .bubble-icon {
+  color: #fff;
 }
 
 /* 코멘트 작성 창의 아이콘(관리자 전용) 선택 버튼 */

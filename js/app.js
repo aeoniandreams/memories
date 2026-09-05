@@ -375,7 +375,7 @@ function renderCardGrid() {
     if (thumbImages.length > 0) {
       const thumbRow = document.createElement("div");
       thumbRow.className = "card-thumbs";
-      thumbImages.forEach((thumbImage) => {
+      thumbImages.forEach((thumbImage, thumbIndex) => {
         const thumbWrap = document.createElement("div");
         thumbWrap.className = "card-thumb-wrap";
         const thumb = document.createElement("img");
@@ -387,6 +387,7 @@ function renderCardGrid() {
         thumbWrap.appendChild(thumb);
 
         if (thumbImage.comment) {
+          const thumbKey = id + "|" + thumbIndex;
           const commentBtn = document.createElement("button");
           commentBtn.type = "button";
           commentBtn.className = "image-comment-btn";
@@ -395,7 +396,11 @@ function renderCardGrid() {
           commentBtn.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
-            openThumbCommentModal(thumbImage.comment);
+            // 코멘트 보기 버튼처럼, 이미 이 이미지의 코멘트 창이 열려 있으면
+            // 다시 눌렀을 때 바로 닫히게 합니다.
+            const alreadyOpen = !thumbCommentModal.hidden && thumbCommentModalKey === thumbKey;
+            if (alreadyOpen) closeThumbCommentModal();
+            else openThumbCommentModal(thumbImage.comment, thumbKey);
           });
           thumbWrap.appendChild(commentBtn);
         }
@@ -598,9 +603,20 @@ function makeTweetCommentViewBtn(commentKey, role, commentEntry) {
       closeTweetCommentPanel();
     } else {
       openTweetCommentView(commentKey, role, commentEntry.id);
+      setActiveTweetCommentViewBtn(btn);
     }
   });
   return btn;
+}
+
+// 코멘트 창을 연 "보기" 버튼 하나를 강조 표시(is-open)합니다. 창이 열려있는
+// 동안엔 해당 버튼만 테마 색으로 바뀌고, 창을 닫거나 다른 코멘트로 옮겨가면
+// 이전 버튼의 강조는 지워집니다.
+let activeTweetCommentViewBtn = null;
+function setActiveTweetCommentViewBtn(btn) {
+  if (activeTweetCommentViewBtn) activeTweetCommentViewBtn.classList.remove("is-open");
+  activeTweetCommentViewBtn = btn || null;
+  if (activeTweetCommentViewBtn) activeTweetCommentViewBtn.classList.add("is-open");
 }
 
 // 이미지 URL마다 원본 가로/세로 크기를 한 번만 읽어와 재사용합니다.
@@ -638,6 +654,7 @@ function makeImageLink(image, msgIndex) {
   link.appendChild(img);
 
   if (image.comment) {
+    const commentKey = msgIndex + "|" + image.url;
     const commentBtn = document.createElement("button");
     commentBtn.type = "button";
     commentBtn.className = "image-comment-btn";
@@ -646,10 +663,18 @@ function makeImageLink(image, msgIndex) {
     commentBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      openCommentModal(image.comment, {
-        canEdit: isAdmin,
-        onSave: isAdmin ? (newText) => saveImageComment(msgIndex, image.url, newText) : null,
-      });
+      // 코멘트 보기 버튼처럼, 이미 이 이미지의 코멘트 창이 열려 있으면
+      // 다시 눌렀을 때 바로 닫히게 합니다.
+      const alreadyOpen = !commentModal.hidden && commentModalState && commentModalState.key === commentKey;
+      if (alreadyOpen) {
+        closeCommentModal();
+      } else {
+        openCommentModal(image.comment, {
+          key: commentKey,
+          canEdit: isAdmin,
+          onSave: isAdmin ? (newText) => saveImageComment(msgIndex, image.url, newText) : null,
+        });
+      }
     });
     link.appendChild(commentBtn);
   }
@@ -806,7 +831,7 @@ const commentModalActionBtn = document.getElementById("comment-modal-action-btn"
 let commentModalState = null;
 
 function openCommentModal(comment, options = {}) {
-  commentModalState = { text: comment || "", canEdit: !!options.canEdit, onSave: options.onSave || null, mode: "view" };
+  commentModalState = { text: comment || "", canEdit: !!options.canEdit, onSave: options.onSave || null, mode: "view", key: options.key || null };
   renderCommentModalBody();
   commentModal.hidden = false;
 }
@@ -870,13 +895,17 @@ const thumbCommentModal = document.getElementById("thumb-comment-modal");
 const thumbCommentModalText = document.getElementById("thumb-comment-modal-text");
 const thumbCommentModalCloseBtn = document.getElementById("thumb-comment-modal-close-btn");
 
-function openThumbCommentModal(comment) {
+let thumbCommentModalKey = null;
+
+function openThumbCommentModal(comment, key) {
   thumbCommentModalText.textContent = comment;
+  thumbCommentModalKey = key || null;
   thumbCommentModal.hidden = false;
 }
 
 function closeThumbCommentModal() {
   thumbCommentModal.hidden = true;
+  thumbCommentModalKey = null;
 }
 
 thumbCommentModalCloseBtn.addEventListener("click", closeThumbCommentModal);
@@ -893,8 +922,29 @@ const imageViewerModal = document.getElementById("image-viewer-modal");
 const imageViewerImg = document.getElementById("image-viewer-img");
 const imageViewerCloseBtn = document.getElementById("image-viewer-close-btn");
 
+// X(트위터) 이미지 CDN(pbs.twimg.com)은 타임라인에 보여줄 때 보통 축소된
+// 미리보기 크기(name=small 등)로 주소를 내려주는데, 북마클릿이 그 <img src>를
+// 그대로 캡처하다 보니 저장되는 주소 자체가 이미 축소본입니다(앱이 따로
+// 이미지를 리사이즈/압축하는 게 아닙니다). 같은 주소의 name 파라미터를
+// orig로 바꾸면 트위터 CDN에서 원본 해상도를 그대로 받아올 수 있어서, 원본
+// 크기로 보여줘야 할 때(이미지 뷰어, 코멘트 패널의 큰 이미지)는 이 함수를
+// 거쳐서 주소를 바꿔줍니다. 트위터 CDN 주소가 아니면 그대로 둡니다. 이미
+// 저장되어 있는 예전 카드들도 그대로 적용되고(저장된 주소 자체를 바꾸는 게
+// 아니라 보여줄 때만 바꾸는 방식), 목록의 작은 썸네일은 로딩 속도를 위해
+// 그대로 둡니다.
+function toOriginalQualityImageUrl(url) {
+  try {
+    const u = new URL(url, location.href);
+    if (u.hostname === "pbs.twimg.com" && u.pathname.startsWith("/media/")) {
+      u.searchParams.set("name", "orig");
+      return u.toString();
+    }
+  } catch (e) {}
+  return url;
+}
+
 function openImageViewer(url) {
-  imageViewerImg.src = url;
+  imageViewerImg.src = toOriginalQualityImageUrl(url);
   imageViewerModal.hidden = false;
 }
 
@@ -950,7 +1000,7 @@ function createCommentBlockImageView(urls) {
   counter.className = "comment-block-image-counter";
 
   function update() {
-    img.src = urls[current];
+    img.src = toOriginalQualityImageUrl(urls[current]);
     counter.textContent = `${current + 1} / ${urls.length}`;
   }
 
@@ -992,11 +1042,15 @@ function openTweetCommentCompose(commentKey) {
   tweetCommentPanelState = { commentKey, role: null, entryId: null, mode: "compose", adminType: "message-circle" };
   renderTweetCommentPanel();
   tweetCommentPanel.hidden = false;
+  // 코멘트 작성 창은 특정 "보기" 버튼과 무관하니, 다른 코멘트를 보다가 넘어온
+  // 거라면 그 버튼의 강조 표시를 지웁니다.
+  setActiveTweetCommentViewBtn(null);
 }
 
 function closeTweetCommentPanel() {
   tweetCommentPanel.hidden = true;
   tweetCommentPanelState = null;
+  setActiveTweetCommentViewBtn(null);
 }
 
 function renderTweetCommentPanel() {
