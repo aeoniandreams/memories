@@ -743,12 +743,59 @@ h1 {
   align-self: flex-end;
 }
 
-/* 코멘트 보기 화면에서 이미지 블록을 렌더링할 때 */
+/* 코멘트 보기 화면에서 이미지 블록을 렌더링할 때. 이미지 한 장이면 wrap이
+   그냥 감싸기만 하고, 여러 장(쉼표로 구분해서 넣은 경우)이면 화살표 두 개로
+   전환하는 캐러셀이 되고 우측 하단에 "n / 전체" 배지가 뜹니다. */
+.comment-block-image-wrap {
+  position: relative;
+  margin: 8px 20px 12px;
+}
+
 .tweet-comment-block-image {
   display: block;
-  max-width: 100%;
+  /* max-width가 아니라 width를 100%로 고정해서, 원본이 아무리 가로로 길어도
+     항상 코멘트창 너비에 맞춰 줄어들도록 합니다(세로로 긴 이미지는 원래도
+     문제없었지만, 가로로 긴 이미지는 max-width만으로는 안 줄어드는 경우가
+     있었습니다). */
+  width: 100%;
+  height: auto;
   border-radius: 8px;
-  margin: 8px 20px 12px;
+}
+
+/* 캐러셀 화살표/배지: image-comment-btn과 같은 배색 규칙을 그대로 씁니다
+   (반투명 --comment-btn-bg 바탕 + 반대 테마 색 --bg 아이콘/글자 —
+   기본 모드는 반투명 검정 바탕에 흰 아이콘, 야간 모드는 반투명 흰 바탕에
+   검은 아이콘). */
+.comment-block-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--comment-btn-bg);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.comment-block-carousel-arrow svg { width: 16px; height: 16px; }
+.comment-block-carousel-prev { left: 8px; }
+.comment-block-carousel-next { right: 8px; }
+
+.comment-block-image-counter {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.4;
+  background: var(--comment-btn-bg);
+  color: var(--bg);
 }
 
 /* 코멘트 보기/작성 패널. 모바일(기본값, 가로/세로 모두)에서는 화면 아래에서 올라오는

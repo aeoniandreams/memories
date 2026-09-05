@@ -108,6 +108,9 @@ const PENCIL_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24
 // currentColor 아웃라인 하나로 충분합니다 (색은 .image-comment-btn의 color: var(--bg)를 따릅니다).
 const MESSAGE_SQUARE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
 const PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`;
+// 코멘트 이미지 블록의 여러 장 넘겨보기용 화살표.
+const CHEVRON_LEFT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
+const CHEVRON_RIGHT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
 
 // ---------- 트윗 코멘트 아이콘 (lucide.dev, MIT 라이선스 아이콘을 참고해 그렸습니다) ----------
 // 말풍선 모양 배경(우측 "보기" 버튼의 바탕)으로 씁니다. fill로 채워 넣는 용도라 stroke는 없습니다.
@@ -900,6 +903,61 @@ function getCommentBlocks(entry) {
   return [{ type: "text", text: (entry && entry.text) || "" }];
 }
 
+// 이미지 블록의 URL 목록을 꺼냅니다. urls(배열, 여러 장)가 없으면 예전
+// 한 장짜리 형식(url 문자열 하나)도 자연스럽게 배열로 바꿔줍니다.
+function getBlockImageUrls(block) {
+  if (Array.isArray(block.urls)) return block.urls.filter(Boolean);
+  return block.url ? [block.url] : [];
+}
+
+// 이미지 블록 하나를 보여주는 엘리먼트를 만듭니다. 이미지가 여러 장이면
+// 화살표 두 개로 넘겨보는 캐러셀이 되고, 우측 하단에 "n / 전체" 배지가 뜹니다.
+function createCommentBlockImageView(urls) {
+  const wrap = document.createElement("div");
+  wrap.className = "comment-block-image-wrap";
+
+  const img = document.createElement("img");
+  img.className = "tweet-comment-block-image";
+  img.alt = "";
+  wrap.appendChild(img);
+
+  let current = 0;
+  const counter = document.createElement("span");
+  counter.className = "comment-block-image-counter";
+
+  function update() {
+    img.src = urls[current];
+    counter.textContent = `${current + 1} / ${urls.length}`;
+  }
+
+  if (urls.length > 1) {
+    const prevBtn = document.createElement("button");
+    prevBtn.type = "button";
+    prevBtn.className = "comment-block-carousel-arrow comment-block-carousel-prev";
+    prevBtn.innerHTML = CHEVRON_LEFT_ICON_SVG;
+    prevBtn.setAttribute("aria-label", "이전 이미지");
+    prevBtn.addEventListener("click", () => {
+      current = (current - 1 + urls.length) % urls.length;
+      update();
+    });
+
+    const nextBtn = document.createElement("button");
+    nextBtn.type = "button";
+    nextBtn.className = "comment-block-carousel-arrow comment-block-carousel-next";
+    nextBtn.innerHTML = CHEVRON_RIGHT_ICON_SVG;
+    nextBtn.setAttribute("aria-label", "다음 이미지");
+    nextBtn.addEventListener("click", () => {
+      current = (current + 1) % urls.length;
+      update();
+    });
+
+    wrap.append(prevBtn, nextBtn, counter);
+  }
+
+  update();
+  return wrap;
+}
+
 function openTweetCommentView(commentKey, role, entryId) {
   tweetCommentPanelState = { commentKey, role, entryId, mode: "view" };
   renderTweetCommentPanel();
@@ -925,12 +983,9 @@ function renderTweetCommentPanel() {
     const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
     getCommentBlocks(entry).forEach((block) => {
       if (block.type === "image") {
-        if (!block.url) return;
-        const img = document.createElement("img");
-        img.className = "tweet-comment-block-image";
-        img.src = block.url;
-        img.alt = "";
-        tweetCommentPanelBody.appendChild(img);
+        const urls = getBlockImageUrls(block);
+        if (!urls.length) return;
+        tweetCommentPanelBody.appendChild(createCommentBlockImageView(urls));
       } else {
         if (!block.text) return;
         const p = document.createElement("p");
@@ -952,7 +1007,11 @@ function renderTweetCommentPanel() {
   if (!state.blocksInitialized) {
     // 블록 배열은 여기서 한 번만 초기화합니다. 관리자 타입 선택 등 다른 조작으로
     // 같은 편집 세션 안에서 다시 렌더링될 때 입력하던 내용이 지워지면 안 되니까요.
-    commentComposeBlocks = getCommentBlocks(entry).map((b) => ({ ...b }));
+    // 이미지 블록은 예전 한 장짜리(url) 형식이어도 여러 장(urls 배열) 형식으로
+    // 통일해서 들고 있습니다 — 편집 중엔 항상 urls 배열만 다루면 되도록.
+    commentComposeBlocks = getCommentBlocks(entry).map((b) =>
+      b.type === "image" ? { type: "image", urls: getBlockImageUrls(b) } : { ...b }
+    );
     state.blocksInitialized = true;
   }
 
@@ -993,7 +1052,7 @@ function renderTweetCommentPanel() {
   addImageBtn.className = "btn-secondary";
   addImageBtn.innerHTML = PLUS_ICON_SVG + " 이미지";
   addImageBtn.addEventListener("click", () => {
-    commentComposeBlocks.push({ type: "image", url: "" });
+    commentComposeBlocks.push({ type: "image", urls: [] });
     renderTweetCommentPanel();
   });
   toolbar.append(addTextBtn, addImageBtn);
@@ -1008,9 +1067,11 @@ function renderTweetCommentPanel() {
     if (block.type === "image") {
       const urlInput = document.createElement("input");
       urlInput.type = "text";
-      urlInput.placeholder = "이미지 URL";
-      urlInput.value = block.url || "";
-      urlInput.addEventListener("input", () => { block.url = urlInput.value; });
+      urlInput.placeholder = "이미지 URL (여러 장은 쉼표로 구분)";
+      urlInput.value = (block.urls || []).join(", ");
+      urlInput.addEventListener("input", () => {
+        block.urls = urlInput.value.split(",").map((u) => u.trim()).filter(Boolean);
+      });
       row.appendChild(urlInput);
     } else {
       const textarea = document.createElement("textarea");
@@ -1058,8 +1119,12 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
 
   // 빈 텍스트 블록/URL 없는 이미지 블록은 저장하지 않고 걸러냅니다.
   const content = commentComposeBlocks
-    .map((b) => (b.type === "image" ? { type: "image", url: (b.url || "").trim() } : { type: "text", text: (b.text || "").trim() }))
-    .filter((b) => (b.type === "image" ? !!b.url : !!b.text));
+    .map((b) =>
+      b.type === "image"
+        ? { type: "image", urls: (b.urls || []).map((u) => u.trim()).filter(Boolean) }
+        : { type: "text", text: (b.text || "").trim() }
+    )
+    .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
 
   const role = state.mode === "edit" ? state.role : isAdmin ? "admin" : "user";
   const type = isAdmin ? state.adminType : "wine";
