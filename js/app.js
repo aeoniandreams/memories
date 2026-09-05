@@ -457,11 +457,30 @@ async function openDetail(id, data) {
 
   (data.messages || []).forEach((msg, index) => {
     const key = getMessageCommentKey(msg, index);
-    detailThread.appendChild(renderMessageRow(msg, key, currentTweetComments.get(key)));
+    detailThread.appendChild(renderMessageRow(msg, index, key, currentTweetComments.get(key)));
   });
 }
 
-function renderMessageRow(msg, commentKey, comments) {
+// 이미지 코멘트는 카드 본문(messages[].images[].comment)에 저장되어 있어서, 관리자만
+// (firestore.rules상 카드 본문은 관리자 전용 쓰기) 여기서 바로 고쳐 저장할 수 있습니다.
+async function saveImageComment(msgIndex, url, newText) {
+  const rawImages = Array.isArray(currentDetailData.messages[msgIndex].images)
+    ? currentDetailData.messages[msgIndex].images
+    : [];
+  const updatedRawImages = rawImages.map((img) => {
+    const imgUrl = typeof img === "string" ? img : (img && img.url) || "";
+    return imgUrl === url ? { url: imgUrl, comment: newText } : img;
+  });
+  const updatedMessages = currentDetailData.messages.map((m, i) =>
+    i === msgIndex ? { ...m, images: updatedRawImages } : m
+  );
+  await updateDoc(doc(db, "cards", currentDetailCardId), { messages: updatedMessages });
+  currentDetailData = { ...currentDetailData, messages: updatedMessages };
+  closeCommentModal();
+  openDetail(currentDetailCardId, currentDetailData);
+}
+
+function renderMessageRow(msg, msgIndex, commentKey, comments) {
   const row = document.createElement("div");
   row.className = "message-row";
 
@@ -504,8 +523,8 @@ function renderMessageRow(msg, commentKey, comments) {
     const grid = document.createElement("div");
     grid.className = "tweet-images";
     contentCol.appendChild(grid);
-    // 이미지 원본 크기를 읽어와야 배치를 계산할 수 있어서 비동기로 채웁니다.
-    renderImageGridInto(grid, msg.images);
+    // 이미지 원본 크기를 읽어야 배치를 계산할 수 있어서 비동기로 채웁니다.
+    renderImageGridInto(grid, msg.images, msgIndex);
   }
 
   row.append(avatarCol, contentCol);
@@ -599,7 +618,7 @@ function getImageDimensions(url) {
 }
 
 // 코멘트가 있는 이미지에만 우측 하단에 동그란 버튼을 붙입니다. 클릭하면 코멘트 창이 열려요.
-function makeImageLink(image) {
+function makeImageLink(image, msgIndex) {
   const link = document.createElement("a");
   link.className = "image-link";
   link.href = image.url;
@@ -622,7 +641,10 @@ function makeImageLink(image) {
     commentBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      openCommentModal(image.comment);
+      openCommentModal(image.comment, {
+        canEdit: isAdmin,
+        onSave: isAdmin ? (newText) => saveImageComment(msgIndex, image.url, newText) : null,
+      });
     });
     link.appendChild(commentBtn);
   }
@@ -639,7 +661,7 @@ function styleGridCellImg(img) {
 // X 트윗의 사진 배치를 재현합니다: 1장은 긴 변이 대화창 너비의 70%,
 // 2장은 각자 비율을 지킨 채 같은 높이로 나란히 폭을 꽉 채움,
 // 3장은 왼쪽 큰 사진 + 오른쪽 위아래 2장, 4장은 2x2. (크롭이 필요하면 object-fit: cover로 처리)
-async function renderImageGridInto(container, images) {
+async function renderImageGridInto(container, images, msgIndex) {
   const normalized = normalizeImages(images);
   if (normalized.length === 0) return;
 
@@ -649,7 +671,7 @@ async function renderImageGridInto(container, images) {
 
   if (normalized.length === 1) {
     const ratio = dims[0].w / dims[0].h;
-    const { link, img } = makeImageLink(normalized[0]);
+    const { link, img } = makeImageLink(normalized[0], msgIndex);
     const longSide = containerWidth * 0.7;
     if (ratio >= 1) {
       img.style.width = longSide + "px";
@@ -671,7 +693,7 @@ async function renderImageGridInto(container, images) {
     container.style.gap = GAP + "px";
     normalized.forEach((image, i) => {
       const ratio = dims[i].w / dims[i].h;
-      const { link, img } = makeImageLink(image);
+      const { link, img } = makeImageLink(image, msgIndex);
       img.style.height = rowHeight + "px";
       img.style.width = rowHeight * ratio + "px";
       container.appendChild(link);
@@ -686,14 +708,14 @@ async function renderImageGridInto(container, images) {
     container.style.gap = GAP + "px";
     container.style.aspectRatio = "1.7 / 1";
 
-    const { link: leftLink, img: leftImg } = makeImageLink(normalized[0]);
+    const { link: leftLink, img: leftImg } = makeImageLink(normalized[0], msgIndex);
     leftLink.style.gridColumn = "1 / 2";
     leftLink.style.gridRow = "1 / 3";
     styleGridCellImg(leftImg);
     container.appendChild(leftLink);
 
     [1, 2].forEach((i) => {
-      const { link, img } = makeImageLink(normalized[i]);
+      const { link, img } = makeImageLink(normalized[i], msgIndex);
       link.style.gridColumn = "2 / 3";
       link.style.gridRow = i === 1 ? "1 / 2" : "2 / 3";
       styleGridCellImg(img);
@@ -709,12 +731,12 @@ async function renderImageGridInto(container, images) {
   if (normalized.length === 4) container.style.aspectRatio = "1 / 1";
 
   normalized.slice(0, 4).forEach((image) => {
-    const { link, img } = makeImageLink(image);
+    const { link, img } = makeImageLink(image, msgIndex);
     styleGridCellImg(img);
     container.appendChild(link);
   });
   normalized.slice(4).forEach((image) => {
-    const { link, img } = makeImageLink(image);
+    const { link, img } = makeImageLink(image, msgIndex);
     link.style.gridColumn = "1 / 3";
     img.style.width = "100%";
     img.style.height = "auto";
@@ -758,24 +780,74 @@ detailModal.addEventListener("click", (e) => {
   if (e.target === detailModal) closeDetail();
 });
 
-// ---------- 이미지 코멘트 보기 (대화 상세 화면 안, 트윗 이미지용) ----------
+// ---------- 이미지 코멘트 보기/수정 (대화 상세 화면 안, 트윗 이미지용) ----------
 // 코멘트 패널과 같은 레이아웃(데스크탑: 대화창 옆, 모바일: 바텀시트)을 씁니다.
 const commentModal = document.getElementById("comment-modal");
-const commentModalText = document.getElementById("comment-modal-text");
+const commentModalBody = document.getElementById("comment-modal-body");
 const commentModalCloseBtn = document.getElementById("comment-modal-close-btn");
+const commentModalActionBtn = document.getElementById("comment-modal-action-btn");
 
-function openCommentModal(comment) {
-  commentModalText.textContent = comment;
+// options.canEdit가 true면(관리자 + 저장 가능한 컨텍스트일 때) "수정" 버튼이 보이고,
+// 누르면 편집 모드로 전환됩니다. 저장은 options.onSave(newText)가 처리합니다.
+let commentModalState = null;
+
+function openCommentModal(comment, options = {}) {
+  commentModalState = { text: comment || "", canEdit: !!options.canEdit, onSave: options.onSave || null, mode: "view" };
+  renderCommentModalBody();
   commentModal.hidden = false;
+}
+
+function renderCommentModalBody() {
+  const state = commentModalState;
+  commentModalBody.innerHTML = "";
+
+  if (state.mode === "view") {
+    const p = document.createElement("p");
+    p.className = "comment-modal-text";
+    p.textContent = state.text;
+    commentModalBody.appendChild(p);
+    commentModalActionBtn.hidden = !state.canEdit;
+    commentModalActionBtn.textContent = "수정";
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.id = "comment-modal-textarea";
+  textarea.className = "tweet-comment-editor-textarea";
+  textarea.rows = 5;
+  textarea.value = state.text;
+  commentModalBody.appendChild(textarea);
+  commentModalActionBtn.hidden = false;
+  commentModalActionBtn.textContent = "저장";
 }
 
 function closeCommentModal() {
   commentModal.hidden = true;
+  commentModalState = null;
 }
 
 commentModalCloseBtn.addEventListener("click", closeCommentModal);
 commentModal.addEventListener("click", (e) => {
   if (e.target === commentModal) closeCommentModal();
+});
+
+commentModalActionBtn.addEventListener("click", async () => {
+  const state = commentModalState;
+  if (!state) return;
+  if (state.mode === "view") {
+    state.mode = "edit";
+    renderCommentModalBody();
+    return;
+  }
+  const textarea = document.getElementById("comment-modal-textarea");
+  const newText = textarea.value.trim();
+  if (state.onSave) {
+    try {
+      await state.onSave(newText);
+    } catch (e) {
+      alert("이미지 코멘트 저장에 실패했습니다: " + e.message);
+    }
+  }
 });
 
 // ---------- 이미지 코멘트 보기 (홈 화면 카드 썸네일용) ----------
