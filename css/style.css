@@ -919,26 +919,28 @@ h1 {
      보기 버튼 묶음이 그 안에 놓임)입니다. 닉네임/아이디/날짜/대화 내용
      자체는 이 padding이 아니라 .content-col 안에 있습니다.
      아이디/날짜가 줄바꿈되지 않도록 상자 좌우 여백을 줄여서 대화 내용 폭을
-     넓힌 값입니다: padding-left 20px(버튼<->프사 4px), padding-right 41px
+     넓힌 값입니다: padding-left 26px(버튼<->프사 4px), padding-right 41px
      (버튼 묶음<->대화 내용 7px, 대화 내용과 너무 붙어 보여서 5px 더 줌).
-     코멘트 작성 버튼은 프사와 겹쳐 보여서 top을 22px -> 4px로 올려, 프사보다
+     코멘트 작성 버튼은 프사와 겹쳐 보여서 top을 22px -> 8px로 올려, 프사보다
      위쪽(이 트윗 자신의 위쪽 여백 안)에 위치하도록 했습니다 — top 값은 이
      .message-row 자기 자신 기준이라, 아무리 올려도 윗 트윗 쪽으로 넘어가진
-     않습니다. */
+     않습니다. 처음엔 상자 모서리(왼쪽 위)에 거의 붙어 보여서 left도 0 -> 4px로
+     살짝 안쪽으로 넣었고, 버튼/아이콘도 코멘트 보기 버튼의 아이콘(13px)과 비슷하던
+     걸 16px 아이콘 x 18px 버튼으로 조금 더 키웠습니다. */
   .message-row {
     gap: 10px;
-    padding-left: 20px;
+    padding-left: 26px;
     padding-right: 41px;
   }
   .tweet-comment-add-btn {
-    left: 0;
-    top: 4px;
-    width: 16px;
-    height: 16px;
+    left: 4px;
+    top: 8px;
+    width: 18px;
+    height: 18px;
   }
   .tweet-comment-add-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
   .tweet-comment-view-stack {
     right: 4px;
