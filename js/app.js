@@ -752,6 +752,13 @@ async function renderImageGridInto(container, images, msgIndex) {
 // 이미 닫힌 대화창 때문에 한 번 더 눌러야 하는 일이 없게 합니다.
 function leaveDetailModal() {
   detailModal.hidden = true;
+  // 대화창 옆/아래에 따로 떠 있는 코멘트 관련 패널들도 같이 닫습니다. 특히
+  // #comment-modal(이미지 코멘트)은 대화창 바깥의 형제 엘리먼트라 대화창을
+  // 닫아도 저절로 사라지지 않고, #tweet-comment-panel(트윗 코멘트)은 대화창
+  // 안쪽에 있어 화면에선 같이 사라지지만 hidden 상태가 남아있어서 다음에
+  // 대화창을 다시 열면 그대로 열린 채로 다시 나타나는 문제가 있었습니다.
+  closeCommentModal();
+  closeTweetCommentPanel();
   if (detailHistoryPushed) {
     detailHistoryPushed = false;
     history.back();
@@ -771,6 +778,8 @@ window.addEventListener("popstate", () => {
   if (!detailModal.hidden) {
     detailHistoryPushed = false;
     detailModal.hidden = true;
+    closeCommentModal();
+    closeTweetCommentPanel();
     currentDetailCardId = null;
   }
 });
