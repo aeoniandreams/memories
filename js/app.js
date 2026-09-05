@@ -111,6 +111,8 @@ const PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 2
 // 코멘트 이미지 블록의 여러 장 넘겨보기용 화살표.
 const CHEVRON_LEFT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
 const CHEVRON_RIGHT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+// 코멘트 편집 중 블록 순서를 드래그로 바꿀 때 잡는 손잡이 아이콘.
+const GRIP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>`;
 
 // ---------- 트윗 코멘트 아이콘 (lucide.dev, MIT 라이선스 아이콘을 참고해 그렸습니다) ----------
 // 말풍선 모양 배경(우측 "보기" 버튼의 바탕)으로 씁니다. fill로 채워 넣는 용도라 stroke는 없습니다.
@@ -1141,6 +1143,47 @@ function renderTweetCommentPanel() {
   commentComposeBlocks.forEach((block, blockIndex) => {
     const row = document.createElement("div");
     row.className = "comment-block-row";
+
+    // 손잡이(grip)를 드래그해서 블록 순서를 바꿉니다. draggable은 손잡이에만
+    // 걸어서(입력칸을 드래그로 오해하지 않게) 시작하고, 드래그 중 보이는
+    // 유령 이미지는 setDragImage로 손잡이가 아니라 블록 전체(row)가 되도록
+    // 합니다.
+    const handleBar = document.createElement("div");
+    handleBar.className = "comment-block-handle-bar";
+    const handle = document.createElement("span");
+    handle.className = "comment-block-drag-handle";
+    handle.innerHTML = GRIP_ICON_SVG;
+    handle.draggable = true;
+    handle.setAttribute("aria-label", "드래그해서 순서 바꾸기");
+    handle.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", String(blockIndex));
+      e.dataTransfer.setDragImage(row, 16, 16);
+      row.classList.add("dragging");
+    });
+    handle.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+    });
+    handleBar.appendChild(handle);
+    row.appendChild(handleBar);
+
+    row.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      row.classList.add("drag-over");
+    });
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drag-over");
+    });
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      row.classList.remove("drag-over");
+      const fromIndex = Number(e.dataTransfer.getData("text/plain"));
+      if (Number.isNaN(fromIndex) || fromIndex === blockIndex) return;
+      const [moved] = commentComposeBlocks.splice(fromIndex, 1);
+      commentComposeBlocks.splice(blockIndex, 0, moved);
+      renderTweetCommentPanel();
+    });
 
     if (block.type === "image") {
       const urlInput = document.createElement("input");

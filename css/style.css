@@ -780,6 +780,38 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  border-radius: 8px;
+}
+
+/* 드래그로 순서 바꾸기: 잡고 있는 블록은 반투명하게, 지금 그 위에 올려놓은
+   자리는 점선 테두리로 보여줍니다. */
+.comment-block-row.dragging {
+  opacity: 0.4;
+}
+.comment-block-row.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+.comment-block-handle-bar {
+  display: flex;
+}
+
+.comment-block-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 18px;
+  color: var(--muted);
+  cursor: grab;
+}
+.comment-block-drag-handle:active {
+  cursor: grabbing;
+}
+.comment-block-drag-handle svg {
+  width: 16px;
+  height: 16px;
 }
 
 .comment-block-row .tweet-comment-editor-textarea {
