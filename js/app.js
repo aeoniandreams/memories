@@ -82,6 +82,11 @@ let currentDetailData = null;
 // 닫히도록, 열 때 히스토리 항목을 하나 쌓아둡니다 (아래 openDetail/leaveDetailModal 참고).
 let detailHistoryPushed = false;
 let editingMessages = []; // 새 대화 추가 모달에서 편집 중인 메시지 배열
+// index -> { avatarInput, preview }. 프로필 사진을 바꾸면 같은 닉네임을 쓰는
+// 아래쪽 메시지들에도 바로 반영해야 하는데, renderEditableRows() 전체를 다시
+// 그리면 지금 입력 중인 칸이 포커스를 잃어버려서, 다른 행의 엘리먼트를 직접
+// 찾아갈 수 있도록 렌더링할 때마다 참조를 담아둡니다.
+let editRowAvatarEls = [];
 let editingTags = []; // 새 대화 추가 모달에서 편집 중인 카드 태그 배열
 let appendTargetCardId = null; // 설정되어 있으면 "새 카드 생성"이 아니라 이 카드에 이어붙임
 let editTargetCardId = null; // 설정되어 있으면 이 카드의 메시지 전체를 편집 내용으로 교체
@@ -1531,6 +1536,7 @@ addEmptyMessageBtn.addEventListener("click", () => {
 
 function renderEditableRows() {
   editableRows.innerHTML = "";
+  editRowAvatarEls = [];
   editingMessages.forEach((msg, index) => {
     editableRows.appendChild(renderEditRow(msg, index));
   });
@@ -1549,9 +1555,25 @@ function renderEditRow(msg, index) {
   fields.className = "edit-row-fields";
 
   const avatarInput = makeInput("프로필 사진 URL", msg.avatar, "avatar-url");
+  editRowAvatarEls[index] = { avatarInput, preview };
   avatarInput.addEventListener("input", () => {
     editingMessages[index].avatar = avatarInput.value;
     preview.src = safeImgSrc(avatarInput.value) || fallbackAvatarDataUri();
+
+    // 같은 닉네임을 쓰는 아래쪽 메시지들의 프로필 사진도 같이 바꿔줍니다
+    // (예: 도중에 프로필 사진이 바뀐 사람의 예전 사진들을 한 번에 맞출 때).
+    // renderEditableRows() 전체를 다시 그리면 지금 입력 중인 칸이 포커스를
+    // 잃어버리니, 해당 행의 입력값/미리보기만 직접 갱신합니다.
+    const nickname = editingMessages[index].nickname;
+    for (let i = index + 1; i < editingMessages.length; i++) {
+      if (editingMessages[i].nickname !== nickname) continue;
+      editingMessages[i].avatar = avatarInput.value;
+      const els = editRowAvatarEls[i];
+      if (els) {
+        els.avatarInput.value = avatarInput.value;
+        els.preview.src = safeImgSrc(avatarInput.value) || fallbackAvatarDataUri();
+      }
+    }
   });
 
   const nicknameInput = makeInput("닉네임", msg.nickname);
