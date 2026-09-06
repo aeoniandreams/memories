@@ -824,7 +824,14 @@ detailCloseBtn.addEventListener("click", closeDetail);
 // 모달 바깥(어두운 배경) 클릭 시 닫기. 패널 안쪽 클릭은 여기까지 이벤트가
 // 버블링되어 오지만, target이 오버레이 자신일 때만 닫아서 안쪽 클릭은 무시합니다.
 detailModal.addEventListener("click", (e) => {
-  if (e.target === detailModal) closeDetail();
+  if (e.target !== detailModal) return;
+  // 데스크탑에서는 코멘트 패널(.tweet-comment-panel)이 카드 크기만큼만
+  // 차지하고 그 바깥은 대화창 자신의 배경(detailModal)이라, "바깥 클릭"이
+  // 여기로 잡힙니다. 편집 중이면 다른 이탈 경로와 똑같이 먼저 확인합니다.
+  if (isEditingTweetComment() && !confirm("정말 뒤로 가시겠어요? 작성 중인 코멘트는 되돌릴 수 없습니다.")) {
+    return;
+  }
+  closeDetail();
 });
 
 // ---------- 이미지 코멘트 보기/수정 (대화 상세 화면 안, 트윗 이미지용) ----------
