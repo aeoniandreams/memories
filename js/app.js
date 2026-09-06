@@ -364,9 +364,16 @@ function renderCardGrid() {
     const nickEl = document.createElement("span");
     nickEl.className = "card-nickname";
     nickEl.textContent = first.nickname || "(이름 없음)";
+    const last = (data.messages && data.messages[data.messages.length - 1]) || {};
+    // 마지막 트윗 날짜가 첫 트윗과 다를 때만 "시작 - 끝" 범위로 보여주고,
+    // 메시지가 하나뿐이거나 같은 날짜에 몰려있으면 날짜 하나만 보여줍니다.
+    const dateLabel =
+      last.dateDisplay && last.dateDisplay !== first.dateDisplay
+        ? `${first.dateDisplay} - ${last.dateDisplay}`
+        : first.dateDisplay;
     const metaEl = document.createElement("span");
     metaEl.className = "card-meta";
-    metaEl.textContent = [first.handle, first.dateDisplay].filter(Boolean).join(" · ");
+    metaEl.textContent = [first.handle, dateLabel].filter(Boolean).join(" · ");
     headText.append(nickEl, metaEl);
     head.appendChild(headText);
 
