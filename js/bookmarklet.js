@@ -85,12 +85,21 @@
         const avatarNow = avatarImg ? avatarImg.src : "";
 
         if (store.has(id)) {
-          // 이미 저장된 트윗이라도, 그때는 프사 이미지가 아직 안 뜬 상태였는데
-          // 지금은 로드됐을 수 있어서 비어있으면 다시 채워봅니다.
+          // 이미 저장된 트윗이라도, 그때는 프사나 첨부 이미지가 아직 안 뜬
+          // 상태였는데 지금은 로드됐을 수 있어서 다시 채워봅니다. 특히
+          // 이미지는 X가 트윗을 화면에 (텍스트부터) 먼저 그리고 실제
+          // <img src="..."> 는 살짝 늦게(비동기로) 채워 넣는 경우가 있는데,
+          // 예전엔 여기서 그냥 return 해버려서 그 사이에 처음 한 번
+          // 캡처된(그 시점엔 비어있던) images가 그대로 굳어버렸습니다 —
+          // "가끔 이미지가 캡처 안 되는" 문제의 원인이었습니다. 이제 매번
+          // 다시 스캔해서 새로 나타난 이미지가 있으면 이어붙입니다.
           const existingEntry = store.get(id);
           if (!existingEntry.avatar && avatarNow) {
             existingEntry.avatar = avatarNow;
           }
+          extractImages(article).forEach((url) => {
+            if (existingEntry.images.indexOf(url) === -1) existingEntry.images.push(url);
+          });
           return;
         }
 
