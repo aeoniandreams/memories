@@ -1060,15 +1060,20 @@ function openTweetCommentView(commentKey, role, entryId) {
   // 이미지 설명 창과 겹쳐서 뜨지 않도록, 열려 있으면 먼저 닫습니다.
   closeCommentModal();
   tweetCommentPanelState = { commentKey, role, entryId, mode: "view" };
-  renderTweetCommentPanel();
+  // hidden을 먼저 풀어야 합니다. renderTweetCommentPanel() 안에서 블록
+  // textarea 높이를 scrollHeight로 재는데, 패널이 아직 hidden(=display:none)인
+  // 상태면 레이아웃 자체가 없어서 scrollHeight가 0으로 나와 칸이 한 줄도
+  // 안 되게 찌그러져 보였습니다(글자를 입력하는 순간 다시 계산되어 정상으로
+  // 돌아왔던 것도 이 때문).
   tweetCommentPanel.hidden = false;
+  renderTweetCommentPanel();
 }
 
 function openTweetCommentCompose(commentKey) {
   closeCommentModal();
   tweetCommentPanelState = { commentKey, role: null, entryId: null, mode: "compose", adminType: "message-circle" };
-  renderTweetCommentPanel();
   tweetCommentPanel.hidden = false;
+  renderTweetCommentPanel();
   // 코멘트 작성 창은 특정 "보기" 버튼과 무관하니, 다른 코멘트를 보다가 넘어온
   // 거라면 그 버튼의 강조 표시를 지웁니다.
   setActiveTweetCommentViewBtn(null);
