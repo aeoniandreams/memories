@@ -1200,4 +1200,15 @@ h1 {
     font-size: 12.5px;
     padding: 7px 13px;
   }
+
+  /* "새 대화 추가" 글자를 빼고 + 아이콘만 남겨서, 그 자리에서 확보되는
+     공간으로 "로그아웃" 버튼이 줄바꿈되지 않게 합니다. 아이콘만 남으니
+     정사각형에 가깝게 좌우 패딩도 줄였습니다. */
+  #new-card-btn .btn-label {
+    display: none;
+  }
+  #new-card-btn {
+    padding: 7px 9px;
+    gap: 0;
+  }
 }
