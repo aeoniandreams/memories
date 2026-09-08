@@ -132,6 +132,21 @@
     </div>
     <div id="kakao-detail-thread" class="kakao-thread"></div>
   </div>
+
+  <!-- 카카오톡 메시지 코멘트 보기/작성. X 백업의 코멘트 패널과 같은
+       레이아웃/아이콘을 씁니다(데스크탑: 옆, 모바일: 바텀시트). -->
+  <div id="kakao-comment-panel" class="tweet-comment-panel" hidden>
+    <div class="tweet-comment-panel-card">
+      <div class="modal-header">
+        <button id="kakao-comment-panel-back-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+        <div class="modal-header-right">
+          <button id="kakao-comment-panel-action-btn" class="btn-secondary" hidden></button>
+          <button id="kakao-comment-panel-delete-btn" class="btn-ghost danger" hidden>삭제</button>
+        </div>
+      </div>
+      <div id="kakao-comment-panel-body" class="tweet-comment-panel-body"></div>
+    </div>
+  </div>
 </div>
 
 <!-- 대화 상세 보기 모달 -->

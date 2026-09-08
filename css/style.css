@@ -1186,29 +1186,37 @@ h1 {
   min-height: 40px;
 }
 
-/* ---------- 카카오톡 백업: 채팅 말풍선 레이아웃 ---------- */
+/* ---------- 카카오톡 백업: 채팅 말풍선 레이아웃 ----------
+   사용자가 보여준 참고 화면(연한 회색 배경, 상대는 옅은 회색 말풍선,
+   나는 검은 말풍선 + 흰 글씨)에 맞춘 색상입니다. */
 :root {
-  --kakao-bg: #b2c7da;
-  --kakao-bubble-other: #ffffff;
-  --kakao-bubble-me: #fee500;
-  --kakao-text-me: #3c1e1e;
+  --kakao-bg: #f5f5f5;
+  --kakao-bubble-other: #e8e8e8;
+  --kakao-text-other: #0f1419;
+  --kakao-bubble-me: #1a1a1a;
+  --kakao-text-me: #ffffff;
   --kakao-time: rgba(0, 0, 0, 0.45);
+  --kakao-avatar-bg: #000000;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --kakao-bg: var(--bg);
     --kakao-bubble-other: var(--surface);
-    --kakao-bubble-me: #8c7a1f;
-    --kakao-text-me: #f5eecb;
+    --kakao-text-other: var(--text);
+    --kakao-bubble-me: #2c2c2e;
+    --kakao-text-me: #ffffff;
     --kakao-time: var(--muted);
+    --kakao-avatar-bg: #3a3a3c;
   }
 }
 :root[data-theme="dark"] {
   --kakao-bg: var(--bg);
   --kakao-bubble-other: var(--surface);
-  --kakao-bubble-me: #8c7a1f;
-  --kakao-text-me: #f5eecb;
+  --kakao-text-other: var(--text);
+  --kakao-bubble-me: #2c2c2e;
+  --kakao-text-me: #ffffff;
   --kakao-time: var(--muted);
+  --kakao-avatar-bg: #3a3a3c;
 }
 
 .kakao-thread {
@@ -1239,16 +1247,37 @@ h1 {
 
 .kakao-message-group {
   display: flex;
-  flex-direction: column;
+  gap: 8px;
   max-width: 78%;
   margin-bottom: 10px;
 }
 .kakao-message-group.me {
   align-self: flex-end;
-  align-items: flex-end;
 }
 .kakao-message-group.other {
   align-self: flex-start;
+}
+
+/* 상대방 전용 원형 프로필. 카카오톡 내보내기엔 실제 프사가 없어서
+   검은 동그라미로 대신합니다(묶음 하나당 한 번, 위쪽에 정렬). */
+.kakao-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--kakao-avatar-bg);
+  flex-shrink: 0;
+  margin-top: 20px;
+}
+
+.kakao-message-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.kakao-message-group.me .kakao-message-col {
+  align-items: flex-end;
+}
+.kakao-message-group.other .kakao-message-col {
   align-items: flex-start;
 }
 
@@ -1263,6 +1292,7 @@ h1 {
   align-items: flex-end;
   gap: 6px;
   margin-top: 2px;
+  position: relative;
 }
 .kakao-message-group.me .kakao-bubble-row {
   flex-direction: row-reverse;
@@ -1278,7 +1308,7 @@ h1 {
 }
 .kakao-message-group.other .kakao-bubble {
   background: var(--kakao-bubble-other);
-  color: var(--text);
+  color: var(--kakao-text-other);
   border-top-left-radius: 4px;
 }
 .kakao-message-group.me .kakao-bubble {
@@ -1292,6 +1322,31 @@ h1 {
   color: var(--kakao-time);
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* 코멘트 작성 버튼: 말풍선 옆(시간 표시와 같은, 가운데를 향한 쪽)에
+   나란히 놓입니다. 위치는 kakao-bubble-row의 flex 순서로 정해지고
+   (row 자체는 위치를 따로 잡지 않음), 아이콘 방향(꼬리)만 상대/나에
+   따라 JS에서 좌우로 뒤집습니다. */
+.kakao-comment-add-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.kakao-comment-add-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 코멘트 보기 버튼(트윗 코멘트 보기 버튼과 같은 컴포넌트)을 카카오톡
+   말풍선 아래에 놓을 때만 위쪽에 살짝 여백을 둡니다. */
+.kakao-message-col > .tweet-comment-view-btn {
+  margin-top: 4px;
 }
 
 .kakao-preview-section {

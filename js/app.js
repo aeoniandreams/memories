@@ -1805,6 +1805,7 @@ let kakaoParsedRoomName = "";
 let kakaoParsedMessages = []; // [{sender, dateDisplay, dateSort, timeDisplay, timeSort, text}]
 let kakaoSelectedMeSender = "";
 let currentKakaoDetailId = null;
+let currentKakaoDetailData = null; // openKakaoDetail에서 채워둠(코멘트 저장 시 필요)
 
 function switchSection(section) {
   currentSection = section;
@@ -2002,11 +2003,16 @@ function parseKakaoExport(rawText) {
 // 전 미리보기 화면) 말풍선 사이사이에 "+ 이미지 추가" 버튼을 넣어서, 원하는
 // 위치에 이미지를 수동으로 끼워 넣을 수 있게 합니다 — 카카오톡 내보내기
 // 텍스트에는 사진이 "사진"이라는 글자로만 남기 때문입니다.
+// options.cardId가 있으면(=저장된 카드의 상세보기) 메시지마다 코멘트
+// 추가/보기 버튼을 같이 그립니다. 미리보기(저장 전)에는 카드 id가 아직
+// 없어서 이 버튼들이 뜨지 않습니다.
 function renderKakaoThread(container, messages, meSender, options = {}) {
   const editable = !!options.editable;
+  const cardId = options.cardId || null;
   container.innerHTML = "";
   let lastDate = null;
   let currentGroup = null;
+  let currentGroupCol = null;
   let currentGroupSender = null;
 
   function makeInsertImageBtn(insertIndex) {
@@ -2033,6 +2039,39 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     return btn;
   }
 
+  // 코멘트 작성 버튼: 말풍선의 "상대를 향한" 세로변(=화면 가운데 쪽 변,
+  // 시간 표시와 같은 쪽) 옆에 붙습니다. 아이콘의 말풍선 꼬리는 항상 자기
+  // 말풍선 쪽을 향하게 상대/나에 따라 좌우로 뒤집습니다.
+  function makeKakaoCommentAddBtn(msgIndex, isMe) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "kakao-comment-add-btn";
+    btn.innerHTML = MESSAGE_CIRCLE_PLUS_ICON_SVG;
+    const svg = btn.querySelector("svg");
+    if (svg) svg.style.transform = isMe ? "scaleX(-1)" : "none";
+    btn.setAttribute("aria-label", "코멘트 작성");
+    btn.addEventListener("click", () => openKakaoCommentCompose(msgIndex));
+    return btn;
+  }
+
+  // 코멘트 보기 버튼: 트윗 코멘트 보기 버튼과 완전히 같은 모양(말풍선 배경 +
+  // 아이콘)이고, 코멘트가 달린 그 말풍선 바로 아래에 놓입니다.
+  function makeKakaoCommentViewBtn(msgIndex) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tweet-comment-view-btn";
+    btn.setAttribute("aria-label", "코멘트 보기");
+    const bubbleShape = document.createElement("span");
+    bubbleShape.className = "bubble-shape";
+    bubbleShape.innerHTML = MESSAGE_CIRCLE_BUBBLE_FILL_SVG;
+    const icon = document.createElement("span");
+    icon.className = "bubble-icon";
+    icon.innerHTML = MESSAGE_CIRCLE_ICON_SVG;
+    btn.append(bubbleShape, icon);
+    btn.addEventListener("click", () => openKakaoCommentView(msgIndex));
+    return btn;
+  }
+
   if (editable) container.appendChild(makeInsertImageBtn(0));
 
   messages.forEach((msg, index) => {
@@ -2050,11 +2089,19 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       currentGroup = document.createElement("div");
       currentGroup.className = "kakao-message-group " + (isMe ? "me" : "other");
       if (!isMe) {
+        const avatar = document.createElement("div");
+        avatar.className = "kakao-avatar";
+        currentGroup.appendChild(avatar);
+      }
+      currentGroupCol = document.createElement("div");
+      currentGroupCol.className = "kakao-message-col";
+      if (!isMe) {
         const nameEl = document.createElement("div");
         nameEl.className = "kakao-sender-name";
         nameEl.textContent = msg.sender;
-        currentGroup.appendChild(nameEl);
+        currentGroupCol.appendChild(nameEl);
       }
+      currentGroup.appendChild(currentGroupCol);
       container.appendChild(currentGroup);
       currentGroupSender = msg.sender;
     }
@@ -2089,7 +2136,11 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       time.textContent = msg.timeDisplay;
       row.append(bubble, time);
     }
-    currentGroup.appendChild(row);
+
+    if (cardId && isAdmin) row.appendChild(makeKakaoCommentAddBtn(index, isMe));
+    currentGroupCol.appendChild(row);
+
+    if (cardId && msg.comment) currentGroupCol.appendChild(makeKakaoCommentViewBtn(index));
 
     if (editable) container.appendChild(makeInsertImageBtn(index + 1));
   });
@@ -2255,22 +2306,123 @@ function renderKakaoCardGrid() {
 
 function openKakaoDetail(id, data) {
   currentKakaoDetailId = id;
+  currentKakaoDetailData = data;
   // 상세보기에서는 "나"를 매번 물어보지 않고 저장 당시 고른 값을 그대로 씁니다.
   const meSet = new Set((data.messages || []).filter((m) => m.isMe).map((m) => m.sender));
   const meSender = meSet.size ? Array.from(meSet)[0] : null;
-  renderKakaoThread(kakaoDetailThread, data.messages || [], meSender);
+  renderKakaoThread(kakaoDetailThread, data.messages || [], meSender, { cardId: id });
   kakaoDetailModal.hidden = false;
 }
 
 function closeKakaoDetail() {
   kakaoDetailModal.hidden = true;
   currentKakaoDetailId = null;
+  currentKakaoDetailData = null;
+  closeKakaoCommentPanel();
 }
 
 kakaoDetailCloseBtn.addEventListener("click", closeKakaoDetail);
 kakaoDetailModal.addEventListener("click", (e) => {
   if (e.target === kakaoDetailModal) closeKakaoDetail();
 });
+
+// 카카오 메시지별 코멘트 보기/작성 패널. X 백업의 코멘트 패널과 같은
+// 레이아웃(트윗 코멘트 패널 CSS 재사용)이지만, 관리자만 쓸 수 있어서
+// 상태 구조가 훨씬 단순합니다(메시지 배열 안 comment 필드 하나).
+const kakaoCommentPanel = document.getElementById("kakao-comment-panel");
+const kakaoCommentPanelBackBtn = document.getElementById("kakao-comment-panel-back-btn");
+const kakaoCommentPanelActionBtn = document.getElementById("kakao-comment-panel-action-btn");
+const kakaoCommentPanelDeleteBtn = document.getElementById("kakao-comment-panel-delete-btn");
+const kakaoCommentPanelBody = document.getElementById("kakao-comment-panel-body");
+
+let kakaoCommentPanelState = null; // { msgIndex, mode: "view" | "edit" }
+
+function openKakaoCommentView(msgIndex) {
+  kakaoCommentPanelState = { msgIndex, mode: "view" };
+  renderKakaoCommentPanel();
+  kakaoCommentPanel.hidden = false;
+}
+
+function openKakaoCommentCompose(msgIndex) {
+  kakaoCommentPanelState = { msgIndex, mode: "edit" };
+  renderKakaoCommentPanel();
+  kakaoCommentPanel.hidden = false;
+}
+
+function closeKakaoCommentPanel() {
+  kakaoCommentPanel.hidden = true;
+  kakaoCommentPanelState = null;
+}
+
+function renderKakaoCommentPanel() {
+  const state = kakaoCommentPanelState;
+  if (!state) return;
+  kakaoCommentPanelBody.innerHTML = "";
+  const msg = (currentKakaoDetailData?.messages || [])[state.msgIndex] || {};
+
+  if (state.mode === "view") {
+    const p = document.createElement("p");
+    p.className = "comment-modal-text";
+    p.textContent = msg.comment || "";
+    kakaoCommentPanelBody.appendChild(p);
+    kakaoCommentPanelActionBtn.hidden = !isAdmin;
+    kakaoCommentPanelActionBtn.textContent = "수정";
+    kakaoCommentPanelDeleteBtn.hidden = !isAdmin;
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.id = "kakao-comment-panel-textarea";
+  textarea.className = "tweet-comment-editor-textarea";
+  textarea.rows = 5;
+  textarea.placeholder = "이 메시지에 대한 코멘트를 입력하세요";
+  textarea.value = msg.comment || "";
+  kakaoCommentPanelBody.appendChild(textarea);
+  kakaoCommentPanelActionBtn.hidden = false;
+  kakaoCommentPanelActionBtn.textContent = "저장";
+  kakaoCommentPanelDeleteBtn.hidden = true;
+}
+
+kakaoCommentPanelBackBtn.addEventListener("click", closeKakaoCommentPanel);
+kakaoCommentPanel.addEventListener("click", (e) => {
+  if (e.target === kakaoCommentPanel) closeKakaoCommentPanel();
+});
+
+kakaoCommentPanelActionBtn.addEventListener("click", async () => {
+  const state = kakaoCommentPanelState;
+  if (!state) return;
+  if (state.mode === "view") {
+    state.mode = "edit";
+    renderKakaoCommentPanel();
+    return;
+  }
+  const textarea = document.getElementById("kakao-comment-panel-textarea");
+  const text = textarea.value.trim();
+  await saveKakaoComment(state.msgIndex, text || null);
+  closeKakaoCommentPanel();
+});
+
+kakaoCommentPanelDeleteBtn.addEventListener("click", async () => {
+  const state = kakaoCommentPanelState;
+  if (!state) return;
+  if (!confirm("이 코멘트를 삭제할까요? 되돌릴 수 없어요.")) return;
+  await saveKakaoComment(state.msgIndex, null);
+  closeKakaoCommentPanel();
+});
+
+async function saveKakaoComment(msgIndex, commentOrNull) {
+  if (!currentKakaoDetailId || !currentKakaoDetailData) return;
+  const messages = currentKakaoDetailData.messages.map((m, i) => {
+    if (i !== msgIndex) return m;
+    const { comment, ...rest } = m;
+    return commentOrNull ? { ...rest, comment: commentOrNull } : rest;
+  });
+  await updateDoc(doc(db, "kakaoCards", currentKakaoDetailId), { messages });
+  currentKakaoDetailData.messages = messages;
+  const meSet = new Set(messages.filter((m) => m.isMe).map((m) => m.sender));
+  const meSender = meSet.size ? Array.from(meSet)[0] : null;
+  renderKakaoThread(kakaoDetailThread, messages, meSender, { cardId: currentKakaoDetailId });
+}
 
 kakaoDetailDeleteBtn.addEventListener("click", async () => {
   if (!currentKakaoDetailId) return;
