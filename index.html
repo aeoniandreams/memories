@@ -33,8 +33,46 @@
      확인되면 js/app.js가 이 화면을 숨기고 맞는 화면(로그인 폼 또는 앱
      화면)을 보여줍니다. -->
 <div id="loading-view" class="view loading-view">
-  <div class="loading-spinner"></div>
+  <div class="loading-content">
+    <p id="loading-comment" class="loading-comment">잠시만 기다려주세요</p>
+    <img id="loading-image" class="loading-image" alt="" hidden />
+    <p class="loading-dots-text">Loading<span id="loading-dots" class="loading-dots"></span></p>
+  </div>
 </div>
+<script>
+  // 점 3개가 하나씩 늘었다 다시 0개로 돌아가는 애니메이션과, 이미지를 3초마다
+  // 무작위로 바꾸는 동작을 여기서 바로 시작합니다. js/app.js는 ES 모듈이라
+  // Firebase 등 import가 전부 끝나야 실행되는데(모듈 실행 규칙상 import
+  // 로딩이 먼저 끝나야 그 다음 코드가 실행됨), 이 로딩 화면은 정확히 그
+  // 기다리는 동안 보여주는 화면이라 그 실행을 기다리면 안 됩니다 — 그래서
+  // 이 스크립트는 일반 스크립트로 두고 페이지가 파싱되는 즉시 바로 시작합니다.
+  (function () {
+    // ⬇️ 로딩 화면에 번갈아 보여줄 이미지 경로를 여기에 채워주세요(예:
+    // "images/loading/1.png"). 비어 있으면 이미지 없이 문구만 보입니다.
+    var LOADING_IMAGES = [];
+
+    var dotsEl = document.getElementById("loading-dots");
+    var dotsCount = 0;
+    function renderDots() {
+      dotsEl.textContent = ".".repeat(dotsCount);
+    }
+    renderDots();
+    setInterval(function () {
+      dotsCount = (dotsCount + 1) % 4;
+      renderDots();
+    }, 500);
+
+    var imgEl = document.getElementById("loading-image");
+    function pickRandomLoadingImage() {
+      if (LOADING_IMAGES.length === 0) return;
+      var idx = Math.floor(Math.random() * LOADING_IMAGES.length);
+      imgEl.src = LOADING_IMAGES[idx];
+      imgEl.hidden = false;
+    }
+    pickRandomLoadingImage();
+    setInterval(pickRandomLoadingImage, 3000);
+  })();
+</script>
 
 <!-- 로그인 화면 -->
 <div id="login-view" class="view" hidden>
