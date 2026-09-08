@@ -1600,14 +1600,17 @@ h1 {
   display: flex;
   flex-direction: column;
 }
+/* 카드를 열자마자 이미지 전체가 (누르지 않고도) 다 보이도록 9:16 비율
+   상자로 고정하고, object-fit:cover로 채웁니다. 원본 이미지 그대로도
+   보고 싶을 수 있어서 클릭하면 트위터 백업과 같은 이미지 원본 보기
+   창(#image-viewer-modal)이 뜹니다. */
 .sumone-detail-image {
   display: block;
   width: 100%;
-  max-height: 420px;
+  aspect-ratio: 9 / 16;
   object-fit: cover;
   border-radius: 12px;
-  /* 이미지와 내용 사이 여백 */
-  margin-bottom: 20px;
+  cursor: pointer;
 }
 .sumone-detail-image[hidden] {
   display: none;
@@ -1620,12 +1623,14 @@ h1 {
   word-break: break-word;
   color: var(--text);
 }
+/* 코멘트 보기 버튼들과 작성 버튼이 한 줄에 나란히 놓입니다(이미지 아래,
+   내용 위). */
 .sumone-comment-area {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-top: 18px;
+  margin: 14px 0;
 }
 .sumone-comment-add-btn {
   background: none;
@@ -1729,5 +1734,17 @@ h1 {
   #sumone-logout-btn {
     font-size: 12.5px;
     padding: 7px 13px;
+  }
+
+  /* 모바일에서는 "새 대화/카드 추가"(+) 버튼을 관리자 여부와 상관없이 아예
+     안 보이게 합니다 — 그만큼 로그아웃 버튼이 줄바꿈 없이 한 줄로 들어갈
+     공간이 생깁니다(버튼 하나가 통째로 flex 배치에서 빠지니 자동으로
+     넓어짐). 대화/카드 상세 화면 안의 "수정" 버튼(detail-edit-btn 계열)은
+     이것과 다른, 별도의 버튼이라 영향받지 않습니다. 이 미디어 쿼리 밖의
+     데스크탑 화면에는 영향이 없습니다. */
+  #new-card-btn,
+  #kakao-new-card-btn,
+  #sumone-new-card-btn {
+    display: none;
   }
 }

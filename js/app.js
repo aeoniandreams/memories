@@ -1860,6 +1860,7 @@ const sumoneFormModal = document.getElementById("sumone-form-modal");
 const sumoneFormCloseBtn = document.getElementById("sumone-form-close-btn");
 const sumoneFormSaveBtn = document.getElementById("sumone-form-save-btn");
 const sumoneTitleInput = document.getElementById("sumone-title-input");
+const sumoneDateInput = document.getElementById("sumone-date-input");
 const sumoneImageInput = document.getElementById("sumone-image-input");
 const sumoneContentInput = document.getElementById("sumone-content-input");
 
@@ -2718,7 +2719,9 @@ kakaoEditSaveBtn.addEventListener("click", async () => {
 // 한 덩어리 + 코멘트로 구성됩니다(X/카카오톡처럼 메시지가 여러 개 쌓이는
 // 구조가 아니라, 카드 하나당 콘텐츠가 하나뿐입니다).
 async function loadSumoneCards() {
-  const q = query(collection(db, "sumoneCards"), orderBy("createdAt", "desc"));
+  // 입력한 날짜(dateSort) 기준 최신순. 날짜를 안 넣은 카드는 dateSort가
+  // 빈 문자열이라 맨 뒤로 갑니다.
+  const q = query(collection(db, "sumoneCards"), orderBy("dateSort", "desc"));
   const snapshot = await getDocs(q);
   loadedSumoneCards = snapshot.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }));
   renderSumoneCardGrid();
@@ -2751,6 +2754,7 @@ function renderSumoneCardGrid() {
 function openSumoneForm(id, data) {
   sumoneEditTargetId = id || null;
   sumoneTitleInput.value = data ? data.title || "" : "";
+  sumoneDateInput.value = data ? data.dateDisplay || "" : "";
   sumoneImageInput.value = data ? data.imageUrl || "" : "";
   sumoneContentInput.value = data ? data.content || "" : "";
   sumoneFormModal.hidden = false;
@@ -2771,8 +2775,11 @@ sumoneFormSaveBtn.addEventListener("click", async () => {
     alert("제목을 입력해주세요.");
     return;
   }
+  const dateDisplay = sumoneDateInput.value.trim();
   const payload = {
     title,
+    dateDisplay,
+    dateSort: toDateSort(dateDisplay), // Firestore가 이 필드로 정렬하니 항상 채워둡니다(없으면 목록 정렬에서 아예 빠짐).
     imageUrl: sumoneImageInput.value.trim(),
     content: sumoneContentInput.value.trim(),
   };
@@ -2812,6 +2819,8 @@ function renderSumoneDetail() {
   const imgSrc = safeImgSrc(data.imageUrl);
   sumoneDetailImage.src = imgSrc || "";
   sumoneDetailImage.hidden = !imgSrc;
+  // 트위터 백업과 같은 이미지 원본 보기 창으로 엽니다.
+  sumoneDetailImage.onclick = imgSrc ? () => openImageViewer(imgSrc) : null;
   sumoneDetailContent.textContent = data.content || "";
   renderSumoneCommentStack();
 }
@@ -2863,7 +2872,9 @@ function findSumoneCommentEntry(role, entryId) {
   return arr.find((e) => e.id === entryId) || null;
 }
 
-// 코멘트 작성 버튼(+ 있으면 보기 버튼들)을 상세 화면에 그립니다.
+// 코멘트 작성 버튼과(있으면) 보기 버튼들을 한 줄에 나란히 그립니다
+// (이미지 아래, 내용 위). sumoneCommentArea 자체가 flex row라 별도
+// 묶음 없이 바로 자식으로 넣습니다.
 function renderSumoneCommentStack() {
   sumoneCommentArea.innerHTML = "";
 
@@ -2871,6 +2882,11 @@ function renderSumoneCommentStack() {
   addBtn.type = "button";
   addBtn.className = "sumone-comment-add-btn";
   addBtn.innerHTML = MESSAGE_CIRCLE_PLUS_ICON_SVG;
+  // 이 아이콘은 기본적으로(다른 곳에서 왼쪽에 놓일 걸 기준으로) 좌우
+  // 반전되어 있는데, 여기서는 그 반대 방향이 자연스러워서 원래대로
+  // 되돌립니다.
+  const addBtnSvg = addBtn.querySelector("svg");
+  if (addBtnSvg) addBtnSvg.style.transform = "none";
   addBtn.setAttribute("aria-label", "코멘트 작성");
   addBtn.addEventListener("click", () => openSumoneCommentCompose());
   sumoneCommentArea.appendChild(addBtn);
@@ -2879,13 +2895,7 @@ function renderSumoneCommentStack() {
   (currentSumoneComments.user || []).forEach((entry) => viewEntries.push({ role: "user", entry }));
   (currentSumoneComments.admin || []).forEach((entry) => viewEntries.push({ role: "admin", entry }));
   viewEntries.sort((a, b) => (a.entry.createdAt || 0) - (b.entry.createdAt || 0));
-
-  if (viewEntries.length > 0) {
-    const stack = document.createElement("div");
-    stack.className = "kakao-comment-view-stack";
-    viewEntries.forEach(({ role, entry }) => stack.appendChild(makeSumoneCommentViewBtn(role, entry)));
-    sumoneCommentArea.appendChild(stack);
-  }
+  viewEntries.forEach(({ role, entry }) => sumoneCommentArea.appendChild(makeSumoneCommentViewBtn(role, entry)));
 }
 
 function makeSumoneCommentViewBtn(role, commentEntry) {
