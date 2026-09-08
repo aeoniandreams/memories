@@ -93,6 +93,25 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 알림창은 collectionGroup(전체 카드를 통틀어 tweetComments/kakaoComments/
+    // sumoneComments를 한 번에 조회)으로 코멘트를 모아 옵니다. 그런데 위의
+    // match /cards/{cardId} { match /tweetComments/{messageId} {...} } 같은
+    // "중첩된" 규칙은 collection()으로 특정 카드 밑을 직접 읽을 때만 적용되고,
+    // collectionGroup() 조회에는 적용되지 않습니다(Firestore 보안 규칙의
+    // 알려진 제약 — collectionGroup을 허용하려면 {path=**} 재귀 와일드카드로
+    // 된 규칙이 따로 있어야 합니다). 이 규칙이 없으면 알림 데이터를 아예
+    // 못 읽어와서 코멘트를 달아도 알림창이 항상 비어 보입니다. 쓰기 권한은
+    // 위의 중첩 규칙이 그대로 담당하고, 여기서는 읽기만 추가로 허용합니다.
+    match /{path=**}/tweetComments/{messageId} {
+      allow read: if request.auth != null;
+    }
+    match /{path=**}/kakaoComments/{messageKey} {
+      allow read: if request.auth != null;
+    }
+    match /{path=**}/sumoneComments/{docId} {
+      allow read: if request.auth != null;
+    }
+
     // 알림 "읽음" 표시. 사용자마다 완전히 따로 저장되고(본인 것만 읽고
     // 쓸 수 있음), 다른 사람이 남긴 코멘트를 내가 확인했는지 여부만
     // 담습니다 — 카드 본문이나 코멘트 자체와는 무관합니다.

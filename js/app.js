@@ -3381,23 +3381,36 @@ function appendNotifDots(cardEl, section, cardId) {
   cardEl.appendChild(row);
 }
 
-// wine/coffee 코멘트가 새로 달렸을 때 보기 버튼의 말풍선 배경색을 그
+// 와인/커피/말풍선 코멘트가 새로 달렸을 때 보기 버튼의 말풍선 배경색을 그
 // 종류의 색으로 바꿉니다(말풍선 SVG가 fill="currentColor"라 bubble-shape의
 // color를 바꾸면 됩니다). 확인하면(그 버튼을 눌러서 보기/닫기) 원래
 // 색으로 돌아옵니다.
 const NOTIF_VIEW_BTN_COLOR = {
   coffee: "#B8E2DC",
   wine: "#7E212A",
+  "message-circle": "var(--accent)",
 };
+// 배경이 어둡거나 진한 색(와인/말풍선)일 땐 그 위 아이콘도 흰색으로 바꿔야
+// 잘 보입니다. 커피는 배경이 밝은 파스텔이라 원래 아이콘 색이 더 잘 보여서
+// 그대로 둡니다.
+const NOTIF_VIEW_BTN_WHITE_ICON_TYPES = new Set(["wine", "message-circle"]);
 function applyNotifViewBtnColor(bubbleShapeEl, section, cardId, targetKey, type, createdAt) {
   if (!NOTIF_VIEW_BTN_COLOR[type]) return;
   if (isTargetTypeUnseen(section, cardId, targetKey, type, createdAt)) {
     bubbleShapeEl.style.color = NOTIF_VIEW_BTN_COLOR[type];
+    if (NOTIF_VIEW_BTN_WHITE_ICON_TYPES.has(type)) {
+      const iconEl = bubbleShapeEl.nextElementSibling;
+      if (iconEl) iconEl.style.color = "#fff";
+    }
   }
 }
 // 보기 버튼을 눌러 코멘트를 확인한 순간 바로 원래 색으로 되돌리고, 서버에도 기록합니다.
 function acknowledgeNotifTarget(bubbleShapeEl, section, cardId, targetKey, type) {
-  if (bubbleShapeEl) bubbleShapeEl.style.color = "";
+  if (bubbleShapeEl) {
+    bubbleShapeEl.style.color = "";
+    const iconEl = bubbleShapeEl.nextElementSibling;
+    if (iconEl) iconEl.style.color = "";
+  }
   markTargetSeen(section, cardId, targetKey, type);
 }
 
@@ -3438,16 +3451,41 @@ function coalesceMessageCircleEntries(entriesSortedAsc) {
   return groups;
 }
 
+// 알림창 한 줄이 어느 카드/대화에서 온 건지 보여주는 짧은 문구. 이미
+// 메모리에 있는 카드 목록(loadedCards 등)에서 바로 찾아 쓰기 때문에
+// Firestore를 추가로 읽지 않습니다.
+function getNotifContextLabel(section, cardId) {
+  if (section === "x") {
+    const found = loadedCards.find((c) => c.id === cardId);
+    const first = found && found.data.messages && found.data.messages[0];
+    return (first && (first.nickname || first.handle)) || "";
+  }
+  if (section === "kakao") {
+    const found = loadedKakaoCards.find((c) => c.id === cardId);
+    return (found && found.data.roomName) || "";
+  }
+  if (section === "sumone") {
+    const found = loadedSumoneCards.find((c) => c.id === cardId);
+    return (found && found.data.title) || "";
+  }
+  return "";
+}
+
+// 알림창에 한 번에 너무 많은 줄이 쌓이지 않도록, 최신 7개만 남기고 나머지
+// (오래된 것)는 그냥 버립니다 — 오래된 알림은 어차피 카드/보기 버튼 쪽
+// 표시(점, 강조색)로 계속 남아있으니 알림창에서는 개수만 제한해도 됩니다.
+const NOTIF_MAX_ROWS = 7;
+
 function buildNotifRows() {
   const visible = notifEntriesCache.filter(isNotifEntryVisible);
-  const rows = []; // { type, time }
+  const rows = []; // { type, time, section, cardId }
 
   // 커피/와인: 안 본 코멘트 하나하나가 각자 한 줄.
   visible
     .filter((e) => e.type === "coffee" || e.type === "wine")
     .forEach((e) => {
       if (!isTargetTypeUnseen(e.section, e.cardId, e.targetKey, e.type, e.createdAt)) return;
-      rows.push({ type: e.type, time: e.createdAt });
+      rows.push({ type: e.type, time: e.createdAt, section: e.section, cardId: e.cardId });
     });
 
   // 말풍선: 대상(카드+타깃)별로 묶어서 7일 이내 묶음은 한 줄로.
@@ -3464,13 +3502,13 @@ function buildNotifRows() {
     const groups = coalesceMessageCircleEntries(list);
     groups.forEach((g) => {
       if (isTargetTypeUnseen(section, cardId, targetKey, "message-circle", g.lastAt)) {
-        rows.push({ type: "message-circle", time: g.lastAt });
+        rows.push({ type: "message-circle", time: g.lastAt, section, cardId });
       }
     });
   });
 
   rows.sort((a, b) => b.time - a.time);
-  return rows;
+  return rows.slice(0, NOTIF_MAX_ROWS);
 }
 
 function renderNotifPanel() {
@@ -3480,6 +3518,13 @@ function renderNotifPanel() {
   rows.forEach((row) => {
     const item = document.createElement("div");
     item.className = "notif-item";
+    const contextLabel = getNotifContextLabel(row.section, row.cardId);
+    if (contextLabel) {
+      const context = document.createElement("p");
+      context.className = "notif-item-context";
+      context.textContent = contextLabel;
+      item.appendChild(context);
+    }
     const text = document.createElement("p");
     text.className = "notif-item-text";
     text.textContent = NOTIF_TEXT_BY_TYPE[row.type] || NOTIF_TEXT_BY_TYPE["message-circle"];

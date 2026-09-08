@@ -409,6 +409,12 @@ h1 {
 .notif-item:last-child {
   border-bottom: none;
 }
+.notif-item-context {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
 .notif-item-text {
   margin: 0;
   font-size: 14px;
