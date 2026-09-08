@@ -1659,11 +1659,59 @@ h1 {
   margin: 0;
   font-size: 14.5px;
   line-height: 1.6;
-  white-space: pre-wrap;
   word-break: break-word;
   color: var(--text);
 }
-.app-info-textarea {
+
+/* 굵게/기울임/취소선/글씨 색(회색 + 테마 색 2종: 파란색 accent, 빨간색
+   danger) 서식 도구. 굵게 등은 execCommand로 적용하고 결과를 그대로
+   HTML로 저장합니다(이 창은 관리자만 쓸 수 있어서, 관리자가 자기 자신을
+   상대로 뭔가를 주입할 위험만 있는 수준이라 innerHTML을 그대로 써도 안전). */
+.app-info-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.app-info-toolbar[hidden] {
+  display: none;
+}
+.app-info-format-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.app-info-format-btn:hover {
+  border-color: var(--accent);
+}
+.app-info-color-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 0;
+}
+.app-info-color-gray {
+  background: var(--muted);
+}
+.app-info-color-accent {
+  background: var(--accent);
+}
+.app-info-color-danger {
+  background: var(--danger);
+}
+
+.app-info-editor {
   width: 100%;
   box-sizing: border-box;
   min-height: 240px;
@@ -1675,9 +1723,9 @@ h1 {
   font: inherit;
   font-size: 14.5px;
   line-height: 1.6;
-  resize: vertical;
+  overflow-wrap: break-word;
 }
-.app-info-textarea[hidden],
+.app-info-editor[hidden],
 .app-info-text[hidden] {
   display: none;
 }

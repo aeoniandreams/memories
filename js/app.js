@@ -1950,18 +1950,26 @@ const appInfoCloseBtn = document.getElementById("app-info-close-btn");
 const appInfoEditBtn = document.getElementById("app-info-edit-btn");
 const appInfoSaveBtn = document.getElementById("app-info-save-btn");
 const appInfoText = document.getElementById("app-info-text");
-const appInfoTextarea = document.getElementById("app-info-textarea");
+const appInfoToolbar = document.getElementById("app-info-toolbar");
+const appInfoEditor = document.getElementById("app-info-editor");
+
+// 관리자가 쓴 내용만 여기 들어올 수 있어서(firestore.rules로 강제) innerHTML로
+// 그대로 그려도 안전합니다 — 굵게/기울임/취소선/글씨색 서식이 HTML 그대로
+// 저장되기 때문입니다.
+let appInfoLoadedContent = "";
 
 async function openAppInfo() {
   appInfoModal.hidden = false;
   appInfoEditBtn.hidden = !isAdmin;
   appInfoSaveBtn.hidden = true;
-  appInfoTextarea.hidden = true;
+  appInfoToolbar.hidden = true;
+  appInfoEditor.hidden = true;
   appInfoText.hidden = false;
   appInfoText.textContent = "불러오는 중...";
   try {
     const snap = await getDoc(doc(db, "appInfo", "main"));
-    appInfoText.textContent = snap.exists() ? snap.data().content || "" : "";
+    appInfoLoadedContent = snap.exists() ? snap.data().content || "" : "";
+    appInfoText.innerHTML = appInfoLoadedContent;
   } catch (e) {
     appInfoText.textContent = "설명을 불러오지 못했습니다.";
     console.error("앱 설명을 불러오지 못했습니다.", e);
@@ -1980,20 +1988,71 @@ appInfoModal.addEventListener("click", (e) => {
 });
 
 appInfoEditBtn.addEventListener("click", () => {
-  appInfoTextarea.value = appInfoText.textContent;
+  appInfoEditor.innerHTML = appInfoLoadedContent;
   appInfoText.hidden = true;
-  appInfoTextarea.hidden = false;
+  appInfoToolbar.hidden = false;
+  appInfoEditor.hidden = false;
   appInfoEditBtn.hidden = true;
   appInfoSaveBtn.hidden = false;
 });
 
+// 굵게/기울임/취소선/색: 선택한 부분에 execCommand로 바로 적용합니다.
+// 버튼(<button>)을 누르면 브라우저가 mouseup 시점에 포커스를 그 버튼으로
+// 옮기는데(mousedown이 아니라 mouseup에서 일어남), 그 순간 편집칸이
+// 포커스를 잃으면서 execCommand가 안 먹히는 문제가 있었습니다. mousedown
+// 시점(아직 포커스가 편집칸에 있을 때)에 선택 범위를 미리 복사해두고,
+// mousedown/mouseup 모두 기본 동작(포커스 이동)을 막은 뒤, click 시점에
+// 편집칸에 다시 포커스를 주고 그 범위를 복원하고 나서 명령을 실행합니다.
+let savedAppInfoRange = null;
+function captureAppInfoSelection() {
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0 && appInfoEditor.contains(sel.anchorNode)) {
+    savedAppInfoRange = sel.getRangeAt(0).cloneRange();
+  }
+}
+function preventAppInfoFocusSteal(e) {
+  e.preventDefault();
+}
+function restoreAppInfoSelection() {
+  appInfoEditor.focus();
+  if (savedAppInfoRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedAppInfoRange);
+  }
+}
+document.querySelectorAll(".app-info-format-btn, .app-info-color-btn").forEach((btn) => {
+  btn.addEventListener("mousedown", (e) => {
+    captureAppInfoSelection();
+    preventAppInfoFocusSteal(e);
+  });
+  btn.addEventListener("mouseup", preventAppInfoFocusSteal);
+});
+document.querySelectorAll(".app-info-format-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    restoreAppInfoSelection();
+    document.execCommand(btn.dataset.cmd, false, null);
+  });
+});
+// 글씨 색: 회색(--muted)과 테마 색 2종(--accent 파란색, --danger 빨간색)만
+// 고를 수 있습니다. 지금 테마에서 실제 적용되는 색상 값을 읽어서 적용합니다.
+document.querySelectorAll(".app-info-color-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    restoreAppInfoSelection();
+    const color = getComputedStyle(document.documentElement).getPropertyValue(btn.dataset.colorVar).trim();
+    document.execCommand("foreColor", false, color);
+  });
+});
+
 appInfoSaveBtn.addEventListener("click", async () => {
-  const content = appInfoTextarea.value.trim();
+  const content = appInfoEditor.innerHTML.trim();
   try {
     await setDoc(doc(db, "appInfo", "main"), { content, updatedAt: serverTimestamp() }, { merge: true });
-    appInfoText.textContent = content;
+    appInfoLoadedContent = content;
+    appInfoText.innerHTML = content;
     appInfoText.hidden = false;
-    appInfoTextarea.hidden = true;
+    appInfoToolbar.hidden = true;
+    appInfoEditor.hidden = true;
     appInfoSaveBtn.hidden = true;
     appInfoEditBtn.hidden = !isAdmin;
   } catch (e) {

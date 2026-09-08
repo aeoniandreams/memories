@@ -71,10 +71,10 @@
     <span>SumOne</span>
   </button>
 
-  <!-- 앱 설명. 사이드바 맨 아래에 붙습니다(margin-top:auto). -->
-  <button id="sidebar-help-btn" class="app-sidebar-btn app-sidebar-help-btn" type="button">
+  <!-- 앱 설명. 사이드바 맨 아래에 붙습니다(margin-top:auto). 다른 항목과
+       달리 아이콘만 두고 글자는 넣지 않습니다. -->
+  <button id="sidebar-help-btn" class="app-sidebar-btn app-sidebar-help-btn" type="button" aria-label="앱 설명">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-    <span>앱 설명</span>
   </button>
 </div>
 
@@ -90,7 +90,15 @@
     </div>
     <div class="app-info-body">
       <p id="app-info-text" class="app-info-text"></p>
-      <textarea id="app-info-textarea" class="app-info-textarea" hidden></textarea>
+      <div id="app-info-toolbar" class="app-info-toolbar" hidden>
+        <button type="button" class="app-info-format-btn" data-cmd="bold" aria-label="굵게"><b>B</b></button>
+        <button type="button" class="app-info-format-btn" data-cmd="italic" aria-label="기울임"><i>I</i></button>
+        <button type="button" class="app-info-format-btn" data-cmd="strikeThrough" aria-label="취소선"><s>S</s></button>
+        <button type="button" class="app-info-color-btn app-info-color-gray" data-color-var="--muted" aria-label="회색 글씨"></button>
+        <button type="button" class="app-info-color-btn app-info-color-accent" data-color-var="--accent" aria-label="테마색 1 글씨"></button>
+        <button type="button" class="app-info-color-btn app-info-color-danger" data-color-var="--danger" aria-label="테마색 2 글씨"></button>
+      </div>
+      <div id="app-info-editor" class="app-info-editor" contenteditable="true" hidden></div>
     </div>
   </div>
 </div>
