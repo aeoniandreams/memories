@@ -2641,8 +2641,12 @@ function renderKakaoEditRows() {
 function openKakaoEdit() {
   if (!currentKakaoDetailData) return;
   kakaoEditingMessages = (currentKakaoDetailData.messages || []).map((m) => ({ ...m }));
-  renderKakaoEditRows();
+  // hidden을 먼저 풀어야 합니다. renderKakaoEditRows() 안에서 textarea 높이를
+  // scrollHeight로 재는데, 모달이 아직 hidden(=display:none)인 상태면 레이아웃
+  // 자체가 없어서 scrollHeight가 0으로 나와 칸이 내용에 안 맞고 한 줄도 안 되게
+  // 찌그러져 보였습니다(트윗 코멘트 패널에서 겪었던 것과 같은 문제).
   kakaoEditModal.hidden = false;
+  renderKakaoEditRows();
 }
 
 function closeKakaoEdit() {
