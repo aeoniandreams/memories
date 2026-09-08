@@ -1429,7 +1429,17 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     arr.push({ id: genCommentId(), type, content, createdAt: Date.now() });
   }
 
-  await persistCommentRoleArray(state.commentKey, role, arr, "코멘트 저장에 실패했습니다: ");
+  await persistCommentRoleArray(
+    doc(db, "cards", currentDetailCardId, "tweetComments", state.commentKey),
+    role,
+    arr,
+    "코멘트 저장에 실패했습니다: ",
+    () => {
+      closeTweetCommentPanel();
+      // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
+      openDetail(currentDetailCardId, currentDetailData);
+    }
+  );
 });
 
 tweetCommentPanelDeleteBtn.addEventListener("click", async () => {
@@ -1442,20 +1452,25 @@ tweetCommentPanelDeleteBtn.addEventListener("click", async () => {
     (e) => e.id !== state.entryId
   );
 
-  await persistCommentRoleArray(state.commentKey, state.role, arr, "코멘트 삭제에 실패했습니다: ");
+  await persistCommentRoleArray(
+    doc(db, "cards", currentDetailCardId, "tweetComments", state.commentKey),
+    state.role,
+    arr,
+    "코멘트 삭제에 실패했습니다: ",
+    () => {
+      closeTweetCommentPanel();
+      openDetail(currentDetailCardId, currentDetailData);
+    }
+  );
 });
 
-// 코멘트 배열을 저장하고, 성공하면 패널을 닫은 뒤 상세 화면을 다시 불러와 반영합니다.
-async function persistCommentRoleArray(commentKey, role, arr, errorPrefix) {
+// 코멘트 배열을 저장하고, 성공하면 onSaved()를 불러 화면에 반영합니다. 트윗
+// 코멘트(cards/.../tweetComments)와 카카오 코멘트(kakaoCards/.../kakaoComments)가
+// 저장 위치만 다르고 나머지 로직은 완전히 같아서 문서 참조를 받아 공용으로 씁니다.
+async function persistCommentRoleArray(commentDocRef, role, arr, errorPrefix, onSaved) {
   try {
-    await setDoc(
-      doc(db, "cards", currentDetailCardId, "tweetComments", commentKey),
-      { [role]: arr, updatedAt: serverTimestamp() },
-      { merge: true }
-    );
-    closeTweetCommentPanel();
-    // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
-    openDetail(currentDetailCardId, currentDetailData);
+    await setDoc(commentDocRef, { [role]: arr, updatedAt: serverTimestamp() }, { merge: true });
+    onSaved();
   } catch (e) {
     alert(errorPrefix + e.message);
   }
@@ -1825,6 +1840,7 @@ let kakaoParsedMessages = []; // [{sender, dateDisplay, dateSort, timeDisplay, t
 let kakaoSelectedMeSender = "";
 let currentKakaoDetailId = null;
 let currentKakaoDetailData = null; // openKakaoDetail에서 채워둠(코멘트 저장 시 필요)
+let currentKakaoComments = new Map(); // "메시지 인덱스(문자열)" -> { user?: [...], admin?: [...] } (상세보기 열 때마다 다시 불러옴)
 
 function switchSection(section) {
   currentSection = section;
@@ -2060,7 +2076,10 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
 
   // 코멘트 작성 버튼: 말풍선의 "상대를 향한" 세로변(=화면 가운데 쪽 변,
   // 시간 표시와 같은 쪽) 옆에 붙습니다. 아이콘의 말풍선 꼬리는 항상 자기
-  // 말풍선 쪽을 향하게 상대/나에 따라 좌우로 뒤집습니다.
+  // 말풍선 쪽을 향하게 상대/나에 따라 좌우로 뒤집습니다. 트위터 코멘트와
+  // 마찬가지로 로그인한 사람 누구나 새 코멘트를 추가할 수 있습니다(관리자
+  // 여부는 저장되는 코멘트 종류만 다르게 만듭니다 — 관리자는 message-circle/
+  // coffee 중 고르고, 비관리자는 항상 wine 아이콘으로 저장됨).
   function makeKakaoCommentAddBtn(msgIndex, isMe) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -2074,8 +2093,9 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
   }
 
   // 코멘트 보기 버튼: 트윗 코멘트 보기 버튼과 완전히 같은 모양(말풍선 배경 +
-  // 종류별 아이콘)이고, 코멘트가 달린 그 말풍선 바로 아래에 놓입니다.
-  function makeKakaoCommentViewBtn(msgIndex, comment) {
+  // 종류별 아이콘)이고 동작도 같습니다 — 열려 있는 버튼을 다시 누르면 패널이
+  // 닫히고, 지금 보고 있는 버튼만 강조 표시됩니다.
+  function makeKakaoCommentViewBtn(msgIndex, role, commentEntry) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "tweet-comment-view-btn";
@@ -2085,9 +2105,23 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     bubbleShape.innerHTML = MESSAGE_CIRCLE_BUBBLE_FILL_SVG;
     const icon = document.createElement("span");
     icon.className = "bubble-icon";
-    icon.innerHTML = COMMENT_TYPE_ICONS[comment && comment.type] || MESSAGE_CIRCLE_ICON_SVG;
+    icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
     btn.append(bubbleShape, icon);
-    btn.addEventListener("click", () => openKakaoCommentView(msgIndex));
+    btn.addEventListener("click", () => {
+      const state = kakaoCommentPanelState;
+      const alreadyOpen =
+        !kakaoCommentPanel.hidden &&
+        state &&
+        state.msgIndex === msgIndex &&
+        state.role === role &&
+        state.entryId === commentEntry.id;
+      if (alreadyOpen) {
+        closeKakaoCommentPanel();
+      } else {
+        openKakaoCommentView(msgIndex, role, commentEntry.id);
+        setActiveKakaoCommentViewBtn(btn);
+      }
+    });
     return btn;
   }
 
@@ -2156,10 +2190,25 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       row.append(bubble, time);
     }
 
-    if (cardId && isAdmin) row.appendChild(makeKakaoCommentAddBtn(index, isMe));
+    if (cardId) row.appendChild(makeKakaoCommentAddBtn(index, isMe));
     currentGroupCol.appendChild(row);
 
-    if (cardId && msg.comment) currentGroupCol.appendChild(makeKakaoCommentViewBtn(index, msg.comment));
+    if (cardId) {
+      // 코멘트는 여러 개 있을 수 있어서(유저 여러 개 + 관리자 여러 개), 작성
+      // 시각(createdAt) 순으로 정렬해 왼쪽(또는 오른쪽)부터 쌓습니다.
+      const commentDoc = currentKakaoComments.get(String(index));
+      const viewEntries = [];
+      (commentDoc && commentDoc.user ? commentDoc.user : []).forEach((entry) => viewEntries.push({ role: "user", entry }));
+      (commentDoc && commentDoc.admin ? commentDoc.admin : []).forEach((entry) => viewEntries.push({ role: "admin", entry }));
+      viewEntries.sort((a, b) => (a.entry.createdAt || 0) - (b.entry.createdAt || 0));
+
+      if (viewEntries.length > 0) {
+        const viewStack = document.createElement("div");
+        viewStack.className = "kakao-comment-view-stack";
+        viewEntries.forEach(({ role, entry }) => viewStack.appendChild(makeKakaoCommentViewBtn(index, role, entry)));
+        currentGroupCol.appendChild(viewStack);
+      }
+    }
 
     if (editable) container.appendChild(makeInsertImageBtn(index + 1));
   });
@@ -2323,14 +2372,24 @@ function renderKakaoCardGrid() {
   });
 }
 
-function openKakaoDetail(id, data) {
+async function openKakaoDetail(id, data) {
   currentKakaoDetailId = id;
   currentKakaoDetailData = data;
+  kakaoDetailThread.innerHTML = "";
+  kakaoDetailModal.hidden = false;
+
+  currentKakaoComments = new Map();
+  try {
+    const snap = await getDocs(collection(db, "kakaoCards", id, "kakaoComments"));
+    snap.forEach((d) => currentKakaoComments.set(d.id, normalizeCommentDoc(d.data())));
+  } catch (e) {
+    console.error("카카오 코멘트를 불러오지 못했습니다.", e);
+  }
+
   // 상세보기에서는 "나"를 매번 물어보지 않고 저장 당시 고른 값을 그대로 씁니다.
   const meSet = new Set((data.messages || []).filter((m) => m.isMe).map((m) => m.sender));
   const meSender = meSet.size ? Array.from(meSet)[0] : null;
   renderKakaoThread(kakaoDetailThread, data.messages || [], meSender, { cardId: id });
-  kakaoDetailModal.hidden = false;
 }
 
 function closeKakaoDetail() {
@@ -2345,72 +2404,91 @@ kakaoDetailModal.addEventListener("click", (e) => {
   if (e.target === kakaoDetailModal) closeKakaoDetail();
 });
 
-// 카카오 메시지별 코멘트 보기/작성 패널. X 백업의 코멘트 패널과 같은
-// 레이아웃(트윗 코멘트 패널 CSS 재사용)이지만, 관리자만 쓸 수 있어서
-// 상태 구조가 훨씬 단순합니다(메시지 배열 안 comment 필드 하나).
+// 카카오 메시지별 코멘트 보기/작성 패널. 트위터 코멘트와 완전히 같은 구조
+// (역할별 여러 개 배열, message-circle/coffee/wine 타입, 텍스트+이미지 블록
+// 에디터)를 쓰고, 저장 위치만 kakaoCards/{cardId}/kakaoComments/{메시지 인덱스}로
+// 다릅니다.
 const kakaoCommentPanel = document.getElementById("kakao-comment-panel");
 const kakaoCommentPanelBackBtn = document.getElementById("kakao-comment-panel-back-btn");
 const kakaoCommentPanelActionBtn = document.getElementById("kakao-comment-panel-action-btn");
 const kakaoCommentPanelDeleteBtn = document.getElementById("kakao-comment-panel-delete-btn");
 const kakaoCommentPanelBody = document.getElementById("kakao-comment-panel-body");
 
-let kakaoCommentPanelState = null; // { msgIndex, mode: "view" | "edit", adminType?, blocksInitialized? }
+let kakaoCommentPanelState = null; // { msgIndex, role, entryId, mode: "view"|"edit"|"compose", adminType?, blocksInitialized? }
 let kakaoCommentComposeBlocks = []; // 작성/수정 중인 텍스트/이미지 블록들 (트윗 코멘트의 commentComposeBlocks와 같은 역할)
 
-// msg.comment를 블록 배열로 정규화합니다. 코멘트가 없으면 빈 텍스트 블록
-// 하나로 시작해서(작성창을 열자마자 바로 입력 가능), 예전에 저장된 문자열
-// 형식(comment가 그냥 string이던 버전)도 텍스트 블록 하나로 자연스럽게 바꿔줍니다.
-function getKakaoCommentBlocks(comment) {
-  if (comment && Array.isArray(comment.content)) return comment.content;
-  if (typeof comment === "string" && comment) return [{ type: "text", text: comment }];
-  return [{ type: "text", text: "" }];
+function findKakaoCommentEntry(msgIndex, role, entryId) {
+  const commentDoc = currentKakaoComments.get(String(msgIndex));
+  if (!commentDoc || !role || !entryId) return null;
+  const arr = commentDoc[role] || [];
+  return arr.find((e) => e.id === entryId) || null;
 }
 
-function openKakaoCommentView(msgIndex) {
-  kakaoCommentPanelState = { msgIndex, mode: "view" };
-  renderKakaoCommentPanel();
+function openKakaoCommentView(msgIndex, role, entryId) {
+  kakaoCommentPanelState = { msgIndex, role, entryId, mode: "view" };
   kakaoCommentPanel.hidden = false;
+  renderKakaoCommentPanel();
 }
 
 function openKakaoCommentCompose(msgIndex) {
-  kakaoCommentPanelState = { msgIndex, mode: "edit" };
-  renderKakaoCommentPanel();
+  // 항상 "새" 코멘트 작성 창을 엽니다 (기존 코멘트가 있어도 그대로 두고 하나 더 추가).
+  kakaoCommentPanelState = { msgIndex, role: null, entryId: null, mode: "compose", adminType: "message-circle" };
   kakaoCommentPanel.hidden = false;
+  renderKakaoCommentPanel();
+  setActiveKakaoCommentViewBtn(null);
 }
 
 function closeKakaoCommentPanel() {
   kakaoCommentPanel.hidden = true;
   kakaoCommentPanelState = null;
+  setActiveKakaoCommentViewBtn(null);
+}
+
+// 코멘트 창을 연 "보기" 버튼 하나를 강조 표시(is-open)합니다. 트윗 코멘트와
+// 마찬가지로, 창이 열려 있는 동안엔 해당 버튼만 강조되고 창을 닫거나 다른
+// 코멘트로 옮겨가면 이전 버튼의 강조는 지워집니다.
+let activeKakaoCommentViewBtn = null;
+function setActiveKakaoCommentViewBtn(btn) {
+  if (activeKakaoCommentViewBtn) activeKakaoCommentViewBtn.classList.remove("is-open");
+  activeKakaoCommentViewBtn = btn || null;
+  if (activeKakaoCommentViewBtn) activeKakaoCommentViewBtn.classList.add("is-open");
 }
 
 function renderKakaoCommentPanel() {
   const state = kakaoCommentPanelState;
   if (!state) return;
   kakaoCommentPanelBody.innerHTML = "";
-  const msg = (currentKakaoDetailData?.messages || [])[state.msgIndex] || {};
 
   if (state.mode === "view") {
-    renderCommentBlocksView(kakaoCommentPanelBody, getKakaoCommentBlocks(msg.comment));
-    kakaoCommentPanelActionBtn.hidden = !isAdmin;
+    const entry = findKakaoCommentEntry(state.msgIndex, state.role, state.entryId);
+    renderCommentBlocksView(kakaoCommentPanelBody, getCommentBlocks(entry));
+
+    const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
+    kakaoCommentPanelActionBtn.hidden = !canEdit;
     kakaoCommentPanelActionBtn.textContent = "수정";
-    kakaoCommentPanelDeleteBtn.hidden = !isAdmin;
+    kakaoCommentPanelDeleteBtn.hidden = !canEdit;
     return;
   }
 
+  // edit(기존 코멘트 수정) / compose(새 코멘트 작성)
+  const entry = state.mode === "edit" ? findKakaoCommentEntry(state.msgIndex, state.role, state.entryId) : null;
   if (!state.blocksInitialized) {
-    kakaoCommentComposeBlocks = getKakaoCommentBlocks(msg.comment).map((b) =>
+    kakaoCommentComposeBlocks = getCommentBlocks(entry).map((b) =>
       b.type === "image" ? { type: "image", urls: getBlockImageUrls(b) } : { ...b }
     );
     state.blocksInitialized = true;
   }
-  if (!state.adminType) state.adminType = (msg.comment && msg.comment.type) || "message-circle";
 
-  renderCommentTypeSelector(kakaoCommentPanelBody, state, renderKakaoCommentPanel);
+  if (isAdmin) {
+    if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
+    renderCommentTypeSelector(kakaoCommentPanelBody, state, renderKakaoCommentPanel);
+  }
+
   renderCommentBlockEditor(kakaoCommentPanelBody, kakaoCommentComposeBlocks, renderKakaoCommentPanel);
 
   kakaoCommentPanelActionBtn.hidden = false;
   kakaoCommentPanelActionBtn.textContent = "저장";
-  kakaoCommentPanelDeleteBtn.hidden = true;
+  kakaoCommentPanelDeleteBtn.hidden = true; // 수정/작성 중에는 삭제 버튼을 숨깁니다.
 }
 
 kakaoCommentPanelBackBtn.addEventListener("click", closeKakaoCommentPanel);
@@ -2420,12 +2498,14 @@ kakaoCommentPanel.addEventListener("click", (e) => {
 
 kakaoCommentPanelActionBtn.addEventListener("click", async () => {
   const state = kakaoCommentPanelState;
-  if (!state) return;
+  if (!state || !currentKakaoDetailId) return;
+
   if (state.mode === "view") {
     state.mode = "edit";
     renderKakaoCommentPanel();
     return;
   }
+
   // 빈 텍스트 블록/URL 없는 이미지 블록은 저장하지 않고 걸러냅니다.
   const content = kakaoCommentComposeBlocks
     .map((b) =>
@@ -2434,32 +2514,62 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
         : { type: "text", text: (b.text || "").trim() }
     )
     .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
-  const comment = content.length ? { type: state.adminType, content } : null;
-  await saveKakaoComment(state.msgIndex, comment);
-  closeKakaoCommentPanel();
+
+  const role = state.mode === "edit" ? state.role : isAdmin ? "admin" : "user";
+  const type = isAdmin ? state.adminType : "wine";
+
+  const commentDoc = currentKakaoComments.get(String(state.msgIndex)) || {};
+  const arr = Array.isArray(commentDoc[role]) ? commentDoc[role].slice() : [];
+
+  if (state.mode === "edit") {
+    const idx = arr.findIndex((e) => e.id === state.entryId);
+    if (idx !== -1) {
+      if (content.length) {
+        const { text, ...rest } = arr[idx];
+        arr[idx] = { ...rest, type, content };
+      } else {
+        arr.splice(idx, 1); // 내용을 비우고 저장하면 코멘트를 삭제합니다.
+      }
+    }
+  } else {
+    if (!content.length) return; // 새 코멘트는 빈 채로 저장하지 않습니다.
+    arr.push({ id: genCommentId(), type, content, createdAt: Date.now() });
+  }
+
+  await persistCommentRoleArray(
+    doc(db, "kakaoCards", currentKakaoDetailId, "kakaoComments", String(state.msgIndex)),
+    role,
+    arr,
+    "코멘트 저장에 실패했습니다: ",
+    () => {
+      closeKakaoCommentPanel();
+      // "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
+      openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
+    }
+  );
 });
 
 kakaoCommentPanelDeleteBtn.addEventListener("click", async () => {
   const state = kakaoCommentPanelState;
-  if (!state) return;
+  if (!state || state.mode !== "view" || !currentKakaoDetailId) return;
   if (!confirm("이 코멘트를 삭제할까요? 되돌릴 수 없어요.")) return;
-  await saveKakaoComment(state.msgIndex, null);
-  closeKakaoCommentPanel();
-});
 
-async function saveKakaoComment(msgIndex, commentOrNull) {
-  if (!currentKakaoDetailId || !currentKakaoDetailData) return;
-  const messages = currentKakaoDetailData.messages.map((m, i) => {
-    if (i !== msgIndex) return m;
-    const { comment, ...rest } = m;
-    return commentOrNull ? { ...rest, comment: commentOrNull } : rest;
-  });
-  await updateDoc(doc(db, "kakaoCards", currentKakaoDetailId), { messages });
-  currentKakaoDetailData.messages = messages;
-  const meSet = new Set(messages.filter((m) => m.isMe).map((m) => m.sender));
-  const meSender = meSet.size ? Array.from(meSet)[0] : null;
-  renderKakaoThread(kakaoDetailThread, messages, meSender, { cardId: currentKakaoDetailId });
-}
+  const commentDoc = currentKakaoComments.get(String(state.msgIndex)) || {};
+  const arr = (Array.isArray(commentDoc[state.role]) ? commentDoc[state.role] : []).filter(
+    (e) => e.id !== state.entryId
+  );
+
+  await persistCommentRoleArray(
+    doc(db, "kakaoCards", currentKakaoDetailId, "kakaoComments", String(state.msgIndex)),
+    state.role,
+    arr,
+    "코멘트 삭제에 실패했습니다: ",
+    () => {
+      closeKakaoCommentPanel();
+      openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
+    }
+  );
+});
 
 kakaoDetailDeleteBtn.addEventListener("click", async () => {
   if (!currentKakaoDetailId) return;

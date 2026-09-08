@@ -1252,15 +1252,17 @@ h1 {
 }
 .kakao-message-group.me {
   align-self: flex-end;
-  /* 아바타가 없어서 말풍선 쪽(.kakao-message-col)에 그대로 대화창의
-     70%를 씁니다. */
-  max-width: 70%;
+  /* 대화창(.kakao-thread)은 모달 자체에 이미 안팎 여백(모달 바깥 여백 +
+     내부 padding)이 있어서, 그 안쪽 폭 기준 82% 정도가 실제 화면 폭
+     기준으로는 약 70%에 해당합니다. 아바타가 없어서 말풍선 쪽
+     (.kakao-message-col)에 이 값을 그대로 씁니다. */
+  max-width: 82%;
 }
 .kakao-message-group.other {
   align-self: flex-start;
   /* 아바타(36px) + 간격(8px)만큼 더 잡아서, 말풍선이 실제로 쓸 수 있는
-     너비(.kakao-message-col)는 me와 똑같이 대화창의 70%가 되도록 맞춥니다. */
-  max-width: calc(70% + 44px);
+     너비(.kakao-message-col)는 me와 똑같이 82%가 되도록 맞춥니다. */
+  max-width: calc(82% + 44px);
 }
 
 /* 상대방 전용 원형 프로필. 카카오톡 내보내기엔 실제 프사가 없어서
@@ -1348,10 +1350,18 @@ h1 {
   height: 16px;
 }
 
-/* 코멘트 보기 버튼(트윗 코멘트 보기 버튼과 같은 컴포넌트)을 카카오톡
-   말풍선 아래에 놓을 때만 위쪽에 살짝 여백을 둡니다. */
-.kakao-message-col > .tweet-comment-view-btn {
+/* 코멘트 보기 버튼(트윗 코멘트 보기 버튼과 같은 컴포넌트, .tweet-comment-view-btn)을
+   해당 말풍선 바로 아래에 한 줄로 늘어놓습니다. 트위터 쪽은 코멘트가 여러 개면
+   세로로 쌓이는(position:absolute) 별도 칸을 쓰지만, 카카오는 말풍선 밑에서 자연스럽게
+   다음 줄로 흐르면 되어서 absolute 없이 그냥 가로로 나열하고 넘치면 줄바꿈합니다. */
+.kakao-comment-view-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: 4px;
+}
+.kakao-message-group.me .kakao-comment-view-stack {
+  justify-content: flex-end;
 }
 
 .kakao-preview-section {
