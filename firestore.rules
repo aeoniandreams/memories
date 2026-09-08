@@ -85,5 +85,12 @@ service cloud.firestore {
         );
       }
     }
+
+    // 앱 설명(사이드바 하단 물음표 아이콘). 로그인한 사람은 누구나 볼 수
+    // 있고, 관리자만 고칠 수 있습니다. 문서 하나("main")만 씁니다.
+    match /appInfo/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
   }
 }

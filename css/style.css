@@ -294,6 +294,12 @@ h1 {
   background: var(--border);
 }
 
+/* 앱 설명 버튼은 사이드바 맨 아래에 붙입니다(사이드바가 flex column이라
+   margin-top:auto를 주면 그 위 남는 공간을 전부 밀어내고 바닥에 붙음). */
+.app-sidebar-help-btn {
+  margin-top: auto;
+}
+
 .sidebar-menu-btn svg {
   width: 18px;
   height: 18px;
@@ -1557,7 +1563,7 @@ h1 {
 /* ---------- SumOne 카드 ---------- */
 .sumone-card-title {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -1600,15 +1606,14 @@ h1 {
   display: flex;
   flex-direction: column;
 }
-/* 카드를 열자마자 이미지 전체가 (누르지 않고도) 다 보이도록 9:16 비율
-   상자로 고정하고, object-fit:cover로 채웁니다. 원본 이미지 그대로도
-   보고 싶을 수 있어서 클릭하면 트위터 백업과 같은 이미지 원본 보기
-   창(#image-viewer-modal)이 뜹니다. */
+/* 크기를 강제로 맞추지 않고, 가로폭 100%에 이미지 자기 비율대로 세로
+   길이가 정해지게 해서(height:auto) 잘리는 부분 없이 전체가 다 보입니다.
+   그래도 원본을 더 크게/확대해서 보고 싶을 수 있어서 클릭하면 트위터
+   백업과 같은 이미지 원본 보기 창(#image-viewer-modal)이 뜹니다. */
 .sumone-detail-image {
   display: block;
   width: 100%;
-  aspect-ratio: 9 / 16;
-  object-fit: cover;
+  height: auto;
   border-radius: 12px;
   cursor: pointer;
 }
@@ -1644,6 +1649,37 @@ h1 {
 .sumone-comment-add-btn svg {
   width: 20px;
   height: 20px;
+}
+
+/* ---------- 앱 설명 ---------- */
+.app-info-body {
+  padding: 20px;
+}
+.app-info-text {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+.app-info-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 240px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14.5px;
+  line-height: 1.6;
+  resize: vertical;
+}
+.app-info-textarea[hidden],
+.app-info-text[hidden] {
+  display: none;
 }
 
 /* 모바일(휴대폰) 전용 오버라이드. CSS 우선순위가 같은 규칙끼리는 파일에서 더

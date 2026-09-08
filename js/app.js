@@ -54,6 +54,7 @@ const sidebarCloseBtn = document.getElementById("sidebar-close-btn");
 const sidebarXBtn = document.getElementById("sidebar-x-btn");
 const sidebarKakaoBtn = document.getElementById("sidebar-kakao-btn");
 const sidebarSumoneBtn = document.getElementById("sidebar-sumone-btn");
+const sidebarHelpBtn = document.getElementById("sidebar-help-btn");
 const sidebarMenuBtns = document.querySelectorAll(".sidebar-menu-btn");
 const kakaoAppView = document.getElementById("kakao-app-view");
 const kakaoLogoutBtn = document.getElementById("kakao-logout-btn");
@@ -1939,6 +1940,65 @@ document.addEventListener("click", (e) => {
   if (!appSidebar.classList.contains("open")) return;
   if (appSidebar.contains(e.target)) return;
   closeSidebar();
+});
+
+// ---------- 앱 설명 (사이드바 하단 물음표 아이콘) ----------
+// 로그인한 사람은 누구나 볼 수 있고, 관리자만 고칠 수 있습니다. 문서
+// 하나(appInfo/main)만 씁니다.
+const appInfoModal = document.getElementById("app-info-modal");
+const appInfoCloseBtn = document.getElementById("app-info-close-btn");
+const appInfoEditBtn = document.getElementById("app-info-edit-btn");
+const appInfoSaveBtn = document.getElementById("app-info-save-btn");
+const appInfoText = document.getElementById("app-info-text");
+const appInfoTextarea = document.getElementById("app-info-textarea");
+
+async function openAppInfo() {
+  appInfoModal.hidden = false;
+  appInfoEditBtn.hidden = !isAdmin;
+  appInfoSaveBtn.hidden = true;
+  appInfoTextarea.hidden = true;
+  appInfoText.hidden = false;
+  appInfoText.textContent = "불러오는 중...";
+  try {
+    const snap = await getDoc(doc(db, "appInfo", "main"));
+    appInfoText.textContent = snap.exists() ? snap.data().content || "" : "";
+  } catch (e) {
+    appInfoText.textContent = "설명을 불러오지 못했습니다.";
+    console.error("앱 설명을 불러오지 못했습니다.", e);
+  }
+}
+function closeAppInfo() {
+  appInfoModal.hidden = true;
+}
+sidebarHelpBtn.addEventListener("click", () => {
+  openAppInfo();
+  closeSidebar();
+});
+appInfoCloseBtn.addEventListener("click", closeAppInfo);
+appInfoModal.addEventListener("click", (e) => {
+  if (e.target === appInfoModal) closeAppInfo();
+});
+
+appInfoEditBtn.addEventListener("click", () => {
+  appInfoTextarea.value = appInfoText.textContent;
+  appInfoText.hidden = true;
+  appInfoTextarea.hidden = false;
+  appInfoEditBtn.hidden = true;
+  appInfoSaveBtn.hidden = false;
+});
+
+appInfoSaveBtn.addEventListener("click", async () => {
+  const content = appInfoTextarea.value.trim();
+  try {
+    await setDoc(doc(db, "appInfo", "main"), { content, updatedAt: serverTimestamp() }, { merge: true });
+    appInfoText.textContent = content;
+    appInfoText.hidden = false;
+    appInfoTextarea.hidden = true;
+    appInfoSaveBtn.hidden = true;
+    appInfoEditBtn.hidden = !isAdmin;
+  } catch (e) {
+    alert("저장에 실패했습니다: " + e.message);
+  }
 });
 
 // ---------- .eml(이메일) 파일에서 본문 텍스트 꺼내기 ----------
