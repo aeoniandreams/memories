@@ -113,6 +113,28 @@ h1 {
   margin: 0;
 }
 
+/* ---------- 로딩 화면 (로그인 상태 확인 중) ---------- */
+.loading-view[hidden] {
+  display: none;
+}
+.loading-view {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: loading-spin 0.7s linear infinite;
+}
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ---------- 로그인 화면 ---------- */
 #login-view[hidden] {
   display: none;
@@ -1252,17 +1274,14 @@ h1 {
 }
 .kakao-message-group.me {
   align-self: flex-end;
-  /* 대화창(.kakao-thread)은 모달 자체에 이미 안팎 여백(모달 바깥 여백 +
-     내부 padding)이 있어서, 그 안쪽 폭 기준 82% 정도가 실제 화면 폭
-     기준으로는 약 70%에 해당합니다. 아바타가 없어서 말풍선 쪽
-     (.kakao-message-col)에 이 값을 그대로 씁니다. */
-  max-width: 82%;
+  /* 아바타가 없어서 말풍선 쪽(.kakao-message-col)에 이 값을 그대로 씁니다. */
+  max-width: 80%;
 }
 .kakao-message-group.other {
   align-self: flex-start;
   /* 아바타(36px) + 간격(8px)만큼 더 잡아서, 말풍선이 실제로 쓸 수 있는
-     너비(.kakao-message-col)는 me와 똑같이 82%가 되도록 맞춥니다. */
-  max-width: calc(82% + 44px);
+     너비(.kakao-message-col)는 me와 똑같이 맞춥니다. */
+  max-width: calc(80% + 44px);
 }
 
 /* 상대방 전용 원형 프로필. 카카오톡 내보내기엔 실제 프사가 없어서
@@ -1456,6 +1475,56 @@ h1 {
   font-size: 11px;
   cursor: pointer;
   padding: 2px 4px;
+}
+
+/* 카카오톡 대화 수정 화면. 메시지마다 한 블록씩, 보낸 사람/시간은 읽기
+   전용으로만 보여주고(수정 대상 아님) 내용(텍스트 또는 이미지 URL)만
+   고칠 수 있습니다. */
+.kakao-edit-rows {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.kakao-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.kakao-edit-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.kakao-edit-row-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+.kakao-edit-row-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  overflow: hidden;
+}
+.kakao-edit-row-image-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
 }
 
 /* 모바일(휴대폰) 전용 오버라이드. CSS 우선순위가 같은 규칙끼리는 파일에서 더

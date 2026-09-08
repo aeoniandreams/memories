@@ -26,8 +26,18 @@
 </head>
 <body>
 
+<!-- 로딩 화면. 로그인 상태를 아직 확인 중일 때(새로고침 직후 등) 잠깐
+     보여줍니다 — 이게 없으면 로그인 화면이 잠깐 번쩍이고 사라졌었습니다
+     (로그인 화면은 원래 기본으로 보이는 상태였는데, Firebase가 "이미
+     로그인되어 있다"는 걸 확인하는 데도 시간이 걸리기 때문). 로그인 여부가
+     확인되면 js/app.js가 이 화면을 숨기고 맞는 화면(로그인 폼 또는 앱
+     화면)을 보여줍니다. -->
+<div id="loading-view" class="view loading-view">
+  <div class="loading-spinner"></div>
+</div>
+
 <!-- 로그인 화면 -->
-<div id="login-view" class="view">
+<div id="login-view" class="view" hidden>
   <form id="login-form" class="login-card">
     <button class="theme-toggle-btn" type="button" aria-label="야간 모드 전환">🌙</button>
     <h1>ハクメイの永遠</h1>
@@ -127,6 +137,7 @@
     <div class="modal-header">
       <button id="kakao-detail-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
       <div class="modal-header-right">
+        <button id="kakao-detail-edit-btn" class="btn-secondary">수정</button>
         <button id="kakao-detail-delete-btn" class="btn-ghost danger">삭제</button>
       </div>
     </div>
@@ -146,6 +157,22 @@
       </div>
       <div id="kakao-comment-panel-body" class="tweet-comment-panel-body"></div>
     </div>
+  </div>
+</div>
+
+<!-- 카카오톡 대화 내용 수정. 닉네임/프사/시간은 그대로 두고, 메시지 내용
+     (텍스트 또는 이미지 URL)만 고칩니다 — 메시지를 추가하거나 지우는 기능은
+     일부러 넣지 않았습니다(코멘트가 메시지 순서 번호로 연결되어 있어서,
+     순서가 바뀌면 엉뚱한 메시지에 코멘트가 달린 것처럼 보이게 됩니다). -->
+<div id="kakao-edit-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button id="kakao-edit-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+      <div class="modal-header-right">
+        <button id="kakao-edit-save-btn" class="btn-primary">저장</button>
+      </div>
+    </div>
+    <div id="kakao-edit-rows" class="kakao-edit-rows"></div>
   </div>
 </div>
 

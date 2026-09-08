@@ -39,6 +39,7 @@ const PUBLT_TAG = "퍼블트"; // 이 태그가 붙은 카드에만 우측 상�
 const NO_TAG_FILTER_VALUE = "__no_tag__"; // 필터에서 "태그 없음"을 고르면 쓰이는 값
 
 // ---------- 엘리먼트 참조 ----------
+const loadingView = document.getElementById("loading-view");
 const loginView = document.getElementById("login-view");
 const appView = document.getElementById("app-view");
 const loginForm = document.getElementById("login-form");
@@ -261,6 +262,9 @@ function fallbackAvatarDataUri() {
 
 // ---------- 인증 ----------
 onAuthStateChanged(auth, (user) => {
+  // 로그인 여부 확인이 끝났으니(로딩 화면이 뜬 목적이 끝남) 로딩 화면을 숨기고,
+  // 아래에서 로그인 폼 또는 앱 화면 중 맞는 쪽을 보여줍니다.
+  loadingView.hidden = true;
   if (user) {
     loginView.hidden = true;
     appSidebar.hidden = false;
@@ -287,6 +291,7 @@ function applyAdminUI() {
   detailAppendBtn.hidden = !isAdmin;
   detailEditBtn.hidden = !isAdmin;
   kakaoNewCardBtn.hidden = !isAdmin;
+  kakaoDetailEditBtn.hidden = !isAdmin;
   kakaoDetailDeleteBtn.hidden = !isAdmin;
 }
 
@@ -1829,8 +1834,14 @@ const kakaoPreviewThread = document.getElementById("kakao-preview-thread");
 
 const kakaoDetailModal = document.getElementById("kakao-detail-modal");
 const kakaoDetailCloseBtn = document.getElementById("kakao-detail-close-btn");
+const kakaoDetailEditBtn = document.getElementById("kakao-detail-edit-btn");
 const kakaoDetailDeleteBtn = document.getElementById("kakao-detail-delete-btn");
 const kakaoDetailThread = document.getElementById("kakao-detail-thread");
+
+const kakaoEditModal = document.getElementById("kakao-edit-modal");
+const kakaoEditCloseBtn = document.getElementById("kakao-edit-close-btn");
+const kakaoEditSaveBtn = document.getElementById("kakao-edit-save-btn");
+const kakaoEditRows = document.getElementById("kakao-edit-rows");
 
 let currentSection = "x"; // "x" | "kakao"
 let kakaoCardsLoaded = false;
@@ -2397,6 +2408,7 @@ function closeKakaoDetail() {
   currentKakaoDetailId = null;
   currentKakaoDetailData = null;
   closeKakaoCommentPanel();
+  closeKakaoEdit();
 }
 
 kakaoDetailCloseBtn.addEventListener("click", closeKakaoDetail);
@@ -2577,4 +2589,79 @@ kakaoDetailDeleteBtn.addEventListener("click", async () => {
   await deleteDoc(doc(db, "kakaoCards", currentKakaoDetailId));
   closeKakaoDetail();
   loadKakaoCards();
+});
+
+// ---------- 카카오톡 대화 내용 수정 ----------
+// 보낸 사람/시간/순서는 그대로 두고 메시지 내용(텍스트 또는 이미지 URL)만
+// 고칩니다. 메시지를 추가/삭제하거나 순서를 바꾸는 기능은 일부러 넣지
+// 않았습니다 — 코멘트(kakaoComments)가 메시지 배열의 인덱스로 연결되어
+// 있어서, 순서가 하나라도 바뀌면 기존 코멘트가 엉뚱한 메시지에 달린 것처럼
+// 보이게 됩니다.
+let kakaoEditingMessages = [];
+
+function renderKakaoEditRows() {
+  kakaoEditRows.innerHTML = "";
+  kakaoEditingMessages.forEach((msg, index) => {
+    const row = document.createElement("div");
+    row.className = "kakao-edit-row";
+
+    const meta = document.createElement("div");
+    meta.className = "kakao-edit-row-meta";
+    meta.textContent = [msg.sender, msg.dateDisplay, msg.timeDisplay].filter(Boolean).join(" · ");
+    row.appendChild(meta);
+
+    if (msg.type === "image") {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "kakao-edit-row-image-input";
+      input.placeholder = "이미지 URL";
+      input.value = msg.url || "";
+      input.addEventListener("input", () => {
+        kakaoEditingMessages[index].url = input.value;
+      });
+      row.appendChild(input);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.className = "kakao-edit-row-textarea";
+      textarea.rows = 2;
+      textarea.value = msg.text || "";
+      textarea.addEventListener("input", () => {
+        kakaoEditingMessages[index].text = textarea.value;
+        autoResizeTextarea(textarea);
+      });
+      row.appendChild(textarea);
+    }
+
+    kakaoEditRows.appendChild(row);
+  });
+  // scrollHeight는 실제 화면에 붙어야 정확히 계산되니, 다 붙인 다음 높이를 맞춥니다.
+  kakaoEditRows.querySelectorAll(".kakao-edit-row-textarea").forEach(autoResizeTextarea);
+}
+
+function openKakaoEdit() {
+  if (!currentKakaoDetailData) return;
+  kakaoEditingMessages = (currentKakaoDetailData.messages || []).map((m) => ({ ...m }));
+  renderKakaoEditRows();
+  kakaoEditModal.hidden = false;
+}
+
+function closeKakaoEdit() {
+  kakaoEditModal.hidden = true;
+}
+
+kakaoDetailEditBtn.addEventListener("click", openKakaoEdit);
+kakaoEditCloseBtn.addEventListener("click", closeKakaoEdit);
+kakaoEditModal.addEventListener("click", (e) => {
+  if (e.target === kakaoEditModal) closeKakaoEdit();
+});
+
+kakaoEditSaveBtn.addEventListener("click", async () => {
+  if (!currentKakaoDetailId) return;
+  const messages = kakaoEditingMessages.map((m) =>
+    m.type === "image" ? { ...m, url: (m.url || "").trim() } : { ...m, text: (m.text || "").trim() }
+  );
+  await updateDoc(doc(db, "kakaoCards", currentKakaoDetailId), { messages });
+  currentKakaoDetailData.messages = messages;
+  closeKakaoEdit();
+  openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
 });
