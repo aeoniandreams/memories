@@ -92,5 +92,20 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if isAdmin();
     }
+
+    // 알림 "읽음" 표시. 사용자마다 완전히 따로 저장되고(본인 것만 읽고
+    // 쓸 수 있음), 다른 사람이 남긴 코멘트를 내가 확인했는지 여부만
+    // 담습니다 — 카드 본문이나 코멘트 자체와는 무관합니다.
+    // cardMarks: 홈 화면 카드의 새 코멘트 점(뱃지)이 사라지는 기준.
+    // targetMarks: 코멘트 하나(트윗/카톡 메시지/SumOne 카드)의 보기
+    // 버튼 강조색과 알림창 목록이 사라지는 기준.
+    match /notifSeen/{uid} {
+      match /cardMarks/{markId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /targetMarks/{markId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
   }
 }

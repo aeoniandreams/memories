@@ -352,6 +352,99 @@ h1 {
   height: 18px;
 }
 
+.notif-bell-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- 알림 ---------- */
+/* 모바일에서만 보이는 반투명 배경(데스크탑은 팝오버 느낌이라 배경을 덮지 않음). */
+.notif-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 55;
+}
+.notif-backdrop[hidden] {
+  display: none;
+}
+
+/* 기본(모바일)값: 화면 정중앙에 뜸. 데스크탑에서는 JS가 .desktop-anchored를
+   붙이고 top/right를 인라인 스타일로 지정해서 bell 아이콘 바로 아래에
+   붙입니다(이때 이 중앙 정렬용 left/transform은 꺼줍니다). */
+.notif-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(320px, calc(100vw - 32px));
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--modal-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  z-index: 60;
+}
+.notif-panel[hidden] {
+  display: none;
+}
+.notif-panel.desktop-anchored {
+  left: auto;
+  transform: none;
+}
+.notif-panel-header {
+  padding: 14px 16px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+.notif-panel-list {
+  display: flex;
+  flex-direction: column;
+}
+.notif-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.notif-item:last-child {
+  border-bottom: none;
+}
+.notif-item-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+.notif-item-time {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.notif-panel-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.notif-panel-empty[hidden] {
+  display: none;
+}
+
+/* 홈 화면 카드 우측 상단의 "새 코멘트" 점. 여러 종류가 한꺼번에 있으면
+   가로로 나란히 놓입니다(.card-tag-badge와 같은 자리, top:14px/right:14px). */
+.notif-dot-row {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 4px;
+}
+.notif-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--surface);
+}
+
 /* [hidden] 속성은 브라우저 기본값이 display:none인데, 아래 display:inline-flex가
    그걸 덮어써서 .hidden = true를 줘도 버튼이 계속 보이는 문제가 있었습니다
    (예: 코멘트 수정 권한이 없어도 "수정" 버튼이 보이던 문제). 이 규칙으로 막습니다. */

@@ -9,6 +9,7 @@ import {
 import {
   getFirestore,
   collection,
+  collectionGroup,
   addDoc,
   deleteDoc,
   doc,
@@ -46,6 +47,11 @@ const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 const themeToggleBtns = document.querySelectorAll(".theme-toggle-btn");
+const notifBellBtns = document.querySelectorAll(".notif-bell-btn");
+const notifBackdrop = document.getElementById("notif-backdrop");
+const notifPanel = document.getElementById("notif-panel");
+const notifPanelList = document.getElementById("notif-panel-list");
+const notifPanelEmpty = document.getElementById("notif-panel-empty");
 
 // X 백업 / 카카오톡 백업 / SumOne 전환용 우측 사이드바. 평소엔 숨겨져
 // 있다가 헤더의 메뉴(☰) 버튼을 누르면 열립니다(아래 "사이드바 열기/닫기" 참고).
@@ -109,6 +115,12 @@ let loadedCards = []; // 홈 화면에 로드된 카드 목록 (정렬/필터 �
 let sortDirection = "desc"; // "desc" = 최신순, "asc" = 오래된순
 let filterTag = ""; // 빈 문자열이면 전체 태그
 let isAdmin = false;
+
+// ---------- 알림 상태 ----------
+let currentUid = null;
+let cardSeenMap = new Map(); // "section:cardId" -> 언제까지 확인했는지(ms)
+let targetSeenMap = new Map(); // "section:cardId:targetKey:type" -> 언제까지 확인했는지(ms)
+let notifEntriesCache = []; // { section, cardId, targetKey, role, type, createdAt }[]
 let currentTweetComments = new Map(); // messageKey -> { user?: [{id,type,text}], admin?: [{id,type,text}] } (상세보기 열 때마다 다시 불러옴)
 // 코멘트 패널(우측 보기/좌측 작성)의 현재 상태.
 // mode: "view"(보기) | "edit"(기존 코멘트 수정) | "compose"(새 코멘트 작성)
@@ -285,7 +297,16 @@ onAuthStateChanged(auth, (user) => {
       switchSection("x");
       isAdmin = user.email === ADMIN_EMAIL;
       applyAdminUI();
+      currentUid = user.uid;
       loadCards();
+      loadSeenMaps().then(loadNotifEntries).then(() => {
+        // 카드 목록이 이미 그려졌을 수 있어서(위 loadCards가 비동기라 순서가
+        // 겹칠 수 있음), 알림 데이터가 준비된 뒤 한 번 더 그려서 새 코멘트
+        // 점이 처음부터 제대로 보이게 합니다.
+        renderCardGrid();
+        if (sumoneCardsLoaded) renderSumoneCardGrid();
+        if (kakaoCardsLoaded) renderKakaoCardGrid();
+      });
     } else {
       loginView.hidden = false;
       appView.hidden = true;
@@ -294,6 +315,11 @@ onAuthStateChanged(auth, (user) => {
       appSidebar.hidden = true;
       appSidebar.classList.remove("open");
       isAdmin = false;
+      currentUid = null;
+      cardSeenMap = new Map();
+      targetSeenMap = new Map();
+      notifEntriesCache = [];
+      closeNotifPanel();
     }
   }, remaining);
 });
@@ -473,6 +499,8 @@ function renderCardGrid() {
       card.appendChild(badge);
     }
 
+    appendNotifDots(card, "x", id);
+
     card.addEventListener("click", () => openDetail(id, data));
     cardGrid.appendChild(card);
   });
@@ -507,6 +535,7 @@ function normalizeCommentDoc(data) {
 async function openDetail(id, data) {
   currentDetailCardId = id;
   currentDetailData = data;
+  markCardSeen("x", id);
   detailThread.innerHTML = "";
   // 이미지 크기 계산 시 실제 너비를 읽어야 해서, 먼저 화면에 보이게 한 뒤 내용을 채웁니다.
   detailModal.hidden = false;
@@ -645,6 +674,7 @@ function makeTweetCommentViewBtn(commentKey, role, commentEntry) {
   icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
 
   btn.append(bubble, icon);
+  applyNotifViewBtnColor(bubble, "x", currentDetailCardId, commentKey, commentEntry.type, commentEntry.createdAt || 0);
   btn.addEventListener("click", () => {
     // 이미 이 코멘트를 보여주고 있는 패널이 열려 있으면, 뒤로가기 없이 바로 닫습니다.
     const state = tweetCommentPanelState;
@@ -659,6 +689,7 @@ function makeTweetCommentViewBtn(commentKey, role, commentEntry) {
     } else {
       openTweetCommentView(commentKey, role, commentEntry.id);
       setActiveTweetCommentViewBtn(btn);
+      acknowledgeNotifTarget(bubble, "x", currentDetailCardId, commentKey, commentEntry.type);
     }
   });
   return btn;
@@ -850,6 +881,7 @@ function leaveDetailModal() {
 function closeDetail() {
   leaveDetailModal();
   currentDetailCardId = null;
+  renderCardGrid();
 }
 
 // 휴대폰의 뒤로가기(브라우저 popstate)를 누르면, 대화창이 열려 있는 동안엔
@@ -870,6 +902,7 @@ window.addEventListener("popstate", () => {
   closeCommentModal();
   closeTweetCommentPanel();
   currentDetailCardId = null;
+  renderCardGrid();
 });
 
 detailCloseBtn.addEventListener("click", closeDetail);
@@ -1459,6 +1492,8 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     arr,
     "코멘트 저장에 실패했습니다: ",
     () => {
+      // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
+      markTargetSeen("x", currentDetailCardId, state.commentKey, type);
       closeTweetCommentPanel();
       // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
       openDetail(currentDetailCardId, currentDetailData);
@@ -2293,6 +2328,14 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     icon.className = "bubble-icon";
     icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
     btn.append(bubbleShape, icon);
+    applyNotifViewBtnColor(
+      bubbleShape,
+      "kakao",
+      currentKakaoDetailId,
+      String(msgIndex),
+      commentEntry.type,
+      commentEntry.createdAt || 0
+    );
     btn.addEventListener("click", () => {
       const state = kakaoCommentPanelState;
       const alreadyOpen =
@@ -2306,6 +2349,7 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       } else {
         openKakaoCommentView(msgIndex, role, commentEntry.id);
         setActiveKakaoCommentViewBtn(btn);
+        acknowledgeNotifTarget(bubbleShape, "kakao", currentKakaoDetailId, String(msgIndex), commentEntry.type);
       }
     });
     return btn;
@@ -2554,6 +2598,7 @@ function renderKakaoCardGrid() {
     textEl.textContent = (last.text || "").split("\n")[0];
 
     card.append(head, textEl);
+    appendNotifDots(card, "kakao", id);
     kakaoCardGrid.appendChild(card);
   });
 }
@@ -2561,6 +2606,7 @@ function renderKakaoCardGrid() {
 async function openKakaoDetail(id, data) {
   currentKakaoDetailId = id;
   currentKakaoDetailData = data;
+  markCardSeen("kakao", id);
   kakaoDetailThread.innerHTML = "";
   kakaoDetailModal.hidden = false;
 
@@ -2584,6 +2630,7 @@ function closeKakaoDetail() {
   currentKakaoDetailData = null;
   closeKakaoCommentPanel();
   closeKakaoEdit();
+  renderKakaoCardGrid();
 }
 
 kakaoDetailCloseBtn.addEventListener("click", closeKakaoDetail);
@@ -2729,6 +2776,8 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
     arr,
     "코멘트 저장에 실패했습니다: ",
     () => {
+      // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
+      markTargetSeen("kakao", currentKakaoDetailId, String(state.msgIndex), type);
       closeKakaoCommentPanel();
       // "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
       openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
@@ -2873,6 +2922,7 @@ function renderSumoneCardGrid() {
     titleEl.className = "sumone-card-title";
     titleEl.textContent = data.title || "(제목 없음)";
     card.appendChild(titleEl);
+    appendNotifDots(card, "sumone", id);
 
     sumoneCardGrid.appendChild(card);
   });
@@ -2929,6 +2979,7 @@ sumoneFormSaveBtn.addEventListener("click", async () => {
 async function openSumoneDetail(id, data) {
   currentSumoneDetailId = id;
   currentSumoneDetailData = data;
+  markCardSeen("sumone", id);
   sumoneDetailModal.hidden = false;
 
   currentSumoneComments = { user: [], admin: [] };
@@ -2958,6 +3009,7 @@ function closeSumoneDetail() {
   currentSumoneDetailId = null;
   currentSumoneDetailData = null;
   closeSumoneCommentPanel();
+  renderSumoneCardGrid();
 }
 
 sumoneDetailCloseBtn.addEventListener("click", closeSumoneDetail);
@@ -3038,6 +3090,14 @@ function makeSumoneCommentViewBtn(role, commentEntry) {
   icon.className = "bubble-icon";
   icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
   btn.append(bubbleShape, icon);
+  applyNotifViewBtnColor(
+    bubbleShape,
+    "sumone",
+    currentSumoneDetailId,
+    "main",
+    commentEntry.type,
+    commentEntry.createdAt || 0
+  );
   btn.addEventListener("click", () => {
     const state = sumoneCommentPanelState;
     const alreadyOpen =
@@ -3047,6 +3107,7 @@ function makeSumoneCommentViewBtn(role, commentEntry) {
     } else {
       openSumoneCommentView(role, commentEntry.id);
       setActiveSumoneCommentViewBtn(btn);
+      acknowledgeNotifTarget(bubbleShape, "sumone", currentSumoneDetailId, "main", commentEntry.type);
     }
   });
   return btn;
@@ -3152,6 +3213,8 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
     arr,
     "코멘트 저장에 실패했습니다: ",
     () => {
+      // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
+      markTargetSeen("sumone", currentSumoneDetailId, "main", type);
       closeSumoneCommentPanel();
       openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
     }
@@ -3177,4 +3240,294 @@ sumoneCommentPanelDeleteBtn.addEventListener("click", async () => {
       openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
     }
   );
+});
+
+// ---------- 알림 ----------
+// "확인 표시"는 두 단계로 따로 저장됩니다:
+// - cardMarks: 홈 화면 카드 우측 상단의 새 코멘트 점이 사라지는 기준.
+//   카드(대화/카드) 상세를 "열기만" 해도 그 카드 전체가 확인된 것으로 칩니다.
+// - targetMarks: 코멘트 하나(트윗/카톡 메시지/SumOne 카드)의 보기 버튼
+//   강조색과 알림창 목록 항목이 사라지는 기준. 그 코멘트를 실제로 열어봐야
+//   확인된 것으로 칩니다 — 카드만 열어본 것으로는 안 지워집니다.
+// 관리자는 모든 코멘트 알림을 보고, 비관리자는 관리자가 단 코멘트
+// (message-circle/coffee)만 알림으로 봅니다(자기 자신의 wine 코멘트나
+// 다른 사람의 wine 코멘트는 알림 대상이 아님).
+function notifCardKey(section, cardId) {
+  return section + ":" + cardId;
+}
+function notifTargetKey(section, cardId, targetKey, type) {
+  return section + ":" + cardId + ":" + targetKey + ":" + type;
+}
+
+async function loadSeenMaps() {
+  cardSeenMap = new Map();
+  targetSeenMap = new Map();
+  if (!currentUid) return;
+  try {
+    const cardSnap = await getDocs(collection(db, "notifSeen", currentUid, "cardMarks"));
+    cardSnap.forEach((d) => cardSeenMap.set(d.id, d.data().seenAt || 0));
+    const targetSnap = await getDocs(collection(db, "notifSeen", currentUid, "targetMarks"));
+    targetSnap.forEach((d) => targetSeenMap.set(d.id, d.data().seenAt || 0));
+  } catch (e) {
+    console.error("알림 확인 기록을 불러오지 못했습니다.", e);
+  }
+}
+
+// 세 카테고리의 모든 코멘트를 한 번에 훑어옵니다. 카드마다 따로 불러오는
+// 대신 collectionGroup으로 "tweetComments"라는 이름의 서브컬렉션 전체를
+// 한 번에 조회합니다 — 어느 카드 밑에 있는지는 문서 참조의 부모의 부모
+// (.ref.parent.parent.id)로 알 수 있습니다.
+async function loadNotifEntries() {
+  const entries = [];
+
+  async function collectFrom(subcollectionName, section, fixedTargetKey) {
+    try {
+      const snap = await getDocs(collectionGroup(db, subcollectionName));
+      snap.forEach((docSnap) => {
+        const cardId = docSnap.ref.parent.parent.id;
+        const targetKey = fixedTargetKey || docSnap.id;
+        const data = normalizeCommentDoc(docSnap.data());
+        ["admin", "user"].forEach((role) => {
+          (data[role] || []).forEach((entry) => {
+            entries.push({
+              section,
+              cardId,
+              targetKey,
+              role,
+              type: entry.type,
+              createdAt: entry.createdAt || 0,
+            });
+          });
+        });
+      });
+    } catch (e) {
+      console.error(subcollectionName + " 알림을 불러오지 못했습니다.", e);
+    }
+  }
+
+  await collectFrom("tweetComments", "x", null);
+  await collectFrom("kakaoComments", "kakao", null);
+  await collectFrom("sumoneComments", "sumone", "main");
+
+  notifEntriesCache = entries;
+}
+
+function isNotifEntryVisible(entry) {
+  if (isAdmin) return true;
+  return entry.type === "message-circle" || entry.type === "coffee";
+}
+
+async function markCardSeen(section, cardId) {
+  if (!currentUid) return;
+  const key = notifCardKey(section, cardId);
+  const now = Date.now();
+  cardSeenMap.set(key, now);
+  try {
+    await setDoc(doc(db, "notifSeen", currentUid, "cardMarks", key), { seenAt: now });
+  } catch (e) {
+    console.error("카드 확인 표시 저장에 실패했습니다.", e);
+  }
+}
+
+async function markTargetSeen(section, cardId, targetKey, type) {
+  if (!currentUid) return;
+  const key = notifTargetKey(section, cardId, targetKey, type);
+  const now = Date.now();
+  targetSeenMap.set(key, now);
+  try {
+    await setDoc(doc(db, "notifSeen", currentUid, "targetMarks", key), { seenAt: now });
+  } catch (e) {
+    console.error("코멘트 확인 표시 저장에 실패했습니다.", e);
+  }
+}
+
+function isTargetTypeUnseen(section, cardId, targetKey, type, createdAt) {
+  const seenAt = targetSeenMap.get(notifTargetKey(section, cardId, targetKey, type)) || 0;
+  return createdAt > seenAt;
+}
+
+// 카드 우측 상단에 찍을 점의 색(코멘트 종류별). 말풍선은 테마 색을 그대로 씁니다.
+const NOTIF_DOT_COLOR = {
+  "message-circle": "var(--accent)",
+  coffee: "#B8E2DC",
+  wine: "#7E212A",
+};
+
+// 이 카드에서 아직 안 본 코멘트 종류들을 돌려줍니다(최대 3개: message-circle/coffee/wine).
+function getUnseenTypesForCard(section, cardId) {
+  const seenAt = cardSeenMap.get(notifCardKey(section, cardId)) || 0;
+  const types = new Set();
+  notifEntriesCache.forEach((e) => {
+    if (e.section !== section || e.cardId !== cardId) return;
+    if (!isNotifEntryVisible(e)) return;
+    if (e.createdAt > seenAt) types.add(e.type);
+  });
+  return Array.from(types);
+}
+
+// 홈 화면 카드(.card, position:relative)의 우측 상단에 새 코멘트 점을
+// 붙입니다. .card-tag-badge와 같은 자리(top:14px/right:14px)를 씁니다.
+function appendNotifDots(cardEl, section, cardId) {
+  const types = getUnseenTypesForCard(section, cardId);
+  if (types.length === 0) return;
+  const row = document.createElement("div");
+  row.className = "notif-dot-row";
+  types.forEach((type) => {
+    const dot = document.createElement("span");
+    dot.className = "notif-dot";
+    dot.style.background = NOTIF_DOT_COLOR[type] || "var(--accent)";
+    row.appendChild(dot);
+  });
+  cardEl.appendChild(row);
+}
+
+// wine/coffee 코멘트가 새로 달렸을 때 보기 버튼의 말풍선 배경색을 그
+// 종류의 색으로 바꿉니다(말풍선 SVG가 fill="currentColor"라 bubble-shape의
+// color를 바꾸면 됩니다). 확인하면(그 버튼을 눌러서 보기/닫기) 원래
+// 색으로 돌아옵니다.
+const NOTIF_VIEW_BTN_COLOR = {
+  coffee: "#B8E2DC",
+  wine: "#7E212A",
+};
+function applyNotifViewBtnColor(bubbleShapeEl, section, cardId, targetKey, type, createdAt) {
+  if (!NOTIF_VIEW_BTN_COLOR[type]) return;
+  if (isTargetTypeUnseen(section, cardId, targetKey, type, createdAt)) {
+    bubbleShapeEl.style.color = NOTIF_VIEW_BTN_COLOR[type];
+  }
+}
+// 보기 버튼을 눌러 코멘트를 확인한 순간 바로 원래 색으로 되돌리고, 서버에도 기록합니다.
+function acknowledgeNotifTarget(bubbleShapeEl, section, cardId, targetKey, type) {
+  if (bubbleShapeEl) bubbleShapeEl.style.color = "";
+  markTargetSeen(section, cardId, targetKey, type);
+}
+
+// n분/시간/일 전. 알림창의 코멘트 문구 바로 아래 회색 작은 글씨로 씁니다.
+function formatRelativeTime(ms) {
+  const diff = Math.max(0, Date.now() - ms);
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (diff < minute) return "방금 전";
+  if (diff < hour) return Math.floor(diff / minute) + "분 전";
+  if (diff < day) return Math.floor(diff / hour) + "시간 전";
+  return Math.floor(diff / day) + "일 전";
+}
+
+const NOTIF_TEXT_BY_TYPE = {
+  "message-circle": "새 코멘트가 달렸어요!",
+  coffee: "윤 양이 새 코멘트를 달았어요",
+  wine: "츄야 군이 새 코멘트를 달았어요",
+};
+
+// 말풍선(message-circle) 코멘트 전용: 같은 대상(target)에 첫 코멘트가 달린
+// 뒤 7일 안에 추가로 여러 개가 달려도 알림창엔 한 줄로만 뜨고, 표시 시각은
+// 그 묶음의 가장 마지막 코멘트 시각을 씁니다. 첫 코멘트로부터 7일이 지난
+// 뒤 또 달리면 별개의 새 묶음(=새 줄)으로 칩니다.
+const NOTIF_MC_COALESCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+function coalesceMessageCircleEntries(entriesSortedAsc) {
+  const groups = [];
+  let current = null;
+  entriesSortedAsc.forEach((e) => {
+    if (!current || e.createdAt - current.firstAt > NOTIF_MC_COALESCE_WINDOW_MS) {
+      current = { firstAt: e.createdAt, lastAt: e.createdAt };
+      groups.push(current);
+    } else {
+      current.lastAt = e.createdAt;
+    }
+  });
+  return groups;
+}
+
+function buildNotifRows() {
+  const visible = notifEntriesCache.filter(isNotifEntryVisible);
+  const rows = []; // { type, time }
+
+  // 커피/와인: 안 본 코멘트 하나하나가 각자 한 줄.
+  visible
+    .filter((e) => e.type === "coffee" || e.type === "wine")
+    .forEach((e) => {
+      if (!isTargetTypeUnseen(e.section, e.cardId, e.targetKey, e.type, e.createdAt)) return;
+      rows.push({ type: e.type, time: e.createdAt });
+    });
+
+  // 말풍선: 대상(카드+타깃)별로 묶어서 7일 이내 묶음은 한 줄로.
+  const byTarget = new Map();
+  visible
+    .filter((e) => e.type === "message-circle")
+    .forEach((e) => {
+      const key = e.section + ":" + e.cardId + ":" + e.targetKey;
+      if (!byTarget.has(key)) byTarget.set(key, { section: e.section, cardId: e.cardId, targetKey: e.targetKey, list: [] });
+      byTarget.get(key).list.push(e);
+    });
+  byTarget.forEach(({ section, cardId, targetKey, list }) => {
+    list.sort((a, b) => a.createdAt - b.createdAt);
+    const groups = coalesceMessageCircleEntries(list);
+    groups.forEach((g) => {
+      if (isTargetTypeUnseen(section, cardId, targetKey, "message-circle", g.lastAt)) {
+        rows.push({ type: "message-circle", time: g.lastAt });
+      }
+    });
+  });
+
+  rows.sort((a, b) => b.time - a.time);
+  return rows;
+}
+
+function renderNotifPanel() {
+  const rows = buildNotifRows();
+  notifPanelList.innerHTML = "";
+  notifPanelEmpty.hidden = rows.length > 0;
+  rows.forEach((row) => {
+    const item = document.createElement("div");
+    item.className = "notif-item";
+    const text = document.createElement("p");
+    text.className = "notif-item-text";
+    text.textContent = NOTIF_TEXT_BY_TYPE[row.type] || NOTIF_TEXT_BY_TYPE["message-circle"];
+    const time = document.createElement("p");
+    time.className = "notif-item-time";
+    time.textContent = formatRelativeTime(row.time);
+    item.append(text, time);
+    notifPanelList.appendChild(item);
+  });
+}
+
+async function openNotifPanel(anchorBtn) {
+  await loadNotifEntries(); // 열 때마다 최신 상태로 다시 불러옵니다.
+  renderNotifPanel();
+  notifPanel.hidden = false;
+  const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+  if (isDesktop) {
+    const rect = anchorBtn.getBoundingClientRect();
+    notifPanel.classList.add("desktop-anchored");
+    notifPanel.style.top = rect.bottom + 8 + "px";
+    notifPanel.style.right = window.innerWidth - rect.right + "px";
+    notifBackdrop.hidden = true;
+  } else {
+    notifPanel.classList.remove("desktop-anchored");
+    notifPanel.style.top = "";
+    notifPanel.style.right = "";
+    notifBackdrop.hidden = false;
+  }
+}
+function closeNotifPanel() {
+  notifPanel.hidden = true;
+  notifBackdrop.hidden = true;
+}
+
+notifBellBtns.forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!notifPanel.hidden) {
+      closeNotifPanel();
+      return;
+    }
+    openNotifPanel(btn);
+  });
+});
+notifBackdrop.addEventListener("click", closeNotifPanel);
+document.addEventListener("click", (e) => {
+  if (notifPanel.hidden) return;
+  if (notifPanel.contains(e.target)) return;
+  if (Array.from(notifBellBtns).some((b) => b.contains(e.target))) return;
+  closeNotifPanel();
 });
