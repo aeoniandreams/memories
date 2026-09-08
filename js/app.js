@@ -1135,68 +1135,51 @@ function tryLeaveTweetCommentPanel() {
   return true;
 }
 
-function renderTweetCommentPanel() {
-  const state = tweetCommentPanelState;
-  tweetCommentPanelBody.innerHTML = "";
+// 코멘트 블록(텍스트/이미지) 목록을 "보기" 모드로 그려서 container에 붙입니다.
+// 트윗 코멘트/카톡 코멘트 둘 다 씁니다.
+function renderCommentBlocksView(container, blocks) {
+  blocks.forEach((block) => {
+    if (block.type === "image") {
+      const urls = getBlockImageUrls(block);
+      if (!urls.length) return;
+      container.appendChild(createCommentBlockImageView(urls));
+    } else {
+      if (!block.text) return;
+      const p = document.createElement("p");
+      p.className = "comment-modal-text";
+      p.textContent = block.text;
+      container.appendChild(p);
+    }
+  });
+}
 
-  if (state.mode === "view") {
-    const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
-    getCommentBlocks(entry).forEach((block) => {
-      if (block.type === "image") {
-        const urls = getBlockImageUrls(block);
-        if (!urls.length) return;
-        tweetCommentPanelBody.appendChild(createCommentBlockImageView(urls));
-      } else {
-        if (!block.text) return;
-        const p = document.createElement("p");
-        p.className = "comment-modal-text";
-        p.textContent = block.text;
-        tweetCommentPanelBody.appendChild(p);
-      }
+// 관리자용 코멘트 종류(message-circle/coffee) 선택 UI. state.adminType을 직접
+// 바꾸고 rerender()를 호출해 다시 그리게 합니다(트윗/카톡 코멘트 편집 화면 공용).
+function renderCommentTypeSelector(container, state, rerender) {
+  const typeBox = document.createElement("div");
+  typeBox.className = "tweet-comment-type-options";
+  [
+    ["message-circle", MESSAGE_CIRCLE_ICON_SVG],
+    ["coffee", COFFEE_ICON_SVG],
+  ].forEach(([type, svg]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tweet-comment-type-btn" + (type === state.adminType ? " selected" : "");
+    btn.innerHTML = svg;
+    btn.setAttribute("aria-label", type);
+    btn.addEventListener("click", () => {
+      state.adminType = type;
+      rerender();
     });
+    typeBox.appendChild(btn);
+  });
+  container.appendChild(typeBox);
+}
 
-    const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
-    tweetCommentPanelActionBtn.hidden = !canEdit;
-    tweetCommentPanelActionBtn.textContent = "수정";
-    tweetCommentPanelDeleteBtn.hidden = !canEdit;
-    return;
-  }
-
-  // edit(기존 코멘트 수정) / compose(새 코멘트 작성)
-  const entry = state.mode === "edit" ? findCommentEntry(state.commentKey, state.role, state.entryId) : null;
-  if (!state.blocksInitialized) {
-    // 블록 배열은 여기서 한 번만 초기화합니다. 관리자 타입 선택 등 다른 조작으로
-    // 같은 편집 세션 안에서 다시 렌더링될 때 입력하던 내용이 지워지면 안 되니까요.
-    // 이미지 블록은 예전 한 장짜리(url) 형식이어도 여러 장(urls 배열) 형식으로
-    // 통일해서 들고 있습니다 — 편집 중엔 항상 urls 배열만 다루면 되도록.
-    commentComposeBlocks = getCommentBlocks(entry).map((b) =>
-      b.type === "image" ? { type: "image", urls: getBlockImageUrls(b) } : { ...b }
-    );
-    state.blocksInitialized = true;
-  }
-
-  if (isAdmin) {
-    if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
-    const typeBox = document.createElement("div");
-    typeBox.className = "tweet-comment-type-options";
-    [
-      ["message-circle", MESSAGE_CIRCLE_ICON_SVG],
-      ["coffee", COFFEE_ICON_SVG],
-    ].forEach(([type, svg]) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "tweet-comment-type-btn" + (type === state.adminType ? " selected" : "");
-      btn.innerHTML = svg;
-      btn.setAttribute("aria-label", type);
-      btn.addEventListener("click", () => {
-        state.adminType = type;
-        renderTweetCommentPanel();
-      });
-      typeBox.appendChild(btn);
-    });
-    tweetCommentPanelBody.appendChild(typeBox);
-  }
-
+// 코멘트 텍스트/이미지 블록 목록을 작성/수정 UI로 그려서 container에 붙입니다.
+// blocks 배열을 직접 바꾸고, 바뀔 때마다 rerender()를 호출해 다시 그리게 합니다
+// (트윗/카톡 코멘트 편집 화면 공용).
+function renderCommentBlockEditor(container, blocks, rerender) {
   const toolbar = document.createElement("div");
   toolbar.className = "comment-block-toolbar";
   const addTextBtn = document.createElement("button");
@@ -1204,24 +1187,24 @@ function renderTweetCommentPanel() {
   addTextBtn.className = "btn-secondary";
   addTextBtn.innerHTML = PLUS_ICON_SVG + " 텍스트";
   addTextBtn.addEventListener("click", () => {
-    commentComposeBlocks.push({ type: "text", text: "" });
-    renderTweetCommentPanel();
+    blocks.push({ type: "text", text: "" });
+    rerender();
   });
   const addImageBtn = document.createElement("button");
   addImageBtn.type = "button";
   addImageBtn.className = "btn-secondary";
   addImageBtn.innerHTML = PLUS_ICON_SVG + " 이미지";
   addImageBtn.addEventListener("click", () => {
-    commentComposeBlocks.push({ type: "image", urls: [] });
-    renderTweetCommentPanel();
+    blocks.push({ type: "image", urls: [] });
+    rerender();
   });
   toolbar.append(addTextBtn, addImageBtn);
-  tweetCommentPanelBody.appendChild(toolbar);
+  container.appendChild(toolbar);
 
   const blockList = document.createElement("div");
   blockList.className = "comment-block-list";
   const pendingAutoResizeInputs = [];
-  commentComposeBlocks.forEach((block, blockIndex) => {
+  blocks.forEach((block, blockIndex) => {
     const row = document.createElement("div");
     row.className = "comment-block-row";
 
@@ -1281,9 +1264,9 @@ function renderTweetCommentPanel() {
       if (fromIndex === null || !overRow) return;
       const toIndex = Number(overRow.dataset.blockIndex);
       if (Number.isNaN(toIndex) || toIndex === fromIndex) return;
-      const [moved] = commentComposeBlocks.splice(fromIndex, 1);
-      commentComposeBlocks.splice(toIndex, 0, moved);
-      renderTweetCommentPanel();
+      const [moved] = blocks.splice(fromIndex, 1);
+      blocks.splice(toIndex, 0, moved);
+      rerender();
     });
 
     row.appendChild(handle);
@@ -1301,9 +1284,9 @@ function renderTweetCommentPanel() {
       row.classList.remove("drag-over");
       const fromIndex = Number(e.dataTransfer.getData("text/plain"));
       if (Number.isNaN(fromIndex) || fromIndex === blockIndex) return;
-      const [moved] = commentComposeBlocks.splice(fromIndex, 1);
-      commentComposeBlocks.splice(blockIndex, 0, moved);
-      renderTweetCommentPanel();
+      const [moved] = blocks.splice(fromIndex, 1);
+      blocks.splice(blockIndex, 0, moved);
+      rerender();
     });
 
     const content = document.createElement("div");
@@ -1323,13 +1306,13 @@ function renderTweetCommentPanel() {
       });
       content.appendChild(urlInput);
       // scrollHeight는 실제 화면에 붙어야 정확히 계산되니, blockList 전체가
-      // 문서에 붙은 다음 한 번 맞춰줍니다(아래 tweetCommentPanelBody.appendChild 이후).
+      // 문서에 붙은 다음 한 번 맞춰줍니다(아래 container.appendChild 이후).
       pendingAutoResizeInputs.push(urlInput);
     } else {
       const textarea = document.createElement("textarea");
       textarea.className = "tweet-comment-editor-textarea";
       textarea.rows = 3;
-      textarea.placeholder = "이 트윗에 대한 코멘트를 입력하세요";
+      textarea.placeholder = "이 내용에 대한 코멘트를 입력하세요";
       textarea.value = block.text || "";
       textarea.addEventListener("input", () => {
         block.text = textarea.value;
@@ -1345,18 +1328,54 @@ function renderTweetCommentPanel() {
     removeBtn.className = "edit-row-remove";
     removeBtn.textContent = "이 블록 삭제";
     removeBtn.addEventListener("click", () => {
-      commentComposeBlocks.splice(blockIndex, 1);
-      renderTweetCommentPanel();
+      blocks.splice(blockIndex, 1);
+      rerender();
     });
     content.appendChild(removeBtn);
 
     row.appendChild(content);
     blockList.appendChild(row);
   });
-  tweetCommentPanelBody.appendChild(blockList);
+  container.appendChild(blockList);
   // scrollHeight는 문서에 실제로 붙어 레이아웃이 계산된 뒤에야 정확하니,
   // 위에서 blockList를 붙인 다음 이미지 URL 입력칸들의 높이를 맞춥니다.
   pendingAutoResizeInputs.forEach(autoResizeTextarea);
+}
+
+function renderTweetCommentPanel() {
+  const state = tweetCommentPanelState;
+  tweetCommentPanelBody.innerHTML = "";
+
+  if (state.mode === "view") {
+    const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
+    renderCommentBlocksView(tweetCommentPanelBody, getCommentBlocks(entry));
+
+    const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
+    tweetCommentPanelActionBtn.hidden = !canEdit;
+    tweetCommentPanelActionBtn.textContent = "수정";
+    tweetCommentPanelDeleteBtn.hidden = !canEdit;
+    return;
+  }
+
+  // edit(기존 코멘트 수정) / compose(새 코멘트 작성)
+  const entry = state.mode === "edit" ? findCommentEntry(state.commentKey, state.role, state.entryId) : null;
+  if (!state.blocksInitialized) {
+    // 블록 배열은 여기서 한 번만 초기화합니다. 관리자 타입 선택 등 다른 조작으로
+    // 같은 편집 세션 안에서 다시 렌더링될 때 입력하던 내용이 지워지면 안 되니까요.
+    // 이미지 블록은 예전 한 장짜리(url) 형식이어도 여러 장(urls 배열) 형식으로
+    // 통일해서 들고 있습니다 — 편집 중엔 항상 urls 배열만 다루면 되도록.
+    commentComposeBlocks = getCommentBlocks(entry).map((b) =>
+      b.type === "image" ? { type: "image", urls: getBlockImageUrls(b) } : { ...b }
+    );
+    state.blocksInitialized = true;
+  }
+
+  if (isAdmin) {
+    if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
+    renderCommentTypeSelector(tweetCommentPanelBody, state, renderTweetCommentPanel);
+  }
+
+  renderCommentBlockEditor(tweetCommentPanelBody, commentComposeBlocks, renderTweetCommentPanel);
 
   tweetCommentPanelActionBtn.hidden = false;
   tweetCommentPanelActionBtn.textContent = "저장";
@@ -2055,8 +2074,8 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
   }
 
   // 코멘트 보기 버튼: 트윗 코멘트 보기 버튼과 완전히 같은 모양(말풍선 배경 +
-  // 아이콘)이고, 코멘트가 달린 그 말풍선 바로 아래에 놓입니다.
-  function makeKakaoCommentViewBtn(msgIndex) {
+  // 종류별 아이콘)이고, 코멘트가 달린 그 말풍선 바로 아래에 놓입니다.
+  function makeKakaoCommentViewBtn(msgIndex, comment) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "tweet-comment-view-btn";
@@ -2066,7 +2085,7 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     bubbleShape.innerHTML = MESSAGE_CIRCLE_BUBBLE_FILL_SVG;
     const icon = document.createElement("span");
     icon.className = "bubble-icon";
-    icon.innerHTML = MESSAGE_CIRCLE_ICON_SVG;
+    icon.innerHTML = COMMENT_TYPE_ICONS[comment && comment.type] || MESSAGE_CIRCLE_ICON_SVG;
     btn.append(bubbleShape, icon);
     btn.addEventListener("click", () => openKakaoCommentView(msgIndex));
     return btn;
@@ -2140,7 +2159,7 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     if (cardId && isAdmin) row.appendChild(makeKakaoCommentAddBtn(index, isMe));
     currentGroupCol.appendChild(row);
 
-    if (cardId && msg.comment) currentGroupCol.appendChild(makeKakaoCommentViewBtn(index));
+    if (cardId && msg.comment) currentGroupCol.appendChild(makeKakaoCommentViewBtn(index, msg.comment));
 
     if (editable) container.appendChild(makeInsertImageBtn(index + 1));
   });
@@ -2335,7 +2354,17 @@ const kakaoCommentPanelActionBtn = document.getElementById("kakao-comment-panel-
 const kakaoCommentPanelDeleteBtn = document.getElementById("kakao-comment-panel-delete-btn");
 const kakaoCommentPanelBody = document.getElementById("kakao-comment-panel-body");
 
-let kakaoCommentPanelState = null; // { msgIndex, mode: "view" | "edit" }
+let kakaoCommentPanelState = null; // { msgIndex, mode: "view" | "edit", adminType?, blocksInitialized? }
+let kakaoCommentComposeBlocks = []; // 작성/수정 중인 텍스트/이미지 블록들 (트윗 코멘트의 commentComposeBlocks와 같은 역할)
+
+// msg.comment를 블록 배열로 정규화합니다. 코멘트가 없으면 빈 텍스트 블록
+// 하나로 시작해서(작성창을 열자마자 바로 입력 가능), 예전에 저장된 문자열
+// 형식(comment가 그냥 string이던 버전)도 텍스트 블록 하나로 자연스럽게 바꿔줍니다.
+function getKakaoCommentBlocks(comment) {
+  if (comment && Array.isArray(comment.content)) return comment.content;
+  if (typeof comment === "string" && comment) return [{ type: "text", text: comment }];
+  return [{ type: "text", text: "" }];
+}
 
 function openKakaoCommentView(msgIndex) {
   kakaoCommentPanelState = { msgIndex, mode: "view" };
@@ -2361,23 +2390,24 @@ function renderKakaoCommentPanel() {
   const msg = (currentKakaoDetailData?.messages || [])[state.msgIndex] || {};
 
   if (state.mode === "view") {
-    const p = document.createElement("p");
-    p.className = "comment-modal-text";
-    p.textContent = msg.comment || "";
-    kakaoCommentPanelBody.appendChild(p);
+    renderCommentBlocksView(kakaoCommentPanelBody, getKakaoCommentBlocks(msg.comment));
     kakaoCommentPanelActionBtn.hidden = !isAdmin;
     kakaoCommentPanelActionBtn.textContent = "수정";
     kakaoCommentPanelDeleteBtn.hidden = !isAdmin;
     return;
   }
 
-  const textarea = document.createElement("textarea");
-  textarea.id = "kakao-comment-panel-textarea";
-  textarea.className = "tweet-comment-editor-textarea";
-  textarea.rows = 5;
-  textarea.placeholder = "이 메시지에 대한 코멘트를 입력하세요";
-  textarea.value = msg.comment || "";
-  kakaoCommentPanelBody.appendChild(textarea);
+  if (!state.blocksInitialized) {
+    kakaoCommentComposeBlocks = getKakaoCommentBlocks(msg.comment).map((b) =>
+      b.type === "image" ? { type: "image", urls: getBlockImageUrls(b) } : { ...b }
+    );
+    state.blocksInitialized = true;
+  }
+  if (!state.adminType) state.adminType = (msg.comment && msg.comment.type) || "message-circle";
+
+  renderCommentTypeSelector(kakaoCommentPanelBody, state, renderKakaoCommentPanel);
+  renderCommentBlockEditor(kakaoCommentPanelBody, kakaoCommentComposeBlocks, renderKakaoCommentPanel);
+
   kakaoCommentPanelActionBtn.hidden = false;
   kakaoCommentPanelActionBtn.textContent = "저장";
   kakaoCommentPanelDeleteBtn.hidden = true;
@@ -2396,9 +2426,16 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
     renderKakaoCommentPanel();
     return;
   }
-  const textarea = document.getElementById("kakao-comment-panel-textarea");
-  const text = textarea.value.trim();
-  await saveKakaoComment(state.msgIndex, text || null);
+  // 빈 텍스트 블록/URL 없는 이미지 블록은 저장하지 않고 걸러냅니다.
+  const content = kakaoCommentComposeBlocks
+    .map((b) =>
+      b.type === "image"
+        ? { type: "image", urls: (b.urls || []).map((u) => u.trim()).filter(Boolean) }
+        : { type: "text", text: (b.text || "").trim() }
+    )
+    .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
+  const comment = content.length ? { type: state.adminType, content } : null;
+  await saveKakaoComment(state.msgIndex, comment);
   closeKakaoCommentPanel();
 });
 
