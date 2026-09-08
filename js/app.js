@@ -47,14 +47,18 @@ const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 const themeToggleBtns = document.querySelectorAll(".theme-toggle-btn");
 
-// X 백업 / 카카오톡 백업 전환용 우측 사이드바. 평소엔 숨겨져 있다가
-// 헤더의 메뉴(☰) 버튼을 누르면 열립니다(아래 "사이드바 열기/닫기" 참고).
+// X 백업 / 카카오톡 백업 / SumOne 전환용 우측 사이드바. 평소엔 숨겨져
+// 있다가 헤더의 메뉴(☰) 버튼을 누르면 열립니다(아래 "사이드바 열기/닫기" 참고).
 const appSidebar = document.getElementById("app-sidebar");
+const sidebarCloseBtn = document.getElementById("sidebar-close-btn");
 const sidebarXBtn = document.getElementById("sidebar-x-btn");
 const sidebarKakaoBtn = document.getElementById("sidebar-kakao-btn");
+const sidebarSumoneBtn = document.getElementById("sidebar-sumone-btn");
 const sidebarMenuBtns = document.querySelectorAll(".sidebar-menu-btn");
 const kakaoAppView = document.getElementById("kakao-app-view");
 const kakaoLogoutBtn = document.getElementById("kakao-logout-btn");
+const sumoneAppView = document.getElementById("sumone-app-view");
+const sumoneLogoutBtn = document.getElementById("sumone-logout-btn");
 
 const sortToggleBtn = document.getElementById("sort-toggle-btn");
 const tagFilterSelect = document.getElementById("tag-filter-select");
@@ -277,6 +281,7 @@ onAuthStateChanged(auth, (user) => {
     loginView.hidden = false;
     appView.hidden = true;
     kakaoAppView.hidden = true;
+    sumoneAppView.hidden = true;
     appSidebar.hidden = true;
     appSidebar.classList.remove("open");
     isAdmin = false;
@@ -293,6 +298,9 @@ function applyAdminUI() {
   kakaoNewCardBtn.hidden = !isAdmin;
   kakaoDetailEditBtn.hidden = !isAdmin;
   kakaoDetailDeleteBtn.hidden = !isAdmin;
+  sumoneNewCardBtn.hidden = !isAdmin;
+  sumoneDetailEditBtn.hidden = !isAdmin;
+  sumoneDetailDeleteBtn.hidden = !isAdmin;
 }
 
 loginForm.addEventListener("submit", async (e) => {
@@ -311,6 +319,7 @@ loginForm.addEventListener("submit", async (e) => {
 
 logoutBtn.addEventListener("click", () => signOut(auth));
 kakaoLogoutBtn.addEventListener("click", () => signOut(auth));
+sumoneLogoutBtn.addEventListener("click", () => signOut(auth));
 
 // ---------- 홈: 카드 목록 ----------
 async function loadCards() {
@@ -1843,7 +1852,26 @@ const kakaoEditCloseBtn = document.getElementById("kakao-edit-close-btn");
 const kakaoEditSaveBtn = document.getElementById("kakao-edit-save-btn");
 const kakaoEditRows = document.getElementById("kakao-edit-rows");
 
-let currentSection = "x"; // "x" | "kakao"
+const sumoneNewCardBtn = document.getElementById("sumone-new-card-btn");
+const sumoneCardGrid = document.getElementById("sumone-card-grid");
+const sumoneEmptyState = document.getElementById("sumone-empty-state");
+
+const sumoneFormModal = document.getElementById("sumone-form-modal");
+const sumoneFormCloseBtn = document.getElementById("sumone-form-close-btn");
+const sumoneFormSaveBtn = document.getElementById("sumone-form-save-btn");
+const sumoneTitleInput = document.getElementById("sumone-title-input");
+const sumoneImageInput = document.getElementById("sumone-image-input");
+const sumoneContentInput = document.getElementById("sumone-content-input");
+
+const sumoneDetailModal = document.getElementById("sumone-detail-modal");
+const sumoneDetailCloseBtn = document.getElementById("sumone-detail-close-btn");
+const sumoneDetailEditBtn = document.getElementById("sumone-detail-edit-btn");
+const sumoneDetailDeleteBtn = document.getElementById("sumone-detail-delete-btn");
+const sumoneDetailImage = document.getElementById("sumone-detail-image");
+const sumoneDetailContent = document.getElementById("sumone-detail-content");
+const sumoneCommentArea = document.getElementById("sumone-comment-area");
+
+let currentSection = "x"; // "x" | "kakao" | "sumone"
 let kakaoCardsLoaded = false;
 let loadedKakaoCards = []; // [{id, data}]
 let kakaoParsedRoomName = "";
@@ -1853,15 +1881,28 @@ let currentKakaoDetailId = null;
 let currentKakaoDetailData = null; // openKakaoDetail에서 채워둠(코멘트 저장 시 필요)
 let currentKakaoComments = new Map(); // "메시지 인덱스(문자열)" -> { user?: [...], admin?: [...] } (상세보기 열 때마다 다시 불러옴)
 
+let sumoneCardsLoaded = false;
+let loadedSumoneCards = []; // [{id, data}]
+let sumoneEditTargetId = null; // null = 새로 만드는 중, 아니면 그 id의 카드를 수정하는 중
+let currentSumoneDetailId = null;
+let currentSumoneDetailData = null;
+let currentSumoneComments = { user: [], admin: [] }; // 카드 하나당 코멘트 대상이 하나뿐이라 Map이 필요 없음
+
 function switchSection(section) {
   currentSection = section;
   appView.hidden = section !== "x";
   kakaoAppView.hidden = section !== "kakao";
+  sumoneAppView.hidden = section !== "sumone";
   sidebarXBtn.classList.toggle("selected", section === "x");
   sidebarKakaoBtn.classList.toggle("selected", section === "kakao");
+  sidebarSumoneBtn.classList.toggle("selected", section === "sumone");
   if (section === "kakao" && !kakaoCardsLoaded) {
     kakaoCardsLoaded = true;
     loadKakaoCards();
+  }
+  if (section === "sumone" && !sumoneCardsLoaded) {
+    sumoneCardsLoaded = true;
+    loadSumoneCards();
   }
 }
 sidebarXBtn.addEventListener("click", () => {
@@ -1872,6 +1913,11 @@ sidebarKakaoBtn.addEventListener("click", () => {
   switchSection("kakao");
   closeSidebar();
 });
+sidebarSumoneBtn.addEventListener("click", () => {
+  switchSection("sumone");
+  closeSidebar();
+});
+sidebarCloseBtn.addEventListener("click", closeSidebar);
 
 // ---------- 사이드바 열기/닫기 ----------
 // 평소엔 숨겨져 있다가 헤더의 메뉴(☰) 버튼을 누르면 열립니다. 다시 그
@@ -2599,9 +2645,18 @@ kakaoDetailDeleteBtn.addEventListener("click", async () => {
 // 보이게 됩니다.
 let kakaoEditingMessages = [];
 
+// 텍스트 메시지/이미지 메시지를 따로 구분한 입력칸을 두지 않고, 칸 하나에
+// 뭘 넣었는지로 종류를 판단합니다: 전체 내용이 그냥 http(s) URL 하나뿐이면
+// 이미지로, 아니면 텍스트로 저장합니다(다른 곳의 이미지 URL 판단 방식과
+// 동일). 그래서 이미지 메시지를 텍스트로, 텍스트 메시지를 이미지로 바꿔
+// 저장하는 것도 자연스럽게 가능합니다.
+function looksLikeBareImageUrl(value) {
+  return /^https?:\/\/\S+$/.test(value.trim());
+}
+
 function renderKakaoEditRows() {
   kakaoEditRows.innerHTML = "";
-  kakaoEditingMessages.forEach((msg, index) => {
+  kakaoEditingMessages.forEach((msg) => {
     const row = document.createElement("div");
     row.className = "kakao-edit-row";
 
@@ -2610,27 +2665,12 @@ function renderKakaoEditRows() {
     meta.textContent = [msg.sender, msg.dateDisplay, msg.timeDisplay].filter(Boolean).join(" · ");
     row.appendChild(meta);
 
-    if (msg.type === "image") {
-      const input = document.createElement("input");
-      input.type = "text";
-      input.className = "kakao-edit-row-image-input";
-      input.placeholder = "이미지 URL";
-      input.value = msg.url || "";
-      input.addEventListener("input", () => {
-        kakaoEditingMessages[index].url = input.value;
-      });
-      row.appendChild(input);
-    } else {
-      const textarea = document.createElement("textarea");
-      textarea.className = "kakao-edit-row-textarea";
-      textarea.rows = 2;
-      textarea.value = msg.text || "";
-      textarea.addEventListener("input", () => {
-        kakaoEditingMessages[index].text = textarea.value;
-        autoResizeTextarea(textarea);
-      });
-      row.appendChild(textarea);
-    }
+    const textarea = document.createElement("textarea");
+    textarea.className = "kakao-edit-row-textarea";
+    textarea.rows = 2;
+    textarea.value = msg.type === "image" ? msg.url || "" : msg.text || "";
+    textarea.addEventListener("input", () => autoResizeTextarea(textarea));
+    row.appendChild(textarea);
 
     kakaoEditRows.appendChild(row);
   });
@@ -2661,11 +2701,342 @@ kakaoEditModal.addEventListener("click", (e) => {
 
 kakaoEditSaveBtn.addEventListener("click", async () => {
   if (!currentKakaoDetailId) return;
-  const messages = kakaoEditingMessages.map((m) =>
-    m.type === "image" ? { ...m, url: (m.url || "").trim() } : { ...m, text: (m.text || "").trim() }
-  );
+  const textareas = kakaoEditRows.querySelectorAll(".kakao-edit-row-textarea");
+  const messages = kakaoEditingMessages.map((m, i) => {
+    const value = (textareas[i].value || "").trim();
+    const { type, url, text, ...rest } = m; // 이전 종류(text/url) 필드는 새로 판단해서 다시 채우니 제외
+    return looksLikeBareImageUrl(value) ? { ...rest, type: "image", url: value } : { ...rest, text: value };
+  });
   await updateDoc(doc(db, "kakaoCards", currentKakaoDetailId), { messages });
   currentKakaoDetailData.messages = messages;
   closeKakaoEdit();
   openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
+});
+
+// ---------- SumOne ----------
+// 카드 하나가 제목(홈 화면 카드에 썸네일 대신 표시) + 이미지 한 장 + 내용
+// 한 덩어리 + 코멘트로 구성됩니다(X/카카오톡처럼 메시지가 여러 개 쌓이는
+// 구조가 아니라, 카드 하나당 콘텐츠가 하나뿐입니다).
+async function loadSumoneCards() {
+  const q = query(collection(db, "sumoneCards"), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  loadedSumoneCards = snapshot.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }));
+  renderSumoneCardGrid();
+}
+
+function renderSumoneCardGrid() {
+  sumoneCardGrid.innerHTML = "";
+  if (loadedSumoneCards.length === 0) {
+    sumoneEmptyState.hidden = false;
+    return;
+  }
+  sumoneEmptyState.hidden = true;
+
+  loadedSumoneCards.forEach(({ id, data }) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "card";
+    card.addEventListener("click", () => openSumoneDetail(id, data));
+
+    const titleEl = document.createElement("p");
+    titleEl.className = "sumone-card-title";
+    titleEl.textContent = data.title || "(제목 없음)";
+    card.appendChild(titleEl);
+
+    sumoneCardGrid.appendChild(card);
+  });
+}
+
+// ---------- SumOne 카드 새로 만들기/수정 ----------
+function openSumoneForm(id, data) {
+  sumoneEditTargetId = id || null;
+  sumoneTitleInput.value = data ? data.title || "" : "";
+  sumoneImageInput.value = data ? data.imageUrl || "" : "";
+  sumoneContentInput.value = data ? data.content || "" : "";
+  sumoneFormModal.hidden = false;
+}
+function closeSumoneForm() {
+  sumoneFormModal.hidden = true;
+  sumoneEditTargetId = null;
+}
+sumoneNewCardBtn.addEventListener("click", () => openSumoneForm(null, null));
+sumoneFormCloseBtn.addEventListener("click", closeSumoneForm);
+sumoneFormModal.addEventListener("click", (e) => {
+  if (e.target === sumoneFormModal) closeSumoneForm();
+});
+
+sumoneFormSaveBtn.addEventListener("click", async () => {
+  const title = sumoneTitleInput.value.trim();
+  if (!title) {
+    alert("제목을 입력해주세요.");
+    return;
+  }
+  const payload = {
+    title,
+    imageUrl: sumoneImageInput.value.trim(),
+    content: sumoneContentInput.value.trim(),
+  };
+
+  if (sumoneEditTargetId) {
+    await updateDoc(doc(db, "sumoneCards", sumoneEditTargetId), payload);
+    if (currentSumoneDetailId === sumoneEditTargetId) {
+      currentSumoneDetailData = { ...currentSumoneDetailData, ...payload };
+      renderSumoneDetail();
+    }
+  } else {
+    await addDoc(collection(db, "sumoneCards"), { ...payload, createdAt: serverTimestamp() });
+  }
+  closeSumoneForm();
+  loadSumoneCards();
+});
+
+// ---------- SumOne 카드 상세 보기 ----------
+async function openSumoneDetail(id, data) {
+  currentSumoneDetailId = id;
+  currentSumoneDetailData = data;
+  sumoneDetailModal.hidden = false;
+
+  currentSumoneComments = { user: [], admin: [] };
+  try {
+    const snap = await getDoc(doc(db, "sumoneCards", id, "sumoneComments", "main"));
+    if (snap.exists()) currentSumoneComments = normalizeCommentDoc(snap.data());
+  } catch (e) {
+    console.error("SumOne 코멘트를 불러오지 못했습니다.", e);
+  }
+
+  renderSumoneDetail();
+}
+
+function renderSumoneDetail() {
+  const data = currentSumoneDetailData;
+  const imgSrc = safeImgSrc(data.imageUrl);
+  sumoneDetailImage.src = imgSrc || "";
+  sumoneDetailImage.hidden = !imgSrc;
+  sumoneDetailContent.textContent = data.content || "";
+  renderSumoneCommentStack();
+}
+
+function closeSumoneDetail() {
+  sumoneDetailModal.hidden = true;
+  currentSumoneDetailId = null;
+  currentSumoneDetailData = null;
+  closeSumoneCommentPanel();
+}
+
+sumoneDetailCloseBtn.addEventListener("click", closeSumoneDetail);
+sumoneDetailModal.addEventListener("click", (e) => {
+  if (e.target === sumoneDetailModal) closeSumoneDetail();
+});
+sumoneDetailEditBtn.addEventListener("click", () => openSumoneForm(currentSumoneDetailId, currentSumoneDetailData));
+sumoneDetailDeleteBtn.addEventListener("click", async () => {
+  if (!currentSumoneDetailId) return;
+  if (!confirm("이 SumOne 카드를 삭제할까요? 되돌릴 수 없어요.")) return;
+  await deleteDoc(doc(db, "sumoneCards", currentSumoneDetailId));
+  closeSumoneDetail();
+  loadSumoneCards();
+});
+
+// ---------- SumOne 코멘트 보기/작성 ----------
+// 트위터 코멘트와 완전히 같은 구조(관리자/비관리자 역할 구분, 역할당 여러
+// 개 저장, message-circle/coffee/wine 타입, 텍스트+이미지 블록 에디터)를
+// 쓰지만, 카드 하나당 코멘트 대상이 하나뿐이라 메시지 인덱스 같은 키가
+// 필요 없습니다.
+const sumoneCommentPanel = document.getElementById("sumone-comment-panel");
+const sumoneCommentPanelBackBtn = document.getElementById("sumone-comment-panel-back-btn");
+const sumoneCommentPanelActionBtn = document.getElementById("sumone-comment-panel-action-btn");
+const sumoneCommentPanelDeleteBtn = document.getElementById("sumone-comment-panel-delete-btn");
+const sumoneCommentPanelBody = document.getElementById("sumone-comment-panel-body");
+
+let sumoneCommentPanelState = null; // { role, entryId, mode: "view"|"edit"|"compose", adminType?, blocksInitialized? }
+let sumoneCommentComposeBlocks = [];
+let activeSumoneCommentViewBtn = null;
+
+function setActiveSumoneCommentViewBtn(btn) {
+  if (activeSumoneCommentViewBtn) activeSumoneCommentViewBtn.classList.remove("is-open");
+  activeSumoneCommentViewBtn = btn || null;
+  if (activeSumoneCommentViewBtn) activeSumoneCommentViewBtn.classList.add("is-open");
+}
+
+function findSumoneCommentEntry(role, entryId) {
+  if (!currentSumoneComments || !role || !entryId) return null;
+  const arr = currentSumoneComments[role] || [];
+  return arr.find((e) => e.id === entryId) || null;
+}
+
+// 코멘트 작성 버튼(+ 있으면 보기 버튼들)을 상세 화면에 그립니다.
+function renderSumoneCommentStack() {
+  sumoneCommentArea.innerHTML = "";
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "sumone-comment-add-btn";
+  addBtn.innerHTML = MESSAGE_CIRCLE_PLUS_ICON_SVG;
+  addBtn.setAttribute("aria-label", "코멘트 작성");
+  addBtn.addEventListener("click", () => openSumoneCommentCompose());
+  sumoneCommentArea.appendChild(addBtn);
+
+  const viewEntries = [];
+  (currentSumoneComments.user || []).forEach((entry) => viewEntries.push({ role: "user", entry }));
+  (currentSumoneComments.admin || []).forEach((entry) => viewEntries.push({ role: "admin", entry }));
+  viewEntries.sort((a, b) => (a.entry.createdAt || 0) - (b.entry.createdAt || 0));
+
+  if (viewEntries.length > 0) {
+    const stack = document.createElement("div");
+    stack.className = "kakao-comment-view-stack";
+    viewEntries.forEach(({ role, entry }) => stack.appendChild(makeSumoneCommentViewBtn(role, entry)));
+    sumoneCommentArea.appendChild(stack);
+  }
+}
+
+function makeSumoneCommentViewBtn(role, commentEntry) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "tweet-comment-view-btn";
+  btn.setAttribute("aria-label", "코멘트 보기");
+  const bubbleShape = document.createElement("span");
+  bubbleShape.className = "bubble-shape";
+  bubbleShape.innerHTML = MESSAGE_CIRCLE_BUBBLE_FILL_SVG;
+  const icon = document.createElement("span");
+  icon.className = "bubble-icon";
+  icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
+  btn.append(bubbleShape, icon);
+  btn.addEventListener("click", () => {
+    const state = sumoneCommentPanelState;
+    const alreadyOpen =
+      !sumoneCommentPanel.hidden && state && state.role === role && state.entryId === commentEntry.id;
+    if (alreadyOpen) {
+      closeSumoneCommentPanel();
+    } else {
+      openSumoneCommentView(role, commentEntry.id);
+      setActiveSumoneCommentViewBtn(btn);
+    }
+  });
+  return btn;
+}
+
+function openSumoneCommentView(role, entryId) {
+  sumoneCommentPanelState = { role, entryId, mode: "view" };
+  sumoneCommentPanel.hidden = false;
+  renderSumoneCommentPanel();
+}
+function openSumoneCommentCompose() {
+  sumoneCommentPanelState = { role: null, entryId: null, mode: "compose", adminType: "message-circle" };
+  sumoneCommentPanel.hidden = false;
+  renderSumoneCommentPanel();
+  setActiveSumoneCommentViewBtn(null);
+}
+function closeSumoneCommentPanel() {
+  sumoneCommentPanel.hidden = true;
+  sumoneCommentPanelState = null;
+  setActiveSumoneCommentViewBtn(null);
+}
+
+function renderSumoneCommentPanel() {
+  const state = sumoneCommentPanelState;
+  if (!state) return;
+  sumoneCommentPanelBody.innerHTML = "";
+
+  if (state.mode === "view") {
+    const entry = findSumoneCommentEntry(state.role, state.entryId);
+    renderCommentBlocksView(sumoneCommentPanelBody, getCommentBlocks(entry));
+    const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
+    sumoneCommentPanelActionBtn.hidden = !canEdit;
+    sumoneCommentPanelActionBtn.textContent = "수정";
+    sumoneCommentPanelDeleteBtn.hidden = !canEdit;
+    return;
+  }
+
+  const entry = state.mode === "edit" ? findSumoneCommentEntry(state.role, state.entryId) : null;
+  if (!state.blocksInitialized) {
+    sumoneCommentComposeBlocks = getCommentBlocks(entry).map((b) =>
+      b.type === "image" ? { type: "image", urls: getBlockImageUrls(b) } : { ...b }
+    );
+    state.blocksInitialized = true;
+  }
+
+  if (isAdmin) {
+    if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
+    renderCommentTypeSelector(sumoneCommentPanelBody, state, renderSumoneCommentPanel);
+  }
+
+  renderCommentBlockEditor(sumoneCommentPanelBody, sumoneCommentComposeBlocks, renderSumoneCommentPanel);
+
+  sumoneCommentPanelActionBtn.hidden = false;
+  sumoneCommentPanelActionBtn.textContent = "저장";
+  sumoneCommentPanelDeleteBtn.hidden = true;
+}
+
+sumoneCommentPanelBackBtn.addEventListener("click", closeSumoneCommentPanel);
+sumoneCommentPanel.addEventListener("click", (e) => {
+  if (e.target === sumoneCommentPanel) closeSumoneCommentPanel();
+});
+
+sumoneCommentPanelActionBtn.addEventListener("click", async () => {
+  const state = sumoneCommentPanelState;
+  if (!state || !currentSumoneDetailId) return;
+
+  if (state.mode === "view") {
+    state.mode = "edit";
+    renderSumoneCommentPanel();
+    return;
+  }
+
+  const content = sumoneCommentComposeBlocks
+    .map((b) =>
+      b.type === "image"
+        ? { type: "image", urls: (b.urls || []).map((u) => u.trim()).filter(Boolean) }
+        : { type: "text", text: (b.text || "").trim() }
+    )
+    .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
+
+  const role = state.mode === "edit" ? state.role : isAdmin ? "admin" : "user";
+  const type = isAdmin ? state.adminType : "wine";
+
+  const arr = Array.isArray(currentSumoneComments[role]) ? currentSumoneComments[role].slice() : [];
+  if (state.mode === "edit") {
+    const idx = arr.findIndex((e) => e.id === state.entryId);
+    if (idx !== -1) {
+      if (content.length) {
+        const { text, ...rest } = arr[idx];
+        arr[idx] = { ...rest, type, content };
+      } else {
+        arr.splice(idx, 1);
+      }
+    }
+  } else {
+    if (!content.length) return;
+    arr.push({ id: genCommentId(), type, content, createdAt: Date.now() });
+  }
+
+  await persistCommentRoleArray(
+    doc(db, "sumoneCards", currentSumoneDetailId, "sumoneComments", "main"),
+    role,
+    arr,
+    "코멘트 저장에 실패했습니다: ",
+    () => {
+      closeSumoneCommentPanel();
+      openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
+    }
+  );
+});
+
+sumoneCommentPanelDeleteBtn.addEventListener("click", async () => {
+  const state = sumoneCommentPanelState;
+  if (!state || state.mode !== "view" || !currentSumoneDetailId) return;
+  if (!confirm("이 코멘트를 삭제할까요? 되돌릴 수 없어요.")) return;
+
+  const arr = (Array.isArray(currentSumoneComments[state.role]) ? currentSumoneComments[state.role] : []).filter(
+    (e) => e.id !== state.entryId
+  );
+
+  await persistCommentRoleArray(
+    doc(db, "sumoneCards", currentSumoneDetailId, "sumoneComments", "main"),
+    state.role,
+    arr,
+    "코멘트 삭제에 실패했습니다: ",
+    () => {
+      closeSumoneCommentPanel();
+      openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
+    }
+  );
 });

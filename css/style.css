@@ -231,11 +231,10 @@ h1 {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 56px;
+  width: 200px;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding-top: 16px;
+  gap: 4px;
+  padding: 12px;
   background: var(--surface);
   border-left: 1px solid var(--border);
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.12);
@@ -245,22 +244,47 @@ h1 {
   display: flex;
 }
 
-.app-sidebar-btn {
-  width: 40px;
-  height: 40px;
+.app-sidebar-close-btn {
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-bottom: 4px;
+}
+.app-sidebar-close-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.app-sidebar-title {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 0 8px 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-sidebar-btn {
+  width: 100%;
+  border-radius: 10px;
   border: none;
   background: transparent;
   color: var(--muted);
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
+  padding: 10px 8px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0;
 }
 .app-sidebar-btn svg {
   width: 20px;
   height: 20px;
+  flex-shrink: 0;
 }
 .app-sidebar-btn.selected {
   background: var(--accent);
@@ -308,15 +332,17 @@ h1 {
 
 /* "새 대화 추가" 버튼: 글자 없이 + 아이콘만 있는 원형 버튼으로, 데스크탑/
    모바일 모두 동일합니다(border-radius:999px는 이미 .btn-primary에 있고,
-   가로세로를 똑같이 맞춰서 원이 되게 합니다). 카카오톡 백업 화면의 같은
-   버튼(#kakao-new-card-btn)도 트위터 백업 화면과 완전히 같은 모양이어야
-   해서 셀렉터를 같이 묶어둡니다. */
+   가로세로를 똑같이 맞춰서 원이 되게 합니다). 카카오톡/SumOne 화면의 같은
+   버튼(#kakao-new-card-btn, #sumone-new-card-btn)도 트위터 백업 화면과
+   완전히 같은 모양이어야 해서 셀렉터를 같이 묶어둡니다. */
 #new-card-btn .btn-label,
-#kakao-new-card-btn .btn-label {
+#kakao-new-card-btn .btn-label,
+#sumone-new-card-btn .btn-label {
   display: none;
 }
 #new-card-btn,
-#kakao-new-card-btn {
+#kakao-new-card-btn,
+#sumone-new-card-btn {
   width: 34px;
   height: 34px;
   padding: 0;
@@ -1528,16 +1554,91 @@ h1 {
   resize: none;
   overflow: hidden;
 }
-.kakao-edit-row-image-input {
+/* ---------- SumOne 카드 ---------- */
+.sumone-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sumone-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sumone-form label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 10px;
+}
+.sumone-form label:first-child {
+  margin-top: 0;
+}
+.sumone-form input[type="text"],
+.sumone-form textarea {
   width: 100%;
   box-sizing: border-box;
-  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
+  padding: 10px 12px;
   background: var(--bg);
   color: var(--text);
   font: inherit;
   font-size: 14px;
+}
+.sumone-form textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.sumone-detail-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.sumone-detail-image {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border-radius: 12px;
+  /* 이미지와 내용 사이 여백 */
+  margin-bottom: 20px;
+}
+.sumone-detail-image[hidden] {
+  display: none;
+}
+.sumone-detail-content {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+.sumone-comment-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 18px;
+}
+.sumone-comment-add-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.sumone-comment-add-btn svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* 모바일(휴대폰) 전용 오버라이드. CSS 우선순위가 같은 규칙끼리는 파일에서 더
@@ -1620,10 +1721,12 @@ h1 {
      (14px -> 12.5px). "새 대화 추가"(#new-card-btn)는 이제 데스크탑/
      모바일 모두 아이콘만 있는 원형 버튼이라 여기서 따로 줄일 폰트 크기가
      없습니다. 같은 영역의 야간 모드 토글 버튼(🌙, .theme-toggle-btn)은
-     이모지 크기라 건드리지 않습니다. 카카오톡 백업 화면의 로그아웃 버튼
-     (#kakao-logout-btn)도 트위터 백업 화면과 똑같이 맞춥니다. */
+     이모지 크기라 건드리지 않습니다. 카카오톡/SumOne 화면의 로그아웃 버튼
+     (#kakao-logout-btn, #sumone-logout-btn)도 트위터 백업 화면과 똑같이
+     맞춥니다. */
   #logout-btn,
-  #kakao-logout-btn {
+  #kakao-logout-btn,
+  #sumone-logout-btn {
     font-size: 12.5px;
     padding: 7px 13px;
   }

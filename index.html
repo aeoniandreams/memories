@@ -49,14 +49,26 @@
   </form>
 </div>
 
-<!-- 우측 사이드바: X 백업 / 카카오톡 백업 화면을 서로 전환합니다. 로그인
-     상태에서만 보입니다. -->
+<!-- 우측 사이드바: X 백업 / 카카오톡 백업 / SumOne 화면을 서로 전환합니다.
+     로그인 상태에서만 보입니다. 맨 위 menu 아이콘은 사이드바를 다시
+     닫는 버튼(연 버튼과 같은 아이콘), 그 아래 일본어 문구는 로그인
+     화면과 같은 제목입니다. -->
 <div id="app-sidebar" class="app-sidebar" hidden>
-  <button id="sidebar-x-btn" class="app-sidebar-btn selected" type="button" aria-label="X 백업">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  <button id="sidebar-close-btn" class="app-sidebar-close-btn btn-ghost" type="button" aria-label="메뉴 닫기">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>
   </button>
-  <button id="sidebar-kakao-btn" class="app-sidebar-btn" type="button" aria-label="카카오톡 백업">
+  <div class="app-sidebar-title">ハクメイの永遠</div>
+  <button id="sidebar-x-btn" class="app-sidebar-btn selected" type="button">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+    <span>Twitter</span>
+  </button>
+  <button id="sidebar-kakao-btn" class="app-sidebar-btn" type="button">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.74c0 2.72 1.822 5.11 4.573 6.478-.201.75-.727 2.72-.833 3.142-.13.522.19.516.402.375.166-.11 2.638-1.79 3.708-2.52.696.103 1.417.157 2.15.157 5.523 0 10-3.463 10-7.632C22 6.463 17.523 3 12 3Z"/></svg>
+    <span>KakaoTalk</span>
+  </button>
+  <button id="sidebar-sumone-btn" class="app-sidebar-btn" type="button">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-10-3.55.04-7.14 5.66-7.5 10-.37 4.43 1.27 9.95 7.5 10z"/></svg>
+    <span>SumOne</span>
   </button>
 </div>
 
@@ -96,6 +108,24 @@
 
   <main id="kakao-card-grid" class="card-grid" aria-live="polite"></main>
   <p id="kakao-empty-state" class="empty-state" hidden>아직 백업된 카카오톡 대화가 없어요. "＋"로 첫 대화를 백업해보세요.</p>
+</div>
+
+<!-- SumOne 화면. X/카카오톡과 완전히 분리된 별도의 Firestore 컬렉션
+     (sumoneCards)을 씁니다. 카드마다 제목(썸네일 대신 카드에 표시) +
+     이미지 한 장 + 내용 한 덩어리 + 코멘트로 구성됩니다. -->
+<div id="sumone-app-view" class="view" hidden>
+  <header class="app-header">
+    <h1>memories</h1>
+    <div class="header-actions">
+      <button id="sumone-new-card-btn" class="btn-primary" aria-label="새 카드 추가"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="btn-label"> 새 카드 추가</span></button>
+      <button id="sumone-logout-btn" class="btn-ghost">로그아웃</button>
+      <button class="theme-toggle-btn btn-ghost" type="button" aria-label="야간 모드 전환">🌙</button>
+      <button class="sidebar-menu-btn btn-ghost" type="button" aria-label="메뉴"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg></button>
+    </div>
+  </header>
+
+  <main id="sumone-card-grid" class="card-grid" aria-live="polite"></main>
+  <p id="sumone-empty-state" class="empty-state" hidden>아직 카드가 없어요. "새 카드 추가"로 첫 카드를 만들어보세요.</p>
 </div>
 
 <!-- 카카오톡 대화 내보내기 텍스트 붙여넣기 -->
@@ -173,6 +203,61 @@
       </div>
     </div>
     <div id="kakao-edit-rows" class="kakao-edit-rows"></div>
+  </div>
+</div>
+
+<!-- SumOne 카드 새로 만들기/수정 공용 폼. 제목/이미지 URL/내용 세 칸뿐이라
+     새로 만들기와 수정을 같은 폼으로 씁니다(관리자 전용). -->
+<div id="sumone-form-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button id="sumone-form-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+      <div class="modal-header-right">
+        <button id="sumone-form-save-btn" class="btn-primary">저장</button>
+      </div>
+    </div>
+    <div class="sumone-form">
+      <label for="sumone-title-input">제목 (카드 목록에 표시됩니다)</label>
+      <input type="text" id="sumone-title-input" placeholder="제목" />
+      <label for="sumone-image-input">이미지 URL</label>
+      <input type="text" id="sumone-image-input" placeholder="https://..." />
+      <label for="sumone-content-input">내용</label>
+      <textarea id="sumone-content-input" rows="8" placeholder="내용을 입력하세요"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- SumOne 카드 상세 보기: 이미지 -> (여백) -> 내용 -> 코멘트 순서. -->
+<div id="sumone-detail-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button id="sumone-detail-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+      <div class="modal-header-right">
+        <button id="sumone-detail-edit-btn" class="btn-secondary">수정</button>
+        <button id="sumone-detail-delete-btn" class="btn-ghost danger">삭제</button>
+      </div>
+    </div>
+    <div class="sumone-detail-body">
+      <img id="sumone-detail-image" class="sumone-detail-image" alt="" hidden />
+      <p id="sumone-detail-content" class="sumone-detail-content"></p>
+      <div id="sumone-comment-area" class="sumone-comment-area"></div>
+    </div>
+  </div>
+
+  <!-- SumOne 코멘트 보기/작성. 트위터 코멘트와 완전히 같은 구조(관리자/
+       비관리자 역할 구분, 여러 개 저장, message-circle/coffee/wine 타입,
+       텍스트+이미지 블록 에디터)를 씁니다. -->
+  <div id="sumone-comment-panel" class="tweet-comment-panel" hidden>
+    <div class="tweet-comment-panel-card">
+      <div class="modal-header">
+        <button id="sumone-comment-panel-back-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+        <div class="modal-header-right">
+          <button id="sumone-comment-panel-action-btn" class="btn-secondary" hidden></button>
+          <button id="sumone-comment-panel-delete-btn" class="btn-ghost danger" hidden>삭제</button>
+        </div>
+      </div>
+      <div id="sumone-comment-panel-body" class="tweet-comment-panel-body"></div>
+    </div>
   </div>
 </div>
 
