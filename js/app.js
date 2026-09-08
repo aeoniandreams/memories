@@ -266,27 +266,36 @@ function fallbackAvatarDataUri() {
 }
 
 // ---------- 인증 ----------
+// 로그인 여부 확인이 너무 빨리 끝나면 로딩 화면(이미지 애니메이션 등)이
+// 한 프레임 반짝이고 사라지는 것처럼 보일 수 있어서, 페이지가 열린 뒤
+// 최소 1초는 로딩 화면이 보이도록 보장합니다. 기준 시각(window.__pageLoadStart)은
+// index.html의 아무것도 기다리지 않는 스크립트에서 미리 재둔 값입니다.
+const MIN_LOADING_MS = 1000;
 onAuthStateChanged(auth, (user) => {
-  // 로그인 여부 확인이 끝났으니(로딩 화면이 뜬 목적이 끝남) 로딩 화면을 숨기고,
-  // 아래에서 로그인 폼 또는 앱 화면 중 맞는 쪽을 보여줍니다.
-  loadingView.hidden = true;
-  if (user) {
-    loginView.hidden = true;
-    appSidebar.hidden = false;
-    appSidebar.classList.remove("open"); // 로그인 직후엔 항상 닫힌 채로 시작
-    switchSection("x");
-    isAdmin = user.email === ADMIN_EMAIL;
-    applyAdminUI();
-    loadCards();
-  } else {
-    loginView.hidden = false;
-    appView.hidden = true;
-    kakaoAppView.hidden = true;
-    sumoneAppView.hidden = true;
-    appSidebar.hidden = true;
-    appSidebar.classList.remove("open");
-    isAdmin = false;
-  }
+  const elapsed = Date.now() - (window.__pageLoadStart || Date.now());
+  const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+  setTimeout(() => {
+    // 로그인 여부 확인이 끝났으니(로딩 화면이 뜬 목적이 끝남) 로딩 화면을 숨기고,
+    // 아래에서 로그인 폼 또는 앱 화면 중 맞는 쪽을 보여줍니다.
+    loadingView.hidden = true;
+    if (user) {
+      loginView.hidden = true;
+      appSidebar.hidden = false;
+      appSidebar.classList.remove("open"); // 로그인 직후엔 항상 닫힌 채로 시작
+      switchSection("x");
+      isAdmin = user.email === ADMIN_EMAIL;
+      applyAdminUI();
+      loadCards();
+    } else {
+      loginView.hidden = false;
+      appView.hidden = true;
+      kakaoAppView.hidden = true;
+      sumoneAppView.hidden = true;
+      appSidebar.hidden = true;
+      appSidebar.classList.remove("open");
+      isAdmin = false;
+    }
+  }, remaining);
 });
 
 // 관리자만 백업 생성/수정/삭제 가능. 화면에서 버튼을 숨기는 건 UX일 뿐이고,

@@ -15,13 +15,22 @@
 <link rel="stylesheet" href="css/fonts.css" />
 <link rel="stylesheet" href="css/style.css" />
 <script>
-  // 저장된 테마를 CSS/본문이 그려지기 전에 미리 적용해서 화면이 잠깐 반대 테마로 번쩍이는 걸 막습니다.
+  // 저장된 테마를 CSS/본문이 그려지기 전에 미리 적용해서 화면이 잠깐 반대 테마로 번쩍이는 걸 방지합니다.
   try {
     const saved = localStorage.getItem("memories-theme");
     if (saved === "dark" || saved === "light") {
       document.documentElement.setAttribute("data-theme", saved);
     }
   } catch (e) {}
+
+  // 로딩 화면을 최소 1초는 보여주기 위한 기준 시각. js/app.js는 ES 모듈이라
+  // Firebase import가 전부 끝나야 실행되는데, 그 안에서 시각을 재면 이미
+  // import 로딩 시간만큼 늦게 잰 게 되어버립니다(모듈 실행 규칙상 import가
+  // 끝나야 그 다음 코드가 실행되기 때문). 그래서 아무것도 기다리지 않는 이
+  // 스크립트(페이지 파싱 중 가장 먼저 실행됨)에서 미리 기록해두고,
+  // js/app.js가 로그인 여부 확인이 끝났을 때 이 값과 비교해서 필요하면
+  // 조금 더 기다립니다.
+  window.__pageLoadStart = Date.now();
 </script>
 </head>
 <body>
@@ -34,9 +43,9 @@
      화면)을 보여줍니다. -->
 <div id="loading-view" class="view loading-view">
   <div class="loading-content">
-    <p id="loading-comment" class="loading-comment">© 404</p>
-    <img id="loading-image" class="loading-image" alt="" hidden />
     <p class="loading-dots-text">Loading<span id="loading-dots" class="loading-dots"></span></p>
+    <img id="loading-image" class="loading-image" alt="" hidden />
+    <p id="loading-comment" class="loading-comment">© 404</p>
   </div>
 </div>
 <script>
