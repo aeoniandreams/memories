@@ -46,6 +46,13 @@ const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 const themeToggleBtns = document.querySelectorAll(".theme-toggle-btn");
 
+// X 백업 / 카카오톡 백업 전환용 우측 사이드바.
+const appSidebar = document.getElementById("app-sidebar");
+const sidebarXBtn = document.getElementById("sidebar-x-btn");
+const sidebarKakaoBtn = document.getElementById("sidebar-kakao-btn");
+const kakaoAppView = document.getElementById("kakao-app-view");
+const kakaoLogoutBtn = document.getElementById("kakao-logout-btn");
+
 const sortToggleBtn = document.getElementById("sort-toggle-btn");
 const tagFilterSelect = document.getElementById("tag-filter-select");
 const cardGrid = document.getElementById("card-grid");
@@ -254,13 +261,16 @@ function fallbackAvatarDataUri() {
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loginView.hidden = true;
-    appView.hidden = false;
+    appSidebar.hidden = false;
+    switchSection("x");
     isAdmin = user.email === ADMIN_EMAIL;
     applyAdminUI();
     loadCards();
   } else {
     loginView.hidden = false;
     appView.hidden = true;
+    kakaoAppView.hidden = true;
+    appSidebar.hidden = true;
     isAdmin = false;
   }
 });
@@ -272,6 +282,8 @@ function applyAdminUI() {
   detailDeleteBtn.hidden = !isAdmin;
   detailAppendBtn.hidden = !isAdmin;
   detailEditBtn.hidden = !isAdmin;
+  kakaoNewCardBtn.hidden = !isAdmin;
+  kakaoDetailDeleteBtn.hidden = !isAdmin;
 }
 
 loginForm.addEventListener("submit", async (e) => {
@@ -289,6 +301,7 @@ loginForm.addEventListener("submit", async (e) => {
 });
 
 logoutBtn.addEventListener("click", () => signOut(auth));
+kakaoLogoutBtn.addEventListener("click", () => signOut(auth));
 
 // ---------- 홈: 카드 목록 ----------
 async function loadCards() {
@@ -1752,4 +1765,335 @@ newCardSaveBtn.addEventListener("click", async () => {
     newCardSaveBtn.disabled = false;
     newCardSaveBtn.textContent = "저장";
   }
+});
+
+// ===================================================================
+// ---------- 카카오톡 백업 ----------
+// X 백업(cards)과 완전히 분리된 kakaoCards 컬렉션을 씁니다. 카카오톡 앱
+// 자체의 "채팅방 설정 > 대화 내용 내보내기"로 만든 텍스트를 붙여넣어
+// 파싱합니다(사진은 실제 이미지가 아니라 "사진"이라는 텍스트로만 남아요).
+// ===================================================================
+
+const kakaoNewCardBtn = document.getElementById("kakao-new-card-btn");
+const kakaoCardGrid = document.getElementById("kakao-card-grid");
+const kakaoEmptyState = document.getElementById("kakao-empty-state");
+
+const kakaoNewCardModal = document.getElementById("kakao-new-card-modal");
+const kakaoNewCardCloseBtn = document.getElementById("kakao-new-card-close-btn");
+const kakaoNewCardSaveBtn = document.getElementById("kakao-new-card-save-btn");
+const kakaoImportTextarea = document.getElementById("kakao-import-textarea");
+const kakaoImportParseBtn = document.getElementById("kakao-import-parse-btn");
+const kakaoImportError = document.getElementById("kakao-import-error");
+const kakaoPreviewSection = document.getElementById("kakao-preview-section");
+const kakaoSenderOptions = document.getElementById("kakao-sender-options");
+const kakaoPreviewThread = document.getElementById("kakao-preview-thread");
+
+const kakaoDetailModal = document.getElementById("kakao-detail-modal");
+const kakaoDetailCloseBtn = document.getElementById("kakao-detail-close-btn");
+const kakaoDetailDeleteBtn = document.getElementById("kakao-detail-delete-btn");
+const kakaoDetailThread = document.getElementById("kakao-detail-thread");
+
+let currentSection = "x"; // "x" | "kakao"
+let kakaoCardsLoaded = false;
+let loadedKakaoCards = []; // [{id, data}]
+let kakaoParsedRoomName = "";
+let kakaoParsedMessages = []; // [{sender, dateDisplay, dateSort, timeDisplay, timeSort, text}]
+let kakaoSelectedMeSender = "";
+let currentKakaoDetailId = null;
+
+function switchSection(section) {
+  currentSection = section;
+  appView.hidden = section !== "x";
+  kakaoAppView.hidden = section !== "kakao";
+  sidebarXBtn.classList.toggle("selected", section === "x");
+  sidebarKakaoBtn.classList.toggle("selected", section === "kakao");
+  if (section === "kakao" && !kakaoCardsLoaded) {
+    kakaoCardsLoaded = true;
+    loadKakaoCards();
+  }
+}
+sidebarXBtn.addEventListener("click", () => switchSection("x"));
+sidebarKakaoBtn.addEventListener("click", () => switchSection("kakao"));
+
+// ---------- 카카오톡 내보내기 텍스트 파서 ----------
+// 각 메시지 줄: "2026년 9월 6일 오후 8:49, 이름 : 내용" 형태입니다. 그 외
+// 줄(날짜만 있는 구분선, "OO님이 들어왔습니다" 같은 시스템 알림, 첫 두 줄의
+// 방 제목/저장 날짜 안내)은 걸러내고, 위 형태와 안 맞는 줄은 바로 앞
+// 메시지가 여러 줄로 이어지는 것으로 보고 그 메시지에 줄바꿈으로 붙입니다
+// (내보내기 텍스트는 메시지 앱 알림 등도 섞여 있어서 100% 완벽하진 않지만,
+// 실제 대화 내용은 이 규칙으로 안정적으로 뽑힙니다).
+const KAKAO_HEADER_RE = /^(.+?)\s*님과의?\s*카카오톡\s*대화/;
+const KAKAO_MESSAGE_RE = /^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)\s*(\d{1,2}):(\d{2}),\s*(.+?)\s*:\s*([\s\S]*)$/;
+const KAKAO_BARE_DATE_RE = /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*(오전|오후)\s*\d{1,2}:\d{2}$/;
+const KAKAO_JOIN_LEAVE_RE = /^\d{4}년\s*\d{1,2}월\s*\d{1,2}일\s*(오전|오후)\s*\d{1,2}:\d{2},\s*.+님이\s*(들어왔습니다|나갔습니다)\.$/;
+
+function parseKakaoExport(rawText) {
+  const lines = rawText.replace(/\r\n/g, "\n").split("\n").map((l) => l.trim());
+  let roomName = "";
+  const firstNonEmpty = lines.find((l) => l);
+  if (firstNonEmpty) {
+    const hm = firstNonEmpty.match(KAKAO_HEADER_RE);
+    if (hm) roomName = hm[1].trim();
+  }
+
+  const messages = [];
+  lines.forEach((line) => {
+    if (!line) return;
+    if (KAKAO_HEADER_RE.test(line)) return;
+    if (/^저장한 날짜\s*:/.test(line)) return;
+    if (KAKAO_BARE_DATE_RE.test(line)) return;
+    if (KAKAO_JOIN_LEAVE_RE.test(line)) return;
+
+    const m = line.match(KAKAO_MESSAGE_RE);
+    if (m) {
+      const [, y, mo, d, ampm, h, min, sender, text] = m;
+      let hour = parseInt(h, 10) % 12;
+      if (ampm === "오후") hour += 12;
+      const pad2 = (n) => String(n).padStart(2, "0");
+      messages.push({
+        sender: sender.trim(),
+        dateDisplay: `${y}.${pad2(mo)}.${pad2(d)}.`,
+        dateSort: `${y}-${pad2(mo)}-${pad2(d)}`,
+        timeSort: `${pad2(hour)}:${min}`,
+        timeDisplay: `${ampm} ${h}:${min}`,
+        text: text.trim(),
+      });
+    } else if (messages.length > 0) {
+      // 날짜 접두어 없는 줄 -> 바로 앞 메시지의 줄바꿈이 이어지는 내용으로 취급합니다.
+      messages[messages.length - 1].text += "\n" + line;
+    }
+  });
+
+  return { roomName, messages };
+}
+
+// ---------- 채팅 말풍선 렌더링 (미리보기/상세보기 공통) ----------
+// 연속된 같은 발신자의 메시지는 하나의 묶음으로 보여주고(이름은 묶음당 한 번만),
+// 날짜가 바뀌면 그 사이에 구분선을 넣습니다.
+function renderKakaoThread(container, messages, meSender) {
+  container.innerHTML = "";
+  let lastDate = null;
+  let currentGroup = null;
+  let currentGroupSender = null;
+
+  messages.forEach((msg) => {
+    if (msg.dateDisplay !== lastDate) {
+      const divider = document.createElement("div");
+      divider.className = "kakao-date-divider";
+      divider.textContent = msg.dateDisplay;
+      container.appendChild(divider);
+      lastDate = msg.dateDisplay;
+      currentGroup = null; // 날짜가 바뀌면 새 묶음부터 시작합니다.
+    }
+
+    const isMe = !!meSender && msg.sender === meSender;
+    if (!currentGroup || currentGroupSender !== msg.sender) {
+      currentGroup = document.createElement("div");
+      currentGroup.className = "kakao-message-group " + (isMe ? "me" : "other");
+      if (!isMe) {
+        const nameEl = document.createElement("div");
+        nameEl.className = "kakao-sender-name";
+        nameEl.textContent = msg.sender;
+        currentGroup.appendChild(nameEl);
+      }
+      container.appendChild(currentGroup);
+      currentGroupSender = msg.sender;
+    }
+
+    const row = document.createElement("div");
+    row.className = "kakao-bubble-row";
+    const bubble = document.createElement("div");
+    bubble.className = "kakao-bubble";
+    bubble.textContent = msg.text;
+    const time = document.createElement("span");
+    time.className = "kakao-time";
+    time.textContent = msg.timeDisplay;
+    row.append(bubble, time);
+    currentGroup.appendChild(row);
+  });
+}
+
+// ---------- 새 카카오톡 대화 추가 ----------
+function resetKakaoImportModal() {
+  kakaoImportTextarea.value = "";
+  kakaoImportError.hidden = true;
+  kakaoPreviewSection.hidden = true;
+  kakaoNewCardSaveBtn.hidden = true;
+  kakaoParsedRoomName = "";
+  kakaoParsedMessages = [];
+  kakaoSelectedMeSender = "";
+}
+
+kakaoNewCardBtn.addEventListener("click", () => {
+  resetKakaoImportModal();
+  kakaoNewCardModal.hidden = false;
+});
+kakaoNewCardCloseBtn.addEventListener("click", () => {
+  kakaoNewCardModal.hidden = true;
+});
+kakaoNewCardModal.addEventListener("click", (e) => {
+  if (e.target === kakaoNewCardModal) kakaoNewCardModal.hidden = true;
+});
+
+function renderKakaoSenderOptions() {
+  kakaoSenderOptions.innerHTML = "";
+  const senders = Array.from(new Set(kakaoParsedMessages.map((m) => m.sender)));
+  senders.forEach((sender) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "kakao-sender-option" + (sender === kakaoSelectedMeSender ? " selected" : "");
+    btn.textContent = sender;
+    btn.addEventListener("click", () => {
+      kakaoSelectedMeSender = sender;
+      renderKakaoSenderOptions();
+      renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender);
+    });
+    kakaoSenderOptions.appendChild(btn);
+  });
+}
+
+kakaoImportParseBtn.addEventListener("click", () => {
+  kakaoImportError.hidden = true;
+  const text = kakaoImportTextarea.value.trim();
+  if (!text) {
+    kakaoImportError.textContent = "붙여넣은 내용이 없어요.";
+    kakaoImportError.hidden = false;
+    return;
+  }
+
+  const { roomName, messages } = parseKakaoExport(text);
+  if (messages.length === 0) {
+    kakaoImportError.textContent =
+      "메시지를 하나도 찾지 못했어요. 카카오톡 채팅방에서 \"대화 내용 내보내기\"로 만든 텍스트를 그대로 붙여넣었는지 확인해주세요.";
+    kakaoImportError.hidden = false;
+    return;
+  }
+
+  kakaoParsedRoomName = roomName;
+  kakaoParsedMessages = messages;
+  // 방 제목("OO 님과 카카오톡 대화")에 나온 상대방이 아닌 첫 발신자를
+  // "나"로 기본 선택합니다(1:1 대화에서는 이게 거의 항상 맞습니다).
+  const senders = Array.from(new Set(messages.map((m) => m.sender)));
+  kakaoSelectedMeSender = senders.find((s) => s !== roomName) || senders[0] || "";
+
+  renderKakaoSenderOptions();
+  renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender);
+  kakaoPreviewSection.hidden = false;
+  kakaoNewCardSaveBtn.hidden = false;
+});
+
+kakaoNewCardSaveBtn.addEventListener("click", async () => {
+  if (kakaoParsedMessages.length === 0) return;
+  kakaoNewCardSaveBtn.disabled = true;
+  kakaoNewCardSaveBtn.textContent = "저장 중...";
+  try {
+    const messages = kakaoParsedMessages.map((m) => ({
+      ...m,
+      isMe: m.sender === kakaoSelectedMeSender,
+    }));
+    await addDoc(collection(db, "kakaoCards"), {
+      roomName: kakaoParsedRoomName || messages.find((m) => !m.isMe)?.sender || "이름 없음",
+      messages,
+      firstDateSort: messages[0].dateSort || "",
+      createdAt: serverTimestamp(),
+    });
+    kakaoNewCardModal.hidden = true;
+    loadKakaoCards();
+  } catch (err) {
+    console.error("[memories] 카카오톡 백업 저장 실패", err);
+    kakaoImportError.textContent = "저장에 실패했어요 (" + (err.code || err.message) + ").";
+    kakaoImportError.hidden = false;
+  } finally {
+    kakaoNewCardSaveBtn.disabled = false;
+    kakaoNewCardSaveBtn.textContent = "저장";
+  }
+});
+
+// ---------- 카카오톡 카드 목록(홈 화면) ----------
+async function loadKakaoCards() {
+  try {
+    const q = query(collection(db, "kakaoCards"), orderBy("firstDateSort", "desc"));
+    const snap = await getDocs(q);
+    loadedKakaoCards = [];
+    snap.forEach((d) => loadedKakaoCards.push({ id: d.id, data: d.data() }));
+    renderKakaoCardGrid();
+  } catch (err) {
+    console.error("[memories] 카카오톡 백업 목록을 불러오지 못했어요.", err);
+  }
+}
+
+function renderKakaoCardGrid() {
+  kakaoCardGrid.innerHTML = "";
+  if (loadedKakaoCards.length === 0) {
+    kakaoEmptyState.hidden = false;
+    return;
+  }
+  kakaoEmptyState.hidden = true;
+
+  loadedKakaoCards.forEach(({ id, data }) => {
+    const messages = data.messages || [];
+    const first = messages[0] || {};
+    const last = messages[messages.length - 1] || {};
+    const dateLabel =
+      last.dateDisplay && last.dateDisplay !== first.dateDisplay
+        ? `${first.dateDisplay} - ${last.dateDisplay}`
+        : first.dateDisplay || "";
+
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "card";
+    card.addEventListener("click", () => openKakaoDetail(id, data));
+
+    const head = document.createElement("div");
+    head.className = "card-head";
+    const avatar = document.createElement("div");
+    avatar.className = "kakao-card-avatar";
+    avatar.textContent = (data.roomName || "?").trim().charAt(0);
+    head.appendChild(avatar);
+
+    const headText = document.createElement("div");
+    headText.className = "card-head-text";
+    const nickEl = document.createElement("span");
+    nickEl.className = "card-nickname";
+    nickEl.textContent = data.roomName || "(이름 없음)";
+    const metaEl = document.createElement("span");
+    metaEl.className = "card-meta";
+    metaEl.textContent = dateLabel;
+    headText.append(nickEl, metaEl);
+    head.appendChild(headText);
+
+    const textEl = document.createElement("p");
+    textEl.className = "card-text";
+    textEl.textContent = (last.text || "").split("\n")[0];
+
+    card.append(head, textEl);
+    kakaoCardGrid.appendChild(card);
+  });
+}
+
+function openKakaoDetail(id, data) {
+  currentKakaoDetailId = id;
+  // 상세보기에서는 "나"를 매번 물어보지 않고 저장 당시 고른 값을 그대로 씁니다.
+  const meSet = new Set((data.messages || []).filter((m) => m.isMe).map((m) => m.sender));
+  const meSender = meSet.size ? Array.from(meSet)[0] : null;
+  renderKakaoThread(kakaoDetailThread, data.messages || [], meSender);
+  kakaoDetailModal.hidden = false;
+}
+
+function closeKakaoDetail() {
+  kakaoDetailModal.hidden = true;
+  currentKakaoDetailId = null;
+}
+
+kakaoDetailCloseBtn.addEventListener("click", closeKakaoDetail);
+kakaoDetailModal.addEventListener("click", (e) => {
+  if (e.target === kakaoDetailModal) closeKakaoDetail();
+});
+
+kakaoDetailDeleteBtn.addEventListener("click", async () => {
+  if (!currentKakaoDetailId) return;
+  if (!confirm("이 카카오톡 백업을 삭제할까요? 되돌릴 수 없어요.")) return;
+  await deleteDoc(doc(db, "kakaoCards", currentKakaoDetailId));
+  closeKakaoDetail();
+  loadKakaoCards();
 });

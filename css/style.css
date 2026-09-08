@@ -196,6 +196,57 @@ h1 {
   gap: 8px;
 }
 
+/* ---------- 우측 사이드바 (X 백업 / 카카오톡 백업 전환) ---------- */
+.app-sidebar[hidden] {
+  display: none;
+}
+.app-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 16px;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 20;
+}
+
+.app-sidebar-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.app-sidebar-btn svg {
+  width: 20px;
+  height: 20px;
+}
+.app-sidebar-btn.selected {
+  background: var(--accent);
+  color: #fff;
+}
+.app-sidebar-btn:not(.selected):hover {
+  background: var(--border);
+}
+
+/* 사이드바 폭(56px)만큼 본문 내용이 가려지지 않도록 오른쪽 여백을 둡니다. */
+#app-view,
+#kakao-app-view {
+  padding-right: 56px;
+}
+
 /* [hidden] 속성은 브라우저 기본값이 display:none인데, 아래 display:inline-flex가
    그걸 덮어써서 .hidden = true를 줘도 버튼이 계속 보이는 문제가 있었습니다
    (예: 코멘트 수정 권한이 없어도 "수정" 버튼이 보이던 문제). 이 규칙으로 막습니다. */
@@ -1127,6 +1178,161 @@ h1 {
   color: var(--text);
   resize: vertical;
   min-height: 40px;
+}
+
+/* ---------- 카카오톡 백업: 채팅 말풍선 레이아웃 ---------- */
+:root {
+  --kakao-bg: #b2c7da;
+  --kakao-bubble-other: #ffffff;
+  --kakao-bubble-me: #fee500;
+  --kakao-text-me: #3c1e1e;
+  --kakao-time: rgba(0, 0, 0, 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --kakao-bg: var(--bg);
+    --kakao-bubble-other: var(--surface);
+    --kakao-bubble-me: #8c7a1f;
+    --kakao-text-me: #f5eecb;
+    --kakao-time: var(--muted);
+  }
+}
+:root[data-theme="dark"] {
+  --kakao-bg: var(--bg);
+  --kakao-bubble-other: var(--surface);
+  --kakao-bubble-me: #8c7a1f;
+  --kakao-text-me: #f5eecb;
+  --kakao-time: var(--muted);
+}
+
+.kakao-thread {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--kakao-bg);
+}
+
+.kakao-preview-thread {
+  border-radius: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.kakao-date-divider {
+  align-self: center;
+  background: rgba(0, 0, 0, 0.18);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  margin: 14px 0 10px;
+}
+.kakao-date-divider:first-child {
+  margin-top: 0;
+}
+
+.kakao-message-group {
+  display: flex;
+  flex-direction: column;
+  max-width: 78%;
+  margin-bottom: 10px;
+}
+.kakao-message-group.me {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+.kakao-message-group.other {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.kakao-sender-name {
+  font-size: 13px;
+  color: var(--text);
+  margin: 0 0 4px 4px;
+}
+
+.kakao-bubble-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+}
+.kakao-message-group.me .kakao-bubble-row {
+  flex-direction: row-reverse;
+}
+
+.kakao-bubble {
+  padding: 9px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.kakao-message-group.other .kakao-bubble {
+  background: var(--kakao-bubble-other);
+  color: var(--text);
+  border-top-left-radius: 4px;
+}
+.kakao-message-group.me .kakao-bubble {
+  background: var(--kakao-bubble-me);
+  color: var(--kakao-text-me);
+  border-top-right-radius: 4px;
+}
+
+.kakao-time {
+  font-size: 10px;
+  color: var(--kakao-time);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kakao-preview-section {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.kakao-preview-section label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.kakao-sender-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kakao-sender-option {
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.kakao-sender-option.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 카카오톡 카드 썸네일: 아바타 자리에 프사 대신 이름 첫 글자를 원 안에 보여줍니다
+   (카카오톡 텍스트 내보내기엔 프사 이미지가 없음). */
+.kakao-card-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 /* 모바일(휴대폰) 전용 오버라이드. CSS 우선순위가 같은 규칙끼리는 파일에서 더

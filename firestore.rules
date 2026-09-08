@@ -34,5 +34,12 @@ service cloud.firestore {
         );
       }
     }
+
+    // 카카오톡 백업. X 백업(cards)과 완전히 분리된 컬렉션이고, 권한 규칙은
+    // 카드 본문과 동일합니다(로그인하면 보기 가능, 관리자만 쓰기 가능).
+    match /kakaoCards/{cardId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
   }
 }

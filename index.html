@@ -39,7 +39,18 @@
   </form>
 </div>
 
-<!-- 메인 앱 화면 -->
+<!-- 우측 사이드바: X 백업 / 카카오톡 백업 화면을 서로 전환합니다. 로그인
+     상태에서만 보입니다. -->
+<div id="app-sidebar" class="app-sidebar" hidden>
+  <button id="sidebar-x-btn" class="app-sidebar-btn selected" type="button" aria-label="X 백업">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+  </button>
+  <button id="sidebar-kakao-btn" class="app-sidebar-btn" type="button" aria-label="카카오톡 백업">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.74c0 2.72 1.822 5.11 4.573 6.478-.201.75-.727 2.72-.833 3.142-.13.522.19.516.402.375.166-.11 2.638-1.79 3.708-2.52.696.103 1.417.157 2.15.157 5.523 0 10-3.463 10-7.632C22 6.463 17.523 3 12 3Z"/></svg>
+  </button>
+</div>
+
+<!-- 메인 앱 화면 (X 백업) -->
 <div id="app-view" class="view" hidden>
   <header class="app-header">
     <h1>memories</h1>
@@ -57,6 +68,62 @@
 
   <main id="card-grid" class="card-grid" aria-live="polite"></main>
   <p id="empty-state" class="empty-state" hidden>아직 백업된 대화가 없어요. "새 대화 추가"로 첫 대화를 백업해보세요.</p>
+</div>
+
+<!-- 카카오톡 백업 화면. X 화면과 완전히 분리된 별도의 Firestore 컬렉션
+     (kakaoCards)을 씁니다. -->
+<div id="kakao-app-view" class="view" hidden>
+  <header class="app-header">
+    <h1>memories · 카카오톡</h1>
+    <div class="header-actions">
+      <button id="kakao-new-card-btn" class="btn-primary" aria-label="새 대화 추가"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+      <button id="kakao-logout-btn" class="btn-ghost">로그아웃</button>
+      <button class="theme-toggle-btn btn-ghost" type="button" aria-label="야간 모드 전환">🌙</button>
+    </div>
+  </header>
+
+  <main id="kakao-card-grid" class="card-grid" aria-live="polite"></main>
+  <p id="kakao-empty-state" class="empty-state" hidden>아직 백업된 카카오톡 대화가 없어요. "＋"로 첫 대화를 백업해보세요.</p>
+</div>
+
+<!-- 카카오톡 대화 내보내기 텍스트 붙여넣기 -->
+<div id="kakao-new-card-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button id="kakao-new-card-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg> 취소</button>
+      <button id="kakao-new-card-save-btn" class="btn-primary" hidden>저장</button>
+    </div>
+
+    <section class="import-section">
+      <label for="kakao-import-textarea">
+        카카오톡 채팅방 설정 → "대화 내용 내보내기"로 저장한 텍스트를 여기에 붙여넣으세요
+      </label>
+      <textarea id="kakao-import-textarea" rows="6" placeholder="OO 님과 카카오톡 대화&#10;저장한 날짜 : ...&#10;&#10;2026년 1월 1일 오후 3:22, OO : 안녕하세요"></textarea>
+      <div class="import-actions">
+        <button id="kakao-import-parse-btn" class="btn-secondary">불러오기</button>
+      </div>
+      <p id="kakao-import-error" class="error-text" hidden></p>
+    </section>
+
+    <section id="kakao-preview-section" class="kakao-preview-section" hidden>
+      <label>대화 상대 중 누가 "나"인가요? (내 메시지가 오른쪽 말풍선으로 표시됩니다)</label>
+      <div id="kakao-sender-options" class="kakao-sender-options"></div>
+      <div id="kakao-preview-thread" class="kakao-thread kakao-preview-thread"></div>
+    </section>
+  </div>
+</div>
+
+<!-- 카카오톡 대화 상세 보기 -->
+<div id="kakao-detail-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <button id="kakao-detail-close-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
+      <div class="modal-header-right">
+        <button id="kakao-detail-delete-btn" class="btn-ghost danger">삭제</button>
+      </div>
+    </div>
+    <div id="kakao-detail-thread" class="kakao-thread"></div>
+  </div>
 </div>
 
 <!-- 대화 상세 보기 모달 -->
