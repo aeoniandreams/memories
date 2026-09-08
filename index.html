@@ -58,6 +58,7 @@
       <button id="new-card-btn" class="btn-primary" aria-label="새 대화 추가"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="btn-label"> 새 대화 추가</span></button>
       <button id="logout-btn" class="btn-ghost">로그아웃</button>
       <button class="theme-toggle-btn btn-ghost" type="button" aria-label="야간 모드 전환">🌙</button>
+      <button class="sidebar-menu-btn btn-ghost" type="button" aria-label="메뉴"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg></button>
     </div>
   </header>
 
@@ -79,6 +80,7 @@
       <button id="kakao-new-card-btn" class="btn-primary" aria-label="새 대화 추가"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
       <button id="kakao-logout-btn" class="btn-ghost">로그아웃</button>
       <button class="theme-toggle-btn btn-ghost" type="button" aria-label="야간 모드 전환">🌙</button>
+      <button class="sidebar-menu-btn btn-ghost" type="button" aria-label="메뉴"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg></button>
     </div>
   </header>
 
@@ -96,11 +98,16 @@
 
     <section class="import-section">
       <label for="kakao-import-textarea">
-        카카오톡 채팅방 설정 → "대화 내용 내보내기"로 저장한 텍스트를 여기에 붙여넣으세요
+        카카오톡 채팅방 설정 → "대화 내용 내보내기"로 저장한 텍스트를 붙여넣거나,
+        내보낸 .eml/.txt 파일을 바로 선택하세요
       </label>
       <textarea id="kakao-import-textarea" rows="6" placeholder="OO 님과 카카오톡 대화&#10;저장한 날짜 : ...&#10;&#10;2026년 1월 1일 오후 3:22, OO : 안녕하세요"></textarea>
       <div class="import-actions">
         <button id="kakao-import-parse-btn" class="btn-secondary">불러오기</button>
+        <label class="btn-secondary kakao-file-label">
+          파일 선택(.eml/.txt)
+          <input type="file" id="kakao-file-input" accept=".eml,.txt,message/rfc822" hidden />
+        </label>
       </div>
       <p id="kakao-import-error" class="error-text" hidden></p>
     </section>
@@ -108,6 +115,7 @@
     <section id="kakao-preview-section" class="kakao-preview-section" hidden>
       <label>대화 상대 중 누가 "나"인가요? (내 메시지가 오른쪽 말풍선으로 표시됩니다)</label>
       <div id="kakao-sender-options" class="kakao-sender-options"></div>
+      <p class="kakao-preview-hint">말풍선 사이 "+ 이미지 추가"를 누르면 원하는 위치에 이미지를 넣을 수 있어요.</p>
       <div id="kakao-preview-thread" class="kakao-thread kakao-preview-thread"></div>
     </section>
   </div>

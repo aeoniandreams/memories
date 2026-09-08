@@ -196,24 +196,31 @@ h1 {
   gap: 8px;
 }
 
-/* ---------- 우측 사이드바 (X 백업 / 카카오톡 백업 전환) ---------- */
+/* ---------- 우측 사이드바 (X 백업 / 카카오톡 백업 전환) ----------
+   평소엔 숨겨져 있다가, 헤더의 메뉴(☰) 아이콘을 누르면 뜨는 오버레이
+   패널입니다. 본문 위에 떠 있는 방식이라(레이아웃 공간을 미리 차지하지
+   않음) 다시 누르거나 바깥을 클릭하면 사라집니다. */
 .app-sidebar[hidden] {
   display: none;
 }
 .app-sidebar {
+  display: none;
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
   width: 56px;
-  display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding-top: 16px;
   background: var(--surface);
   border-left: 1px solid var(--border);
-  z-index: 20;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+}
+.app-sidebar.open {
+  display: flex;
 }
 
 .app-sidebar-btn {
@@ -241,10 +248,9 @@ h1 {
   background: var(--border);
 }
 
-/* 사이드바 폭(56px)만큼 본문 내용이 가려지지 않도록 오른쪽 여백을 둡니다. */
-#app-view,
-#kakao-app-view {
-  padding-right: 56px;
+.sidebar-menu-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* [hidden] 속성은 브라우저 기본값이 display:none인데, 아래 display:inline-flex가
@@ -1333,6 +1339,53 @@ h1 {
   font-size: 18px;
   font-weight: 600;
   flex-shrink: 0;
+}
+
+/* 파일(.eml/.txt) 선택 버튼. <input type="file">를 숨기고 <label>을
+   버튼처럼 씁니다. */
+.kakao-file-label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.kakao-preview-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 미리보기에서 말풍선 사이사이에 두는 "이미지 삽입" 버튼 */
+.kakao-insert-image-btn {
+  align-self: center;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 3px 12px;
+  margin: 2px 0;
+  cursor: pointer;
+}
+.kakao-insert-image-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.kakao-bubble-image {
+  display: block;
+  max-width: 220px;
+  max-height: 220px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.kakao-bubble-remove {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
 }
 
 /* 모바일(휴대폰) 전용 오버라이드. CSS 우선순위가 같은 규칙끼리는 파일에서 더

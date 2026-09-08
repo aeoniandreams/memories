@@ -46,10 +46,12 @@ const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 const themeToggleBtns = document.querySelectorAll(".theme-toggle-btn");
 
-// X 백업 / 카카오톡 백업 전환용 우측 사이드바.
+// X 백업 / 카카오톡 백업 전환용 우측 사이드바. 평소엔 숨겨져 있다가
+// 헤더의 메뉴(☰) 버튼을 누르면 열립니다(아래 "사이드바 열기/닫기" 참고).
 const appSidebar = document.getElementById("app-sidebar");
 const sidebarXBtn = document.getElementById("sidebar-x-btn");
 const sidebarKakaoBtn = document.getElementById("sidebar-kakao-btn");
+const sidebarMenuBtns = document.querySelectorAll(".sidebar-menu-btn");
 const kakaoAppView = document.getElementById("kakao-app-view");
 const kakaoLogoutBtn = document.getElementById("kakao-logout-btn");
 
@@ -262,6 +264,7 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     loginView.hidden = true;
     appSidebar.hidden = false;
+    appSidebar.classList.remove("open"); // 로그인 직후엔 항상 닫힌 채로 시작
     switchSection("x");
     isAdmin = user.email === ADMIN_EMAIL;
     applyAdminUI();
@@ -271,6 +274,7 @@ onAuthStateChanged(auth, (user) => {
     appView.hidden = true;
     kakaoAppView.hidden = true;
     appSidebar.hidden = true;
+    appSidebar.classList.remove("open");
     isAdmin = false;
   }
 });
@@ -1784,6 +1788,7 @@ const kakaoNewCardSaveBtn = document.getElementById("kakao-new-card-save-btn");
 const kakaoImportTextarea = document.getElementById("kakao-import-textarea");
 const kakaoImportParseBtn = document.getElementById("kakao-import-parse-btn");
 const kakaoImportError = document.getElementById("kakao-import-error");
+const kakaoFileInput = document.getElementById("kakao-file-input");
 const kakaoPreviewSection = document.getElementById("kakao-preview-section");
 const kakaoSenderOptions = document.getElementById("kakao-sender-options");
 const kakaoPreviewThread = document.getElementById("kakao-preview-thread");
@@ -1812,8 +1817,132 @@ function switchSection(section) {
     loadKakaoCards();
   }
 }
-sidebarXBtn.addEventListener("click", () => switchSection("x"));
-sidebarKakaoBtn.addEventListener("click", () => switchSection("kakao"));
+sidebarXBtn.addEventListener("click", () => {
+  switchSection("x");
+  closeSidebar();
+});
+sidebarKakaoBtn.addEventListener("click", () => {
+  switchSection("kakao");
+  closeSidebar();
+});
+
+// ---------- 사이드바 열기/닫기 ----------
+// 평소엔 숨겨져 있다가 헤더의 메뉴(☰) 버튼을 누르면 열립니다. 다시 그
+// 버튼을 누르거나, 사이드바 바깥 아무 곳이나 클릭하면 닫힙니다.
+function openSidebar() {
+  appSidebar.classList.add("open");
+}
+function closeSidebar() {
+  appSidebar.classList.remove("open");
+}
+sidebarMenuBtns.forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation(); // 아래 document 클릭 리스너가 곧바로 다시 닫아버리지 않도록
+    appSidebar.classList.toggle("open");
+  });
+});
+document.addEventListener("click", (e) => {
+  if (!appSidebar.classList.contains("open")) return;
+  if (appSidebar.contains(e.target)) return;
+  closeSidebar();
+});
+
+// ---------- .eml(이메일) 파일에서 본문 텍스트 꺼내기 ----------
+// 카카오톡 "대화 내용 내보내기"를 이메일로 보내면 .eml 파일이 됩니다. .eml은
+// 헤더 + 본문으로 된 이메일 원문 형식(RFC 822/MIME)이라, 그 안에서 실제
+// 대화 내용이 담긴 본문 텍스트만 뽑아냅니다. 첨부파일 라이브러리 없이
+// 직접 파싱하다 보니 아주 특이한 메일 형식까지 완벽히 대응하진 못하지만,
+// 일반적인 단순 텍스트 메일과 멀티파트(본문 여러 개로 나뉜) 메일 모두
+// 처리합니다.
+function decodeQuotedPrintable(str) {
+  const joined = str.replace(/=\r?\n/g, ""); // 소프트 라인브레이크(줄 끝 =) 제거
+  const bytes = [];
+  for (let i = 0; i < joined.length; i++) {
+    if (joined[i] === "=" && /^[0-9A-Fa-f]{2}$/.test(joined.slice(i + 1, i + 3))) {
+      bytes.push(parseInt(joined.slice(i + 1, i + 3), 16));
+      i += 2;
+    } else {
+      bytes.push(joined.charCodeAt(i));
+    }
+  }
+  return new TextDecoder("utf-8").decode(Uint8Array.from(bytes));
+}
+
+function decodeEmlPart(partBody, partHeaders) {
+  const encodingMatch = partHeaders.match(/^Content-Transfer-Encoding:\s*([^\n]+)/im);
+  const encoding = encodingMatch ? encodingMatch[1].trim().toLowerCase() : "7bit";
+  if (encoding === "base64") {
+    try {
+      const binary = atob(partBody.replace(/\s+/g, ""));
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return new TextDecoder("utf-8").decode(bytes);
+    } catch (e) {
+      return partBody;
+    }
+  }
+  if (encoding === "quoted-printable") return decodeQuotedPrintable(partBody);
+  return partBody;
+}
+
+function stripHtmlToText(html) {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  return div.textContent || "";
+}
+
+function extractTextFromEml(rawText) {
+  const normalized = rawText.replace(/\r\n/g, "\n");
+  const headerEnd = normalized.indexOf("\n\n");
+  if (headerEnd === -1) return normalized;
+  const headerBlock = normalized.slice(0, headerEnd);
+  const body = normalized.slice(headerEnd + 2);
+
+  // 여러 줄로 접힌(맨 앞에 공백/탭이 있는 줄은 이어지는 값) Content-Type 헤더를 한 줄로 폅니다.
+  const contentTypeMatch = headerBlock.match(/^Content-Type:\s*([^\n]+(?:\n[ \t][^\n]*)*)/im);
+  const contentType = contentTypeMatch ? contentTypeMatch[1].replace(/\n[ \t]/g, " ") : "";
+
+  if (/multipart\//i.test(contentType)) {
+    const boundaryMatch = contentType.match(/boundary="?([^";\n]+)"?/i);
+    if (boundaryMatch) {
+      const boundary = boundaryMatch[1];
+      const parts = body.split("--" + boundary).slice(1, -1);
+      let plainPart = null;
+      let htmlPart = null;
+      parts.forEach((part) => {
+        const partHeaderEnd = part.indexOf("\n\n");
+        if (partHeaderEnd === -1) return;
+        const partHeaders = part.slice(0, partHeaderEnd);
+        const partBody = part.slice(partHeaderEnd + 2);
+        const partType = (partHeaders.match(/^Content-Type:\s*([^\n;]+)/im) || [])[1] || "";
+        const decoded = decodeEmlPart(partBody, partHeaders);
+        if (/text\/plain/i.test(partType) && !plainPart) plainPart = decoded;
+        else if (/text\/html/i.test(partType) && !htmlPart) htmlPart = decoded;
+      });
+      if (plainPart) return plainPart;
+      if (htmlPart) return stripHtmlToText(htmlPart);
+    }
+  }
+
+  // 멀티파트가 아니면(단순 텍스트 메일) 본문 전체를 그대로 디코딩합니다.
+  return decodeEmlPart(body, headerBlock);
+}
+
+kakaoFileInput.addEventListener("change", async () => {
+  const file = kakaoFileInput.files[0];
+  kakaoFileInput.value = ""; // 같은 파일을 다시 선택해도 change 이벤트가 뜨도록 초기화
+  if (!file) return;
+  try {
+    const rawText = await file.text();
+    const isEml =
+      /\.eml$/i.test(file.name) || /^(From|Subject|Content-Type|MIME-Version):/im.test(rawText.slice(0, 1000));
+    kakaoImportTextarea.value = isEml ? extractTextFromEml(rawText) : rawText;
+    kakaoImportError.hidden = true;
+  } catch (err) {
+    console.error("[memories] 파일을 읽지 못했어요.", err);
+    kakaoImportError.textContent = "파일을 읽는 데 실패했어요.";
+    kakaoImportError.hidden = false;
+  }
+});
 
 // ---------- 카카오톡 내보내기 텍스트 파서 ----------
 // 각 메시지 줄: "2026년 9월 6일 오후 8:49, 이름 : 내용" 형태입니다. 그 외
@@ -1869,15 +1998,45 @@ function parseKakaoExport(rawText) {
 
 // ---------- 채팅 말풍선 렌더링 (미리보기/상세보기 공통) ----------
 // 연속된 같은 발신자의 메시지는 하나의 묶음으로 보여주고(이름은 묶음당 한 번만),
-// 날짜가 바뀌면 그 사이에 구분선을 넣습니다.
-function renderKakaoThread(container, messages, meSender) {
+// 날짜가 바뀌면 그 사이에 구분선을 넣습니다. options.editable이 true면(저장
+// 전 미리보기 화면) 말풍선 사이사이에 "+ 이미지 추가" 버튼을 넣어서, 원하는
+// 위치에 이미지를 수동으로 끼워 넣을 수 있게 합니다 — 카카오톡 내보내기
+// 텍스트에는 사진이 "사진"이라는 글자로만 남기 때문입니다.
+function renderKakaoThread(container, messages, meSender, options = {}) {
+  const editable = !!options.editable;
   container.innerHTML = "";
   let lastDate = null;
   let currentGroup = null;
   let currentGroupSender = null;
 
-  messages.forEach((msg) => {
-    if (msg.dateDisplay !== lastDate) {
+  function makeInsertImageBtn(insertIndex) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "kakao-insert-image-btn";
+    btn.textContent = "+ 이미지 추가";
+    btn.addEventListener("click", () => {
+      const url = window.prompt("이미지 URL을 입력하세요:");
+      if (!url || !url.trim()) return;
+      const neighbor = kakaoParsedMessages[insertIndex] || kakaoParsedMessages[insertIndex - 1];
+      kakaoParsedMessages.splice(insertIndex, 0, {
+        type: "image",
+        sender: neighbor ? neighbor.sender : kakaoSelectedMeSender || "",
+        dateDisplay: neighbor ? neighbor.dateDisplay : "",
+        dateSort: neighbor ? neighbor.dateSort : "",
+        timeDisplay: "",
+        timeSort: "",
+        url: url.trim(),
+      });
+      renderKakaoSenderOptions();
+      renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender, { editable: true });
+    });
+    return btn;
+  }
+
+  if (editable) container.appendChild(makeInsertImageBtn(0));
+
+  messages.forEach((msg, index) => {
+    if (msg.dateDisplay && msg.dateDisplay !== lastDate) {
       const divider = document.createElement("div");
       divider.className = "kakao-date-divider";
       divider.textContent = msg.dateDisplay;
@@ -1902,14 +2061,37 @@ function renderKakaoThread(container, messages, meSender) {
 
     const row = document.createElement("div");
     row.className = "kakao-bubble-row";
-    const bubble = document.createElement("div");
-    bubble.className = "kakao-bubble";
-    bubble.textContent = msg.text;
-    const time = document.createElement("span");
-    time.className = "kakao-time";
-    time.textContent = msg.timeDisplay;
-    row.append(bubble, time);
+
+    if (msg.type === "image") {
+      const img = document.createElement("img");
+      img.className = "kakao-bubble-image";
+      img.src = msg.url;
+      img.alt = "";
+      row.appendChild(img);
+      if (editable) {
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "kakao-bubble-remove";
+        removeBtn.textContent = "삭제";
+        removeBtn.addEventListener("click", () => {
+          kakaoParsedMessages.splice(index, 1);
+          renderKakaoSenderOptions();
+          renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender, { editable: true });
+        });
+        row.appendChild(removeBtn);
+      }
+    } else {
+      const bubble = document.createElement("div");
+      bubble.className = "kakao-bubble";
+      bubble.textContent = msg.text;
+      const time = document.createElement("span");
+      time.className = "kakao-time";
+      time.textContent = msg.timeDisplay;
+      row.append(bubble, time);
+    }
     currentGroup.appendChild(row);
+
+    if (editable) container.appendChild(makeInsertImageBtn(index + 1));
   });
 }
 
@@ -1946,7 +2128,7 @@ function renderKakaoSenderOptions() {
     btn.addEventListener("click", () => {
       kakaoSelectedMeSender = sender;
       renderKakaoSenderOptions();
-      renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender);
+      renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender, { editable: true });
     });
     kakaoSenderOptions.appendChild(btn);
   });
@@ -1977,7 +2159,7 @@ kakaoImportParseBtn.addEventListener("click", () => {
   kakaoSelectedMeSender = senders.find((s) => s !== roomName) || senders[0] || "";
 
   renderKakaoSenderOptions();
-  renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender);
+  renderKakaoThread(kakaoPreviewThread, kakaoParsedMessages, kakaoSelectedMeSender, { editable: true });
   kakaoPreviewSection.hidden = false;
   kakaoNewCardSaveBtn.hidden = false;
 });
