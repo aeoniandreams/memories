@@ -435,18 +435,19 @@ h1 {
   display: none;
 }
 
-/* 홈 화면 카드 우측 상단의 "새 코멘트" 점. 여러 종류가 한꺼번에 있으면
-   가로로 나란히 놓입니다(.card-tag-badge와 같은 자리, top:14px/right:14px). */
+/* 홈 화면 카드 우측 상단(꼭짓점)의 "새 코멘트" 점. .card-tag-badge(P 뱃지)와
+   같은 자리(top:14px/right:14px)에, 크기도 그와 똑같이 맞췄습니다. 여러 종류가
+   한꺼번에 있으면 가로변을 따라 나란히 놓입니다. */
 .notif-dot-row {
   position: absolute;
   top: 14px;
   right: 14px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 .notif-dot {
-  width: 10px;
-  height: 10px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 1px solid var(--surface);
 }
@@ -1021,6 +1022,54 @@ h1 {
 .tweet-comment-type-btn.selected {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* 코멘트 작성/수정 중 왼쪽 스레드에서 드래그로 고른 문구 목록. */
+.comment-highlight-picker {
+  padding: 12px 20px 0;
+}
+.comment-highlight-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.comment-highlight-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.comment-highlight-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 6px 4px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text);
+}
+.comment-highlight-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.comment-highlight-chip-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  padding: 2px;
+  cursor: pointer;
+}
+
+/* 코멘트 작성/수정/보기 중, 왼쪽 스레드에서 이 코멘트와 관련 없는(=드래그로
+   고르지 않은) 부분을 아주 옅게 표시합니다. 색을 따로 지정하지 않고 opacity로
+   흐리게 해서, 야간 모드에서도 자연스럽게 어울립니다. */
+.comment-highlight-dim {
+  opacity: 0.28;
 }
 
 /* 복사 붙여넣기를 해도 배경 서식이 남지 않도록 배경은 항상 투명하고,

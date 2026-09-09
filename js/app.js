@@ -129,6 +129,13 @@ let tweetCommentPanelState = null;
 // 순서대로 나열되며, 저장 시 이 배열이 그대로 entry.content가 됩니다.
 let commentComposeBlocks = [];
 
+// "메시지 키(트윗은 commentKey, 카카오는 msgIndex 문자열)" -> 그 메시지의 원본
+// 텍스트. 코멘트 작성/보기 중 왼쪽 스레드에서 드래그로 고른 문구를 강조 표시할 때,
+// 이미 강조 표시가 적용된 뒤에도(=텍스트가 여러 span으로 쪼개진 뒤에도) 원본
+// 문자열을 기준으로 다시 계산할 수 있도록 따로 들고 있습니다.
+let tweetOriginalTextByKey = new Map();
+let kakaoOriginalTextByKey = new Map();
+
 // ---------- 야간 모드 ----------
 // Lucide(lucide.dev, MIT 라이선스) 아이콘의 SVG를 그대로 가져다 씁니다.
 // stroke="currentColor"라 버튼의 글자색(테마에 따라 자동으로 바뀜)을 그대로 따라갑니다.
@@ -550,10 +557,16 @@ async function openDetail(id, data) {
     console.error("트윗 코멘트를 불러오지 못했습니다.", e);
   }
 
+  tweetOriginalTextByKey = new Map();
   (data.messages || []).forEach((msg, index) => {
     const key = getMessageCommentKey(msg, index);
+    tweetOriginalTextByKey.set(key, msg.text || "");
     detailThread.appendChild(renderMessageRow(msg, index, key, currentTweetComments.get(key)));
   });
+}
+
+function applyTweetThreadHighlights(highlights) {
+  applyThreadHighlights(detailThread, ".message-row", ".tweet-text", tweetOriginalTextByKey, highlights);
 }
 
 // 이미지 코멘트는 카드 본문(messages[].images[].comment)에 저장되어 있어서, 관리자만
@@ -578,6 +591,7 @@ async function saveImageComment(msgIndex, url, newText) {
 function renderMessageRow(msg, msgIndex, commentKey, comments) {
   const row = document.createElement("div");
   row.className = "message-row";
+  row.dataset.commentKey = commentKey;
 
   const addCommentBtn = document.createElement("button");
   addCommentBtn.type = "button";
@@ -1061,6 +1075,136 @@ imageViewerModal.addEventListener("click", (e) => {
   if (e.target === imageViewerModal) closeImageViewer();
 });
 
+// ---------- 코멘트-문구 강조(트윗/카카오 공용) ----------
+// 코멘트를 작성/수정/보기할 때, 왼쪽 스레드에서 관련 있는 문구를 드래그로 여러 개
+// 골라둘 수 있습니다(서로 다른 메시지에 걸쳐도 됩니다). 그 코멘트 창이 열려 있는
+// 동안엔, 골라둔 문구가 있는 메시지에서 골라둔 부분은 그대로 두고 나머지만 아주
+// 옅게 표시해서 "이 코멘트가 뭘 가리키는지" 한눈에 알아볼 수 있게 합니다. 위치
+// (몇 번째 글자)가 아니라 "고른 문자열 자체"를 저장해두고, 표시할 때마다 원본
+// 텍스트 안에서 다시 찾습니다 — 나중에 메시지 내용이 살짝 바뀌어도 덜 깨집니다.
+function computeHighlightSegments(text, phrases) {
+  const ranges = [];
+  phrases.forEach((phrase) => {
+    if (!phrase) return;
+    const idx = text.indexOf(phrase);
+    if (idx === -1) return; // 원문에서 못 찾으면(내용이 바뀌었거나) 그냥 무시합니다.
+    ranges.push([idx, idx + phrase.length]);
+  });
+  if (ranges.length === 0) return null;
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged = [];
+  ranges.forEach(([s, e]) => {
+    const last = merged[merged.length - 1];
+    if (last && s <= last[1]) last[1] = Math.max(last[1], e);
+    else merged.push([s, e]);
+  });
+  const segments = [];
+  let cursor = 0;
+  merged.forEach(([s, e]) => {
+    if (s > cursor) segments.push({ text: text.slice(cursor, s), dim: true });
+    segments.push({ text: text.slice(s, e), dim: false });
+    cursor = e;
+  });
+  if (cursor < text.length) segments.push({ text: text.slice(cursor), dim: true });
+  return segments;
+}
+
+function renderTextWithHighlight(textEl, originalText, phrases) {
+  const segments = phrases.length ? computeHighlightSegments(originalText, phrases) : null;
+  if (!segments) {
+    textEl.textContent = originalText;
+    return;
+  }
+  textEl.innerHTML = "";
+  segments.forEach((seg) => {
+    if (seg.dim) {
+      const span = document.createElement("span");
+      span.className = "comment-highlight-dim";
+      span.textContent = seg.text;
+      textEl.appendChild(span);
+    } else {
+      textEl.appendChild(document.createTextNode(seg.text));
+    }
+  });
+}
+
+// threadEl 밑의 rowSelector 요소들을 훑어서, dataset.commentKey가 highlights의
+// targetKey와 일치하는 메시지에만 부분 강조를 적용합니다. 그 코멘트와 무관한
+// 메시지는 원본 텍스트 그대로 둡니다.
+function applyThreadHighlights(threadEl, rowSelector, textSelector, originalTextByKey, highlights) {
+  const byTarget = new Map();
+  (highlights || []).forEach((h) => {
+    if (!h || !h.targetKey || !h.text) return;
+    if (!byTarget.has(h.targetKey)) byTarget.set(h.targetKey, []);
+    byTarget.get(h.targetKey).push(h.text);
+  });
+  threadEl.querySelectorAll(rowSelector).forEach((row) => {
+    const key = row.dataset.commentKey;
+    const textEl = row.querySelector(textSelector);
+    if (!textEl || key === undefined) return;
+    const original = originalTextByKey.get(key);
+    if (original === undefined) return;
+    renderTextWithHighlight(textEl, original, byTarget.get(key) || []);
+  });
+}
+
+// 스레드 안에서 드래그로 문구를 고르면 onCaptured(targetKey, text)를 불러줍니다.
+// 코멘트 작성/수정 중일 때만 동작하도록 isEditingFn으로 켜고 끕니다(보기 중이거나
+// 코멘트 창이 아예 안 열려 있으면 아무 일도 하지 않음). 드래그가 두 메시지에 걸쳐
+// 있으면(예: 한 트윗 끝~다음 트윗 시작) 어느 쪽 것인지 애매하므로 무시합니다.
+function captureThreadSelection(threadEl, rowSelector, isEditingFn, onCaptured) {
+  threadEl.addEventListener("mouseup", () => {
+    if (!isEditingFn()) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const text = sel.toString().trim();
+    const anchorEl = sel.anchorNode && (sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode);
+    const focusEl = sel.focusNode && (sel.focusNode.nodeType === 3 ? sel.focusNode.parentElement : sel.focusNode);
+    const anchorRow = anchorEl && anchorEl.closest(rowSelector);
+    const focusRow = focusEl && focusEl.closest(rowSelector);
+    sel.removeAllRanges();
+    if (!text || !anchorRow || anchorRow !== focusRow) return;
+    const targetKey = anchorRow.dataset.commentKey;
+    if (targetKey === undefined) return;
+    onCaptured(targetKey, text);
+  });
+}
+
+// 코멘트 작성/수정 패널 안에, 지금까지 고른 문구들을 칩(chip) 목록으로 보여줍니다.
+// x를 누르면 목록에서 빼고 다시 그립니다(패널+스레드 강조 둘 다 rerender가 갱신).
+function renderHighlightPicker(container, highlights, rerender) {
+  const wrap = document.createElement("div");
+  wrap.className = "comment-highlight-picker";
+  const hint = document.createElement("p");
+  hint.className = "comment-highlight-hint";
+  hint.textContent = "왼쪽 대화에서 관련 문구를 드래그하면 이 코멘트에 연결됩니다 (여러 개 가능).";
+  wrap.appendChild(hint);
+  if (highlights.length > 0) {
+    const chipRow = document.createElement("div");
+    chipRow.className = "comment-highlight-chip-row";
+    highlights.forEach((h, i) => {
+      const chip = document.createElement("span");
+      chip.className = "comment-highlight-chip";
+      const label = document.createElement("span");
+      label.className = "comment-highlight-chip-text";
+      label.textContent = h.text;
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "comment-highlight-chip-remove";
+      removeBtn.textContent = "✕";
+      removeBtn.setAttribute("aria-label", "선택한 문구 삭제");
+      removeBtn.addEventListener("click", () => {
+        highlights.splice(i, 1);
+        rerender();
+      });
+      chip.append(label, removeBtn);
+      chipRow.appendChild(chip);
+    });
+    wrap.appendChild(chipRow);
+  }
+  container.appendChild(wrap);
+}
+
 // ---------- 트윗 코멘트 보기/작성/수정 ----------
 // 관리자가 아닌 사용자는 항상 "wine" 아이콘으로 저장되고, 관리자는 message-circle/coffee
 // 중 하나를 골라 저장합니다. (본인 역할의 코멘트만 쓸 수 있게 firestore.rules에서 막아둡니다.)
@@ -1145,7 +1289,8 @@ function createCommentBlockImageView(urls) {
 function openTweetCommentView(commentKey, role, entryId) {
   // 이미지 설명 창과 겹쳐서 뜨지 않도록, 열려 있으면 먼저 닫습니다.
   closeCommentModal();
-  tweetCommentPanelState = { commentKey, role, entryId, mode: "view" };
+  const entry = findCommentEntry(commentKey, role, entryId);
+  tweetCommentPanelState = { commentKey, role, entryId, mode: "view", highlights: (entry && entry.highlights) || [] };
   // hidden을 먼저 풀어야 합니다. renderTweetCommentPanel() 안에서 블록
   // textarea 높이를 scrollHeight로 재는데, 패널이 아직 hidden(=display:none)인
   // 상태면 레이아웃 자체가 없어서 scrollHeight가 0으로 나와 칸이 한 줄도
@@ -1157,7 +1302,14 @@ function openTweetCommentView(commentKey, role, entryId) {
 
 function openTweetCommentCompose(commentKey) {
   closeCommentModal();
-  tweetCommentPanelState = { commentKey, role: null, entryId: null, mode: "compose", adminType: "message-circle" };
+  tweetCommentPanelState = {
+    commentKey,
+    role: null,
+    entryId: null,
+    mode: "compose",
+    adminType: "message-circle",
+    highlights: [],
+  };
   tweetCommentPanel.hidden = false;
   renderTweetCommentPanel();
   // 코멘트 작성 창은 특정 "보기" 버튼과 무관하니, 다른 코멘트를 보다가 넘어온
@@ -1169,7 +1321,18 @@ function closeTweetCommentPanel() {
   tweetCommentPanel.hidden = true;
   tweetCommentPanelState = null;
   setActiveTweetCommentViewBtn(null);
+  applyTweetThreadHighlights([]); // 코멘트 창을 닫으면 왼쪽 스레드 강조도 해제합니다.
 }
+
+captureThreadSelection(
+  detailThread,
+  ".message-row",
+  () => !!tweetCommentPanelState && (tweetCommentPanelState.mode === "compose" || tweetCommentPanelState.mode === "edit"),
+  (targetKey, text) => {
+    tweetCommentPanelState.highlights.push({ targetKey, text });
+    renderTweetCommentPanel();
+  }
+);
 
 // 코멘트를 새로 쓰거나 고치는 중(저장 전)인지 확인합니다. 그냥 보기만 하는
 // 중이면 잃을 내용이 없으니 확인 없이 바로 나가도 됩니다.
@@ -1401,6 +1564,7 @@ function renderCommentBlockEditor(container, blocks, rerender) {
 
 function renderTweetCommentPanel() {
   const state = tweetCommentPanelState;
+  applyTweetThreadHighlights(state.highlights || []);
   tweetCommentPanelBody.innerHTML = "";
 
   if (state.mode === "view") {
@@ -1426,6 +1590,8 @@ function renderTweetCommentPanel() {
     );
     state.blocksInitialized = true;
   }
+
+  renderHighlightPicker(tweetCommentPanelBody, state.highlights, renderTweetCommentPanel);
 
   if (isAdmin) {
     if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
@@ -1476,14 +1642,14 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
         // 예전 형식의 text 필드가 남아있으면 Firestore가 undefined 값을 거부하니
         // 새 객체를 만들 때 아예 제외합니다(구조 분해로 빼고 나머지만 사용).
         const { text, ...rest } = arr[idx];
-        arr[idx] = { ...rest, type, content };
+        arr[idx] = { ...rest, type, content, highlights: state.highlights || [] };
       } else {
         arr.splice(idx, 1); // 내용을 비우고 저장하면 코멘트를 삭제합니다.
       }
     }
   } else {
     if (!content.length) return; // 새 코멘트는 빈 채로 저장하지 않습니다.
-    arr.push({ id: genCommentId(), type, content, createdAt: Date.now() });
+    arr.push({ id: genCommentId(), type, content, createdAt: Date.now(), highlights: state.highlights || [] });
   }
 
   await persistCommentRoleArray(
@@ -2266,6 +2432,7 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
   const editable = !!options.editable;
   const cardId = options.cardId || null;
   container.innerHTML = "";
+  kakaoOriginalTextByKey = new Map();
   let lastDate = null;
   let currentGroup = null;
   let currentGroupCol = null;
@@ -2391,6 +2558,7 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
 
     const row = document.createElement("div");
     row.className = "kakao-bubble-row";
+    row.dataset.commentKey = String(index);
 
     if (msg.type === "image") {
       const img = document.createElement("img");
@@ -2414,6 +2582,7 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       const bubble = document.createElement("div");
       bubble.className = "kakao-bubble";
       bubble.textContent = msg.text;
+      kakaoOriginalTextByKey.set(String(index), msg.text || "");
       const time = document.createElement("span");
       time.className = "kakao-time";
       time.textContent = msg.timeDisplay;
@@ -2442,6 +2611,10 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
 
     if (editable) container.appendChild(makeInsertImageBtn(index + 1));
   });
+}
+
+function applyKakaoThreadHighlights(highlights) {
+  applyThreadHighlights(kakaoDetailThread, ".kakao-bubble-row", ".kakao-bubble", kakaoOriginalTextByKey, highlights);
 }
 
 // ---------- 새 카카오톡 대화 추가 ----------
@@ -2659,14 +2832,22 @@ function findKakaoCommentEntry(msgIndex, role, entryId) {
 }
 
 function openKakaoCommentView(msgIndex, role, entryId) {
-  kakaoCommentPanelState = { msgIndex, role, entryId, mode: "view" };
+  const entry = findKakaoCommentEntry(msgIndex, role, entryId);
+  kakaoCommentPanelState = { msgIndex, role, entryId, mode: "view", highlights: (entry && entry.highlights) || [] };
   kakaoCommentPanel.hidden = false;
   renderKakaoCommentPanel();
 }
 
 function openKakaoCommentCompose(msgIndex) {
   // 항상 "새" 코멘트 작성 창을 엽니다 (기존 코멘트가 있어도 그대로 두고 하나 더 추가).
-  kakaoCommentPanelState = { msgIndex, role: null, entryId: null, mode: "compose", adminType: "message-circle" };
+  kakaoCommentPanelState = {
+    msgIndex,
+    role: null,
+    entryId: null,
+    mode: "compose",
+    adminType: "message-circle",
+    highlights: [],
+  };
   kakaoCommentPanel.hidden = false;
   renderKakaoCommentPanel();
   setActiveKakaoCommentViewBtn(null);
@@ -2676,7 +2857,18 @@ function closeKakaoCommentPanel() {
   kakaoCommentPanel.hidden = true;
   kakaoCommentPanelState = null;
   setActiveKakaoCommentViewBtn(null);
+  applyKakaoThreadHighlights([]); // 코멘트 창을 닫으면 왼쪽 스레드 강조도 해제합니다.
 }
+
+captureThreadSelection(
+  kakaoDetailThread,
+  ".kakao-bubble-row",
+  () => !!kakaoCommentPanelState && (kakaoCommentPanelState.mode === "compose" || kakaoCommentPanelState.mode === "edit"),
+  (targetKey, text) => {
+    kakaoCommentPanelState.highlights.push({ targetKey, text });
+    renderKakaoCommentPanel();
+  }
+);
 
 // 코멘트 창을 연 "보기" 버튼 하나를 강조 표시(is-open)합니다. 트윗 코멘트와
 // 마찬가지로, 창이 열려 있는 동안엔 해당 버튼만 강조되고 창을 닫거나 다른
@@ -2691,6 +2883,7 @@ function setActiveKakaoCommentViewBtn(btn) {
 function renderKakaoCommentPanel() {
   const state = kakaoCommentPanelState;
   if (!state) return;
+  applyKakaoThreadHighlights(state.highlights || []);
   kakaoCommentPanelBody.innerHTML = "";
 
   if (state.mode === "view") {
@@ -2712,6 +2905,8 @@ function renderKakaoCommentPanel() {
     );
     state.blocksInitialized = true;
   }
+
+  renderHighlightPicker(kakaoCommentPanelBody, state.highlights, renderKakaoCommentPanel);
 
   if (isAdmin) {
     if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
@@ -2760,14 +2955,14 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
     if (idx !== -1) {
       if (content.length) {
         const { text, ...rest } = arr[idx];
-        arr[idx] = { ...rest, type, content };
+        arr[idx] = { ...rest, type, content, highlights: state.highlights || [] };
       } else {
         arr.splice(idx, 1); // 내용을 비우고 저장하면 코멘트를 삭제합니다.
       }
     }
   } else {
     if (!content.length) return; // 새 코멘트는 빈 채로 저장하지 않습니다.
-    arr.push({ id: genCommentId(), type, content, createdAt: Date.now() });
+    arr.push({ id: genCommentId(), type, content, createdAt: Date.now(), highlights: state.highlights || [] });
   }
 
   await persistCommentRoleArray(
@@ -3428,8 +3623,8 @@ function formatRelativeTime(ms) {
 
 const NOTIF_TEXT_BY_TYPE = {
   "message-circle": "새 코멘트가 달렸어요!",
-  coffee: "윤 양이 새 코멘트를 달았어요",
-  wine: "츄야 군이 새 코멘트를 달았어요",
+  coffee: "윤 양이 새 코멘트를 달았어요!",
+  wine: "츄야 군이 새 코멘트를 달았어요!",
 };
 
 // 말풍선(message-circle) 코멘트 전용: 같은 대상(target)에 첫 코멘트가 달린
