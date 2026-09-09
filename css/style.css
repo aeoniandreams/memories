@@ -455,24 +455,26 @@ h1 {
   display: none;
 }
 
-/* 홈 화면 카드 우측 상단 "꼭짓점"에 정확히 걸치는 "새 코멘트" 점. 점(20px)의
+/* 홈 화면 카드 좌측 상단 "꼭짓점"에 정확히 걸치는 "새 코멘트" 점. 점(20px)의
    중심이 카드 모서리 위에 오도록 절반(-10px)만큼 바깥으로 뺐습니다. 여러
-   종류가 한꺼번에 있으면 가로변을 따라, 왼쪽 점을 3할 정도 가릴 만큼
-   겹쳐서 나란히 놓입니다. */
+   종류가 한꺼번에 있으면 가로변을 따라, 오른쪽 점을 절반 정도 가릴 만큼
+   겹쳐서 나란히 놓입니다(먼저 만든 점이 위로 오도록 z-index를 줍니다).
+*/
 .notif-dot-row {
   position: absolute;
   top: -10px;
-  right: -10px;
+  left: -10px;
   display: flex;
 }
 .notif-dot {
+  position: relative;
   width: 20px;
   height: 20px;
   border-radius: 50%;
   border: 1px solid var(--surface);
 }
 .notif-dot:not(:first-child) {
-  margin-left: -6px;
+  margin-left: -10px;
 }
 
 /* [hidden] 속성은 브라우저 기본값이 display:none인데, 아래 display:inline-flex가
@@ -1093,7 +1095,7 @@ h1 {
    배경 쪽으로 흐리게 해서, 야간 모드나 카카오톡의 어두운 말풍선(흰 글씨)에서도
    각각 옅은/짙은 회색으로 자연스럽게 어울립니다. */
 .comment-highlight-dim {
-  opacity: 0.14;
+  opacity: 0.07;
 }
 
 /* 복사 붙여넣기를 해도 배경 서식이 남지 않도록 배경은 항상 투명하고,

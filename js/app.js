@@ -1130,16 +1130,10 @@ function renderTextWithHighlight(textEl, originalText, phrases) {
   });
 }
 
-// 하이라이트가 붙은 메시지 기준 위/아래 몇 개까지 "맥락"으로 같이 흐리게
-// 보여줄지. 예: 트윗 1,2,3,4에 하이라이트가 있으면 1의 위쪽 3개 + 4의
-// 아래쪽 3개까지 전부 흐리게 표시합니다.
-const HIGHLIGHT_CONTEXT_WINDOW = 3;
-
 // threadEl 밑의 rowSelector 요소들을 훑어서, dataset.commentKey가 highlights의
 // targetKey와 일치하는 메시지엔 부분 강조(고른 부분만 원래 색, 나머지는 흐리게)를
-// 적용합니다. 그 메시지들 위/아래로 HIGHLIGHT_CONTEXT_WINDOW개까지는 맥락 파악용으로
-// 전체를 흐리게 처리하고, 그보다 먼 메시지는 원본 그대로 둡니다. DOM에 그려진
-// 순서(=대화 순서)를 기준으로 "위/아래"를 판단합니다.
+// 적용합니다. 그 코멘트와 무관한(=드래그로 안 고른) 메시지는 대화창에 보이는
+// 전체를 흐리게 처리해서, 고른 부분이 한눈에 도드라져 보이게 합니다.
 function applyThreadHighlights(threadEl, rowSelector, textSelector, originalTextByKey, highlights) {
   const byTarget = new Map();
   (highlights || []).forEach((h) => {
@@ -1150,51 +1144,23 @@ function applyThreadHighlights(threadEl, rowSelector, textSelector, originalText
 
   const rows = Array.from(threadEl.querySelectorAll(rowSelector));
 
-  const resetRow = (row) => {
-    const textEl = row.querySelector(textSelector);
-    const original = textEl && originalTextByKey.get(row.dataset.commentKey);
-    if (textEl && original !== undefined) textEl.textContent = original;
-  };
-
-  if (byTarget.size === 0) {
-    rows.forEach(resetRow);
-    return;
-  }
-
-  const targetIndices = [];
-  rows.forEach((row, i) => {
-    if (byTarget.has(row.dataset.commentKey)) targetIndices.push(i);
-  });
-  if (targetIndices.length === 0) {
-    rows.forEach(resetRow);
-    return;
-  }
-
-  const minIdx = Math.min(...targetIndices);
-  const maxIdx = Math.max(...targetIndices);
-  const windowStart = Math.max(0, minIdx - HIGHLIGHT_CONTEXT_WINDOW);
-  // 위쪽에 흐리게 할 자리가 하나도 없으면(스레드의 첫 메시지부터 골랐으면),
-  // 그 몫만큼은 아니지만 아래쪽에 1개를 더 흐리게 해서 어느 정도 보완합니다.
-  const belowBonus = minIdx === 0 ? 1 : 0;
-  const windowEnd = Math.min(rows.length - 1, maxIdx + HIGHLIGHT_CONTEXT_WINDOW + belowBonus);
-
-  rows.forEach((row, i) => {
+  rows.forEach((row) => {
     const key = row.dataset.commentKey;
     const textEl = row.querySelector(textSelector);
     if (!textEl || key === undefined) return;
     const original = originalTextByKey.get(key);
     if (original === undefined) return;
 
-    if (byTarget.has(key)) {
+    if (byTarget.size === 0) {
+      textEl.textContent = original;
+    } else if (byTarget.has(key)) {
       renderTextWithHighlight(textEl, original, byTarget.get(key));
-    } else if (i >= windowStart && i <= windowEnd) {
+    } else {
       textEl.innerHTML = "";
       const span = document.createElement("span");
       span.className = "comment-highlight-dim";
       span.textContent = original;
       textEl.appendChild(span);
-    } else {
-      textEl.textContent = original;
     }
   });
 }
@@ -1711,6 +1677,10 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("x", currentDetailCardId, state.commentKey, type);
+      // 말풍선은 화면 단위로 알림이 묶이므로(말풍선은 관리자만 쓸 수 있어서
+      // 이 화면의 말풍선 알림은 전부 내가 쓴 것뿐입니다), 화면 전체를 확인
+      // 처리해야 알림창에도 자기 코멘트가 뜨지 않습니다.
+      if (type === "message-circle") markSectionMessageCircleSeen("x");
       closeTweetCommentPanel();
       // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
       openDetail(currentDetailCardId, currentDetailData);
@@ -3024,6 +2994,7 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("kakao", currentKakaoDetailId, String(state.msgIndex), type);
+      if (type === "message-circle") markSectionMessageCircleSeen("kakao");
       closeKakaoCommentPanel();
       // "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
       openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
@@ -3461,6 +3432,7 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("sumone", currentSumoneDetailId, "main", type);
+      if (type === "message-circle") markSectionMessageCircleSeen("sumone");
       closeSumoneCommentPanel();
       openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
     }
@@ -3622,17 +3594,19 @@ function getUnseenTypesForCard(section, cardId) {
   return Array.from(types);
 }
 
-// 홈 화면 카드(.card, position:relative)의 우측 상단에 새 코멘트 점을
-// 붙입니다. .card-tag-badge와 같은 자리(top:14px/right:14px)를 씁니다.
+// 홈 화면 카드(.card, position:relative)의 좌측 상단 꼭짓점에 새 코멘트 점을
+// 붙입니다. 여러 개면 왼쪽 점이 오른쪽 점을 절반 정도 덮도록, 먼저 만든
+// 점일수록 z-index를 높게 줍니다.
 function appendNotifDots(cardEl, section, cardId) {
   const types = getUnseenTypesForCard(section, cardId);
   if (types.length === 0) return;
   const row = document.createElement("div");
   row.className = "notif-dot-row";
-  types.forEach((type) => {
+  types.forEach((type, i) => {
     const dot = document.createElement("span");
     dot.className = "notif-dot";
     dot.style.background = NOTIF_DOT_COLOR[type] || "var(--accent)";
+    dot.style.zIndex = String(types.length - i);
     row.appendChild(dot);
   });
   cardEl.appendChild(row);
@@ -3689,23 +3663,48 @@ const NOTIF_TEXT_BY_TYPE = {
   wine: "츄야 군이 새 코멘트를 달았어요",
 };
 
-// 말풍선(message-circle) 코멘트 전용: 같은 대상(target)에 첫 코멘트가 달린
-// 뒤 7일 안에 추가로 여러 개가 달려도 알림창엔 한 줄로만 뜨고, 표시 시각은
-// 그 묶음의 가장 마지막 코멘트 시각을 씁니다. 첫 코멘트로부터 7일이 지난
-// 뒤 또 달리면 별개의 새 묶음(=새 줄)으로 칩니다.
+// 말풍선(message-circle) 코멘트 전용: 같은 화면(X/카카오/SumOne) 안에서는
+// 어느 카드·트윗에 달렸든, 첫 코멘트가 달린 뒤 7일 안에 추가로 여러 개가
+// 달려도 알림창엔 한 줄로만 뜨고, 표시 시각(과 컨텍스트로 보여줄 카드)은
+// 그 묶음의 가장 마지막 코멘트 기준입니다. 첫 코멘트로부터 7일이 지난 뒤
+// 또 달리면 별개의 새 묶음(=새 줄)으로 칩니다.
 const NOTIF_MC_COALESCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 function coalesceMessageCircleEntries(entriesSortedAsc) {
   const groups = [];
   let current = null;
   entriesSortedAsc.forEach((e) => {
     if (!current || e.createdAt - current.firstAt > NOTIF_MC_COALESCE_WINDOW_MS) {
-      current = { firstAt: e.createdAt, lastAt: e.createdAt };
+      current = { firstAt: e.createdAt, lastAt: e.createdAt, lastEntry: e };
       groups.push(current);
     } else {
       current.lastAt = e.createdAt;
+      current.lastEntry = e;
     }
   });
   return groups;
+}
+
+// 말풍선 묶음은 화면(section) 전체를 기준으로 하나로 치기 때문에, 특정
+// 코멘트가 아니라 "이 화면의 말풍선 알림을 마지막으로 언제 확인했는지"를
+// 따로 기억해둡니다. 기존 targetSeenMap/notifSeen 저장 구조를 그대로
+// 재사용하되, 카드/트윗 자리에 고정 문자열을 넣어 화면 단위 키를 만듭니다.
+function notifSectionMessageCircleKey(section) {
+  return notifTargetKey(section, "_section_", "_all_", "message-circle");
+}
+function isSectionMessageCircleUnseen(section, lastAt) {
+  const seenAt = targetSeenMap.get(notifSectionMessageCircleKey(section)) || 0;
+  return lastAt > seenAt;
+}
+async function markSectionMessageCircleSeen(section) {
+  if (!currentUid) return;
+  const key = notifSectionMessageCircleKey(section);
+  const now = Date.now();
+  targetSeenMap.set(key, now);
+  try {
+    await setDoc(doc(db, "notifSeen", currentUid, "targetMarks", key), { seenAt: now });
+  } catch (e) {
+    console.error("말풍선 알림 확인 표시 저장에 실패했습니다.", e);
+  }
 }
 
 // 알림창 한 줄이 어느 카드/대화에서 온 건지 보여주는 짧은 문구. 이미
@@ -3745,21 +3744,21 @@ function buildNotifRows() {
       rows.push({ type: e.type, time: e.createdAt, section: e.section, cardId: e.cardId });
     });
 
-  // 말풍선: 대상(카드+타깃)별로 묶어서 7일 이내 묶음은 한 줄로.
-  const byTarget = new Map();
+  // 말풍선: 화면(섹션) 단위로 묶어서, 그 화면 안 어느 카드/트윗에 달렸든
+  // 7일 이내 묶음은 한 줄로.
+  const bySection = new Map();
   visible
     .filter((e) => e.type === "message-circle")
     .forEach((e) => {
-      const key = e.section + ":" + e.cardId + ":" + e.targetKey;
-      if (!byTarget.has(key)) byTarget.set(key, { section: e.section, cardId: e.cardId, targetKey: e.targetKey, list: [] });
-      byTarget.get(key).list.push(e);
+      if (!bySection.has(e.section)) bySection.set(e.section, []);
+      bySection.get(e.section).push(e);
     });
-  byTarget.forEach(({ section, cardId, targetKey, list }) => {
+  bySection.forEach((list, section) => {
     list.sort((a, b) => a.createdAt - b.createdAt);
     const groups = coalesceMessageCircleEntries(list);
     groups.forEach((g) => {
-      if (isTargetTypeUnseen(section, cardId, targetKey, "message-circle", g.lastAt)) {
-        rows.push({ type: "message-circle", time: g.lastAt, section, cardId });
+      if (isSectionMessageCircleUnseen(section, g.lastAt)) {
+        rows.push({ type: "message-circle", time: g.lastAt, section, cardId: g.lastEntry.cardId });
       }
     });
   });
@@ -3794,6 +3793,17 @@ function renderNotifPanel() {
 }
 
 async function openNotifPanel(anchorBtn) {
+  // 카카오/SumOne 섹션을 아직 한 번도 안 열어봤으면 그쪽 카드 목록이 비어 있어서,
+  // 알림 문구 위 컨텍스트(방 이름/카드 제목)가 빈 채로 뜹니다. 알림창을 열 때
+  // 미리 불러와 둡니다.
+  if (!kakaoCardsLoaded) {
+    kakaoCardsLoaded = true;
+    await loadKakaoCards();
+  }
+  if (!sumoneCardsLoaded) {
+    sumoneCardsLoaded = true;
+    await loadSumoneCards();
+  }
   await loadNotifEntries(); // 열 때마다 최신 상태로 다시 불러옵니다.
   renderNotifPanel();
   notifPanel.hidden = false;
@@ -3810,6 +3820,11 @@ async function openNotifPanel(anchorBtn) {
     notifPanel.style.right = "";
     notifBackdrop.hidden = false;
   }
+  // 말풍선 알림은 카드 하나가 아니라 화면(X/카카오/SumOne) 전체를 기준으로
+  // 묶이므로, 커피/와인처럼 특정 코멘트를 직접 열어야 확인되는 방식 대신
+  // 알림창을 연 시점 자체를 "확인함"으로 칩니다.
+  ["x", "kakao", "sumone"].forEach((section) => markSectionMessageCircleSeen(section));
+  updateNotifBellDots();
 }
 function closeNotifPanel() {
   notifPanel.hidden = true;
