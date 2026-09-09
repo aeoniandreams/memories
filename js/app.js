@@ -171,6 +171,10 @@ const MESSAGE_CIRCLE_PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" vi
 // CSS(.message-like-btn.liked)가 fill을 채워 꽉 찬 하트로 바꿉니다.
 const HEART_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
 
+// 앱 설명란 토글(접기/펼치기) 블록의 "펼침" 아이콘. "접힘" 쪽은 위에 이미 있는
+// CHEVRON_RIGHT_ICON_SVG를 그대로 씁니다.
+const CHEVRON_DOWN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
+
 // 코멘트에 저장된 type 문자열로 어떤 아이콘을 보여줄지 결정합니다.
 const COMMENT_TYPE_ICONS = {
   "message-circle": MESSAGE_CIRCLE_ICON_SVG,
@@ -2313,6 +2317,7 @@ document.querySelectorAll(".app-info-format-btn, .app-info-color-btn").forEach((
   btn.addEventListener("mouseup", preventAppInfoFocusSteal);
 });
 document.querySelectorAll(".app-info-format-btn").forEach((btn) => {
+  if (!btn.dataset.cmd) return;
   btn.addEventListener("click", () => {
     restoreAppInfoSelection();
     document.execCommand(btn.dataset.cmd, false, null);
@@ -2327,6 +2332,69 @@ document.querySelectorAll(".app-info-color-btn").forEach((btn) => {
     document.execCommand("foreColor", false, color);
   });
 });
+
+// 토글(접기/펼치기) 블록 삽입. 제목 줄(라벨)과 내용칸 모두 편집칸 안이라
+// 그대로 타이핑해서 고칠 수 있고, 저장되는 HTML에 열림/닫힘 상태(data-open)가
+// 그대로 남아서 다음에 볼 때도 마지막으로 남겨둔 모양 그대로 보입니다.
+function buildAppInfoToggleHtml() {
+  return (
+    `<div class="app-info-toggle" data-open="true">` +
+    `<div class="app-info-toggle-head"><button type="button" class="app-info-toggle-btn" contenteditable="false" aria-label="펼치기/접기">${CHEVRON_DOWN_ICON_SVG}</button>` +
+    `<span class="app-info-toggle-label">토글 항목</span></div>` +
+    `<div class="app-info-toggle-body">내용을 입력하세요.</div></div>`
+  );
+}
+// execCommand("insertHTML")는 중첩된 div/버튼처럼 서식 태그가 아닌 구조를
+// 넣으면 브라우저가 자기 나름대로 "정리"하면서 구조를 흐트러뜨리는 경우가
+// 있어서(Chrome에서 확인됨), 토글 블록만은 Range API로 직접 노드를 넣습니다.
+document.querySelector(".app-info-toggle-insert-btn").addEventListener("click", () => {
+  appInfoEditor.focus();
+  const sel = window.getSelection();
+  if (savedAppInfoRange && appInfoEditor.contains(savedAppInfoRange.startContainer)) {
+    sel.removeAllRanges();
+    sel.addRange(savedAppInfoRange);
+  }
+  if (sel.rangeCount === 0 || !appInfoEditor.contains(sel.getRangeAt(0).startContainer)) {
+    const fallback = document.createRange();
+    fallback.selectNodeContents(appInfoEditor);
+    fallback.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(fallback);
+  }
+  const range = sel.getRangeAt(0);
+  range.deleteContents();
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = buildAppInfoToggleHtml();
+  const node = wrapper.firstElementChild;
+  range.insertNode(node);
+  range.setStartAfter(node);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
+
+// 이미지 삽입: URL만 입력받아 <img>로 넣습니다. 토글 블록 안에서 커서를 두고
+// 눌러도 그 자리에 들어갑니다.
+document.querySelector(".app-info-image-insert-btn").addEventListener("click", () => {
+  const url = window.prompt("이미지 URL을 입력하세요.");
+  if (!url) return;
+  restoreAppInfoSelection();
+  document.execCommand("insertImage", false, url);
+});
+
+// 토글 블록의 화살표 버튼을 누르면 열림/닫힘을 바꿉니다. 보기 화면(app-info-text)과
+// 편집 화면(app-info-editor) 양쪽에서 다 동작해야 해서 이벤트 위임으로 둘 다 처리합니다.
+function handleAppInfoToggleClick(e) {
+  const btn = e.target.closest(".app-info-toggle-btn");
+  if (!btn) return;
+  const block = btn.closest(".app-info-toggle");
+  if (!block) return;
+  const wasOpen = block.dataset.open !== "false";
+  block.dataset.open = wasOpen ? "false" : "true";
+  btn.innerHTML = wasOpen ? CHEVRON_RIGHT_ICON_SVG : CHEVRON_DOWN_ICON_SVG;
+}
+appInfoText.addEventListener("click", handleAppInfoToggleClick);
+appInfoEditor.addEventListener("click", handleAppInfoToggleClick);
 
 appInfoSaveBtn.addEventListener("click", async () => {
   const content = appInfoEditor.innerHTML.trim();
