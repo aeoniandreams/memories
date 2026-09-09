@@ -330,7 +330,9 @@ h1 {
 }
 
 .app-sidebar-admin-badge {
+  display: block;
   font-size: 11px;
+  margin-bottom: 5px;
 }
 
 .app-sidebar-btn {
@@ -1012,16 +1014,15 @@ h1 {
 
 /* 프사 좌측 하단 "좋아요" 하트. 코멘트 작성 버튼(위쪽, top:22px)과 같은
    가로 위치(left:12px)에, 프사(48px, top 18px~66px) 아래쪽에 걸치게
-   둡니다. 기본은 회색 선(테두리)만 있는 하트, 찜하면(.liked) 선 색만
-   테마 설명란의 붉은색(--danger)으로 바뀝니다(속은 계속 비어 있음).
-   유저에게 보이는 건(관리자가 찜한 것만) 버튼이 아니라 <span>이라
-   클릭할 수 없습니다. */
+   둡니다. 기본은 회색 선(테두리)만 있는 하트, 찜하면(.liked) 테마
+   설명란의 붉은색(--danger)으로 꽉 채웁니다. 유저에게 보이는 건(관리자가
+   찜한 것만) 버튼이 아니라 <span>이라 클릭할 수 없습니다. */
 .message-like-btn {
   position: absolute;
   left: 12px;
-  top: 58px;
-  width: 20px;
-  height: 20px;
+  top: 60px;
+  width: 16px;
+  height: 16px;
   background: transparent;
   border: none;
   padding: 0;
@@ -1032,11 +1033,14 @@ h1 {
   cursor: pointer;
 }
 .message-like-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
 }
 .message-like-btn.liked {
   color: var(--danger);
+}
+.message-like-btn.liked svg {
+  fill: currentColor;
 }
 
 /* 우측: 코멘트 보기 버튼. 말풍선(message-circle) 모양으로 채워진 바탕 위에
@@ -2142,13 +2146,13 @@ h1 {
      작아진 프사(30px, top 18px~48px) 아래쪽에 걸치도록 크기/위치를 줄였습니다. */
   .message-like-btn {
     left: 4px;
-    top: 40px;
-    width: 18px;
-    height: 18px;
+    top: 41px;
+    width: 14px;
+    height: 14px;
   }
   .message-like-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
   }
 
   /* X 카드 블록: 아이디와 날짜 사이에 줄바꿈이 되게 합니다(데스크탑은 그대로
