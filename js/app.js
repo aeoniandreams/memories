@@ -48,6 +48,7 @@ const loginError = document.getElementById("login-error");
 const logoutBtn = document.getElementById("logout-btn");
 const themeToggleBtns = document.querySelectorAll(".theme-toggle-btn");
 const notifBellBtns = document.querySelectorAll(".notif-bell-btn");
+const notifBellDots = document.querySelectorAll(".notif-bell-dot");
 const notifBackdrop = document.getElementById("notif-backdrop");
 const notifPanel = document.getElementById("notif-panel");
 const notifPanelList = document.getElementById("notif-panel-list");
@@ -326,6 +327,7 @@ onAuthStateChanged(auth, (user) => {
       cardSeenMap = new Map();
       targetSeenMap = new Map();
       notifEntriesCache = [];
+      updateNotifBellDots();
       closeNotifPanel();
     }
   }, remaining);
@@ -1128,9 +1130,16 @@ function renderTextWithHighlight(textEl, originalText, phrases) {
   });
 }
 
+// 하이라이트가 붙은 메시지 기준 위/아래 몇 개까지 "맥락"으로 같이 흐리게
+// 보여줄지. 예: 트윗 1,2,3,4에 하이라이트가 있으면 1의 위쪽 3개 + 4의
+// 아래쪽 3개까지 전부 흐리게 표시합니다.
+const HIGHLIGHT_CONTEXT_WINDOW = 3;
+
 // threadEl 밑의 rowSelector 요소들을 훑어서, dataset.commentKey가 highlights의
-// targetKey와 일치하는 메시지에만 부분 강조를 적용합니다. 그 코멘트와 무관한
-// 메시지는 원본 텍스트 그대로 둡니다.
+// targetKey와 일치하는 메시지엔 부분 강조(고른 부분만 원래 색, 나머지는 흐리게)를
+// 적용합니다. 그 메시지들 위/아래로 HIGHLIGHT_CONTEXT_WINDOW개까지는 맥락 파악용으로
+// 전체를 흐리게 처리하고, 그보다 먼 메시지는 원본 그대로 둡니다. DOM에 그려진
+// 순서(=대화 순서)를 기준으로 "위/아래"를 판단합니다.
 function applyThreadHighlights(threadEl, rowSelector, textSelector, originalTextByKey, highlights) {
   const byTarget = new Map();
   (highlights || []).forEach((h) => {
@@ -1138,13 +1147,55 @@ function applyThreadHighlights(threadEl, rowSelector, textSelector, originalText
     if (!byTarget.has(h.targetKey)) byTarget.set(h.targetKey, []);
     byTarget.get(h.targetKey).push(h.text);
   });
-  threadEl.querySelectorAll(rowSelector).forEach((row) => {
+
+  const rows = Array.from(threadEl.querySelectorAll(rowSelector));
+
+  const resetRow = (row) => {
+    const textEl = row.querySelector(textSelector);
+    const original = textEl && originalTextByKey.get(row.dataset.commentKey);
+    if (textEl && original !== undefined) textEl.textContent = original;
+  };
+
+  if (byTarget.size === 0) {
+    rows.forEach(resetRow);
+    return;
+  }
+
+  const targetIndices = [];
+  rows.forEach((row, i) => {
+    if (byTarget.has(row.dataset.commentKey)) targetIndices.push(i);
+  });
+  if (targetIndices.length === 0) {
+    rows.forEach(resetRow);
+    return;
+  }
+
+  const minIdx = Math.min(...targetIndices);
+  const maxIdx = Math.max(...targetIndices);
+  const windowStart = Math.max(0, minIdx - HIGHLIGHT_CONTEXT_WINDOW);
+  // 위쪽에 흐리게 할 자리가 하나도 없으면(스레드의 첫 메시지부터 골랐으면),
+  // 그 몫만큼은 아니지만 아래쪽에 1개를 더 흐리게 해서 어느 정도 보완합니다.
+  const belowBonus = minIdx === 0 ? 1 : 0;
+  const windowEnd = Math.min(rows.length - 1, maxIdx + HIGHLIGHT_CONTEXT_WINDOW + belowBonus);
+
+  rows.forEach((row, i) => {
     const key = row.dataset.commentKey;
     const textEl = row.querySelector(textSelector);
     if (!textEl || key === undefined) return;
     const original = originalTextByKey.get(key);
     if (original === undefined) return;
-    renderTextWithHighlight(textEl, original, byTarget.get(key) || []);
+
+    if (byTarget.has(key)) {
+      renderTextWithHighlight(textEl, original, byTarget.get(key));
+    } else if (i >= windowStart && i <= windowEnd) {
+      textEl.innerHTML = "";
+      const span = document.createElement("span");
+      span.className = "comment-highlight-dim";
+      span.textContent = original;
+      textEl.appendChild(span);
+    } else {
+      textEl.textContent = original;
+    }
   });
 }
 
@@ -3505,6 +3556,7 @@ async function loadNotifEntries() {
   await collectFrom("sumoneComments", "sumone", "main");
 
   notifEntriesCache = entries;
+  updateNotifBellDots();
 }
 
 function isNotifEntryVisible(entry) {
@@ -3529,11 +3581,21 @@ async function markTargetSeen(section, cardId, targetKey, type) {
   const key = notifTargetKey(section, cardId, targetKey, type);
   const now = Date.now();
   targetSeenMap.set(key, now);
+  updateNotifBellDots();
   try {
     await setDoc(doc(db, "notifSeen", currentUid, "targetMarks", key), { seenAt: now });
   } catch (e) {
     console.error("코멘트 확인 표시 저장에 실패했습니다.", e);
   }
+}
+
+// 벨 아이콘 우측 상단에 테마 컬러 점을 붙여서, 안 본 알림이 하나라도 있으면
+// 바로 알 수 있게 합니다(알림창을 직접 열어보지 않아도).
+function updateNotifBellDots() {
+  const hasUnseen = buildNotifRows().length > 0;
+  notifBellDots.forEach((dot) => {
+    dot.hidden = !hasUnseen;
+  });
 }
 
 function isTargetTypeUnseen(section, cardId, targetKey, type, createdAt) {
@@ -3622,9 +3684,9 @@ function formatRelativeTime(ms) {
 }
 
 const NOTIF_TEXT_BY_TYPE = {
-  "message-circle": "새 코멘트가 달렸어요!",
-  coffee: "윤 양이 새 코멘트를 달았어요!",
-  wine: "츄야 군이 새 코멘트를 달았어요!",
+  "message-circle": "새 코멘트가 달렸어요",
+  coffee: "윤 양이 새 코멘트를 달았어요",
+  wine: "츄야 군이 새 코멘트를 달았어요",
 };
 
 // 말풍선(message-circle) 코멘트 전용: 같은 대상(target)에 첫 코멘트가 달린

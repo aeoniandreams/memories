@@ -352,9 +352,28 @@ h1 {
   height: 18px;
 }
 
+.notif-bell-btn {
+  position: relative;
+}
 .notif-bell-btn svg {
   width: 18px;
   height: 18px;
+}
+/* 안 본 알림이 있으면 벨 아이콘 우측 상단에 테마 컬러 점을 겹쳐 보여줍니다.
+   버튼 자체가 아니라 그 안의 아이콘(18px, 위아래 9px/좌우 16px 안쪽에 있음)
+   모서리 기준으로 살짝 겹치게 위치를 잡습니다. */
+.notif-bell-dot {
+  position: absolute;
+  top: 6px;
+  right: 13px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 1.5px solid var(--surface);
+}
+.notif-bell-dot[hidden] {
+  display: none;
 }
 
 /* ---------- 알림 ---------- */
@@ -418,6 +437,7 @@ h1 {
 .notif-item-text {
   margin: 0;
   font-size: 14px;
+  font-weight: 500;
   color: var(--text);
 }
 .notif-item-time {
@@ -435,21 +455,24 @@ h1 {
   display: none;
 }
 
-/* 홈 화면 카드 우측 상단(꼭짓점)의 "새 코멘트" 점. .card-tag-badge(P 뱃지)와
-   같은 자리(top:14px/right:14px)에, 크기도 그와 똑같이 맞췄습니다. 여러 종류가
-   한꺼번에 있으면 가로변을 따라 나란히 놓입니다. */
+/* 홈 화면 카드 우측 상단 "꼭짓점"에 정확히 걸치는 "새 코멘트" 점. 점(20px)의
+   중심이 카드 모서리 위에 오도록 절반(-10px)만큼 바깥으로 뺐습니다. 여러
+   종류가 한꺼번에 있으면 가로변을 따라, 왼쪽 점을 3할 정도 가릴 만큼
+   겹쳐서 나란히 놓입니다. */
 .notif-dot-row {
   position: absolute;
-  top: 14px;
-  right: 14px;
+  top: -10px;
+  right: -10px;
   display: flex;
-  gap: 6px;
 }
 .notif-dot {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 1px solid var(--surface);
+}
+.notif-dot:not(:first-child) {
+  margin-left: -6px;
 }
 
 /* [hidden] 속성은 브라우저 기본값이 display:none인데, 아래 display:inline-flex가
@@ -1067,9 +1090,10 @@ h1 {
 
 /* 코멘트 작성/수정/보기 중, 왼쪽 스레드에서 이 코멘트와 관련 없는(=드래그로
    고르지 않은) 부분을 아주 옅게 표시합니다. 색을 따로 지정하지 않고 opacity로
-   흐리게 해서, 야간 모드에서도 자연스럽게 어울립니다. */
+   배경 쪽으로 흐리게 해서, 야간 모드나 카카오톡의 어두운 말풍선(흰 글씨)에서도
+   각각 옅은/짙은 회색으로 자연스럽게 어울립니다. */
 .comment-highlight-dim {
-  opacity: 0.28;
+  opacity: 0.14;
 }
 
 /* 복사 붙여넣기를 해도 배경 서식이 남지 않도록 배경은 항상 투명하고,
