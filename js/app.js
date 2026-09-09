@@ -3561,10 +3561,26 @@ async function markTargetSeen(section, cardId, targetKey, type) {
   }
 }
 
-// 벨 아이콘 우측 상단에 테마 컬러 점을 붙여서, 안 본 알림이 하나라도 있으면
-// 바로 알 수 있게 합니다(알림창을 직접 열어보지 않아도).
+// 벨 아이콘 우측 상단 점은 "알림창을 마지막으로 연 뒤로 뭔가 새로 생겼는지"만
+// 봅니다. 알림창 목록(패널 안 줄들)은 커피/와인처럼 코멘트를 직접 열어야
+// 없어지는 것과 별개로, 벨 점은 알림창을 여는 것 자체로 확인 처리됩니다.
+function notifBellSeenKey() {
+  return notifTargetKey("_bell_", "_all_", "_all_", "_all_");
+}
+async function markBellSeen() {
+  if (!currentUid) return;
+  const key = notifBellSeenKey();
+  const now = Date.now();
+  targetSeenMap.set(key, now);
+  try {
+    await setDoc(doc(db, "notifSeen", currentUid, "targetMarks", key), { seenAt: now });
+  } catch (e) {
+    console.error("알림 확인 표시 저장에 실패했습니다.", e);
+  }
+}
 function updateNotifBellDots() {
-  const hasUnseen = buildNotifRows().length > 0;
+  const seenAt = targetSeenMap.get(notifBellSeenKey()) || 0;
+  const hasUnseen = notifEntriesCache.filter(isNotifEntryVisible).some((e) => e.createdAt > seenAt);
   notifBellDots.forEach((dot) => {
     dot.hidden = !hasUnseen;
   });
@@ -3600,6 +3616,9 @@ function getUnseenTypesForCard(section, cardId) {
 function appendNotifDots(cardEl, section, cardId) {
   const types = getUnseenTypesForCard(section, cardId);
   if (types.length === 0) return;
+  // 새 코멘트가 있는 카드는 테두리도 테마 컬러로 강조합니다. 카드를 열어
+  // 확인하면(markCardSeen) 목록이 다시 그려지면서 이 클래스도 자연히 빠집니다.
+  cardEl.classList.add("has-new-comment");
   const row = document.createElement("div");
   row.className = "notif-dot-row";
   types.forEach((type, i) => {
@@ -3766,12 +3785,15 @@ function renderNotifPanel() {
   rows.forEach((row) => {
     const item = document.createElement("div");
     item.className = "notif-item";
+
+    const body = document.createElement("div");
+    body.className = "notif-item-body";
     const contextLabel = getNotifContextLabel(row.section);
     if (contextLabel) {
       const context = document.createElement("p");
       context.className = "notif-item-context";
       context.textContent = contextLabel;
-      item.appendChild(context);
+      body.appendChild(context);
     }
     const text = document.createElement("p");
     text.className = "notif-item-text";
@@ -3779,7 +3801,13 @@ function renderNotifPanel() {
     const time = document.createElement("p");
     time.className = "notif-item-time";
     time.textContent = formatRelativeTime(row.time);
-    item.append(text, time);
+    body.append(text, time);
+
+    const icon = document.createElement("span");
+    icon.className = "notif-item-icon";
+    icon.innerHTML = COMMENT_TYPE_ICONS[row.type] || MESSAGE_CIRCLE_ICON_SVG;
+
+    item.append(icon, body);
     notifPanelList.appendChild(item);
   });
 }
@@ -3805,6 +3833,10 @@ async function openNotifPanel(anchorBtn) {
   // 묶이므로, 커피/와인처럼 특정 코멘트를 직접 열어야 확인되는 방식 대신
   // 알림창을 연 시점 자체를 "확인함"으로 칩니다.
   ["x", "kakao", "sumone"].forEach((section) => markSectionMessageCircleSeen(section));
+  // 벨 아이콘 점은 알림창(목록)과 별개로, "알림창을 열어봤는지"만 봅니다.
+  // 커피/와인 알림이 목록엔 아직 남아 있어도(코멘트를 직접 열어야 없어짐),
+  // 벨 점 자체는 알림창을 여는 순간 사라집니다.
+  markBellSeen();
   updateNotifBellDots();
 }
 function closeNotifPanel() {

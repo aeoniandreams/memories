@@ -342,9 +342,15 @@ h1 {
 }
 
 /* 앱 설명 버튼은 사이드바 맨 아래에 붙입니다(사이드바가 flex column이라
-   margin-top:auto를 주면 그 위 남는 공간을 전부 밀어내고 바닥에 붙음). */
+   margin-top:auto를 주면 그 위 남는 공간을 전부 밀어내고 바닥에 붙음).
+   아이콘만 있는 버튼이라 다른 항목(20px)보다 살짝 크게(24px) 키웠습니다
+   (모바일/데스크탑 공통). */
 .app-sidebar-help-btn {
   margin-top: auto;
+}
+.app-sidebar-help-btn svg {
+  width: 24px;
+  height: 24px;
 }
 
 .sidebar-menu-btn svg {
@@ -422,11 +428,29 @@ h1 {
   flex-direction: column;
 }
 .notif-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
 }
 .notif-item:last-child {
   border-bottom: none;
+}
+/* 코멘트 종류 아이콘. 왼쪽에 두고, 문구 세트는 그만큼 오른쪽으로 밀립니다. */
+.notif-item-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+.notif-item-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.notif-item-body {
+  min-width: 0;
+  flex: 1;
 }
 .notif-item-context {
   margin: 0 0 2px;
@@ -584,6 +608,11 @@ h1 {
   flex-direction: column;
   gap: 8px;
   transition: border-color 0.15s;
+}
+/* 새 코멘트가 달린 카드는 테두리를 테마 컬러로 강조합니다. 카드를 열어
+   확인하면(코멘트 점과 함께) 다시 원래 테두리로 돌아옵니다. */
+.card.has-new-comment {
+  border-color: var(--accent);
 }
 .card:hover { border-color: var(--accent); }
 
@@ -1091,11 +1120,9 @@ h1 {
 }
 
 /* 코멘트 작성/수정/보기 중, 왼쪽 스레드에서 이 코멘트와 관련 없는(=드래그로
-   고르지 않은) 부분을 아주 옅게 표시합니다. 색을 따로 지정하지 않고 opacity로
-   배경 쪽으로 흐리게 해서, 야간 모드나 카카오톡의 어두운 말풍선(흰 글씨)에서도
-   각각 옅은/짙은 회색으로 자연스럽게 어울립니다. */
+   고르지 않은) 부분은 아예 안 보이게 합니다. */
 .comment-highlight-dim {
-  opacity: 0.07;
+  opacity: 0;
 }
 
 /* 복사 붙여넣기를 해도 배경 서식이 남지 않도록 배경은 항상 투명하고,
@@ -2051,5 +2078,11 @@ h1 {
   #kakao-new-card-btn,
   #sumone-new-card-btn {
     display: none;
+  }
+
+  /* 로그아웃/알림/야간모드/사이드바 메뉴 아이콘 사이 간격을 모바일에서만
+     8px -> 4px로 줄였습니다(데스크탑은 그대로 8px). */
+  .header-actions {
+    gap: 4px;
   }
 }
