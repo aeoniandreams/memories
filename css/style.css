@@ -279,9 +279,10 @@ h1 {
   gap: 8px;
 }
 
-/* "새 대화 추가"(+) 버튼만 다른 헤더 버튼보다 살짝 아래로 내립니다. */
+/* "새 대화/카드 추가"(+) 버튼만 다른 헤더 버튼보다 살짝 아래로 내립니다. */
 #new-card-btn,
-#kakao-new-card-btn {
+#kakao-new-card-btn,
+#sumone-new-card-btn {
   position: relative;
   top: 2px;
 }
