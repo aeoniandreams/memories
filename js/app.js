@@ -3710,21 +3710,13 @@ async function markSectionMessageCircleSeen(section) {
 // 알림창 한 줄이 어느 카드/대화에서 온 건지 보여주는 짧은 문구. 이미
 // 메모리에 있는 카드 목록(loadedCards 등)에서 바로 찾아 쓰기 때문에
 // Firestore를 추가로 읽지 않습니다.
-function getNotifContextLabel(section, cardId) {
-  if (section === "x") {
-    const found = loadedCards.find((c) => c.id === cardId);
-    const first = found && found.data.messages && found.data.messages[0];
-    return (first && (first.nickname || first.handle)) || "";
-  }
-  if (section === "kakao") {
-    const found = loadedKakaoCards.find((c) => c.id === cardId);
-    return (found && found.data.roomName) || "";
-  }
-  if (section === "sumone") {
-    const found = loadedSumoneCards.find((c) => c.id === cardId);
-    return (found && found.data.title) || "";
-  }
-  return "";
+const NOTIF_SECTION_LABEL = {
+  x: "X(Twitter)",
+  kakao: "KakaoTalk",
+  sumone: "SumOne",
+};
+function getNotifContextLabel(section) {
+  return NOTIF_SECTION_LABEL[section] || "";
 }
 
 // 알림창에 한 번에 너무 많은 줄이 쌓이지 않도록, 최신 7개만 남기고 나머지
@@ -3774,7 +3766,7 @@ function renderNotifPanel() {
   rows.forEach((row) => {
     const item = document.createElement("div");
     item.className = "notif-item";
-    const contextLabel = getNotifContextLabel(row.section, row.cardId);
+    const contextLabel = getNotifContextLabel(row.section);
     if (contextLabel) {
       const context = document.createElement("p");
       context.className = "notif-item-context";
@@ -3793,17 +3785,6 @@ function renderNotifPanel() {
 }
 
 async function openNotifPanel(anchorBtn) {
-  // 카카오/SumOne 섹션을 아직 한 번도 안 열어봤으면 그쪽 카드 목록이 비어 있어서,
-  // 알림 문구 위 컨텍스트(방 이름/카드 제목)가 빈 채로 뜹니다. 알림창을 열 때
-  // 미리 불러와 둡니다.
-  if (!kakaoCardsLoaded) {
-    kakaoCardsLoaded = true;
-    await loadKakaoCards();
-  }
-  if (!sumoneCardsLoaded) {
-    sumoneCardsLoaded = true;
-    await loadSumoneCards();
-  }
   await loadNotifEntries(); // 열 때마다 최신 상태로 다시 불러옵니다.
   renderNotifPanel();
   notifPanel.hidden = false;
