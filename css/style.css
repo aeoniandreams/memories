@@ -1005,6 +1005,37 @@ h1 {
   height: 18px;
 }
 
+/* 프사 좌측 하단 "좋아요" 하트. 코멘트 작성 버튼(위쪽, top:22px)과 같은
+   가로 위치(left:12px)에, 프사(48px, top 18px~66px) 아래쪽에 걸치게
+   둡니다. 기본은 선(테두리)만 있는 하트, 찜하면(.liked) 테마 설명란의
+   붉은색(--danger)으로 꽉 채웁니다. 유저에게 보이는 건(관리자가 찜한 것만)
+   버튼이 아니라 <span>이라 클릭할 수 없습니다. */
+.message-like-btn {
+  position: absolute;
+  left: 12px;
+  top: 58px;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.message-like-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.message-like-btn.liked {
+  color: var(--danger);
+}
+.message-like-btn.liked svg {
+  fill: currentColor;
+}
+
 /* 우측: 코멘트 보기 버튼. 말풍선(message-circle) 모양으로 채워진 바탕 위에
    코멘트 종류 아이콘(message-circle/wine/coffee)을 겹쳐 그립니다. 바탕색(--border)은
    기본 모드에선 배경색보다 살짝 어둡고 야간 모드에선 살짝 밝아서, 튀지 않으면서도
@@ -2061,6 +2092,18 @@ h1 {
   .tweet-comment-view-stack {
     right: 4px;
   }
+  /* 하트 버튼도 코멘트 작성 버튼과 같은 가로 위치(left:4px)로 맞추고,
+     작아진 프사(30px, top 18px~48px) 아래쪽에 걸치도록 크기/위치를 줄였습니다. */
+  .message-like-btn {
+    left: 4px;
+    top: 40px;
+    width: 18px;
+    height: 18px;
+  }
+  .message-like-btn svg {
+    width: 16px;
+    height: 16px;
+  }
 
   /* X 카드 블록: 아이디와 날짜 사이에 줄바꿈이 되게 합니다(데스크탑은 그대로
      " · "로 이어진 한 줄). 부모(.card-meta)가 한 줄 말줄임(nowrap+ellipsis)
@@ -2074,6 +2117,7 @@ h1 {
   }
   .card-meta-date {
     display: block;
+    margin-top: 2px;
   }
 
   /* 홈 화면 카드 썸네일: 대화 내용(.card-text)만 살짝 줄입니다. 닉네임(.card-nickname,

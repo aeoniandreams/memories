@@ -62,6 +62,7 @@ const sidebarXBtn = document.getElementById("sidebar-x-btn");
 const sidebarKakaoBtn = document.getElementById("sidebar-kakao-btn");
 const sidebarSumoneBtn = document.getElementById("sidebar-sumone-btn");
 const sidebarHelpBtn = document.getElementById("sidebar-help-btn");
+const appSidebarAdminBadge = document.getElementById("app-sidebar-admin-badge");
 const sidebarMenuBtns = document.querySelectorAll(".sidebar-menu-btn");
 const kakaoAppView = document.getElementById("kakao-app-view");
 const kakaoLogoutBtn = document.getElementById("kakao-logout-btn");
@@ -166,6 +167,9 @@ const COFFEE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24
 // 좌측 "코멘트 작성" 버튼 아이콘. 다른 message-circle류 아이콘과 달리 말풍선 꼬리가
 // 반대쪽(오른쪽)을 향하도록 전체를 좌우 반전했습니다 (십자가는 대칭이라 모양이 그대로 유지됨).
 const MESSAGE_CIRCLE_PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1);"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`;
+// 프사 좌측 하단 "좋아요" 하트. 기본은 선(테두리)만 있고, 눌러서 찜하면
+// CSS(.message-like-btn.liked)가 fill을 채워 꽉 찬 하트로 바꿉니다.
+const HEART_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`;
 
 // 코멘트에 저장된 type 문자열로 어떤 아이콘을 보여줄지 결정합니다.
 const COMMENT_TYPE_ICONS = {
@@ -336,6 +340,7 @@ onAuthStateChanged(auth, (user) => {
 // 관리자만 백업 생성/수정/삭제 가능. 화면에서 버튼을 숨기는 건 UX일 뿐이고,
 // 실제 권한 통제는 Firestore 보안 규칙(firestore.rules)이 해요.
 function applyAdminUI() {
+  appSidebarAdminBadge.hidden = !isAdmin;
   newCardBtn.hidden = !isAdmin;
   detailDeleteBtn.hidden = !isAdmin;
   detailAppendBtn.hidden = !isAdmin;
@@ -609,6 +614,19 @@ async function saveImageComment(msgIndex, url, newText) {
   openDetail(currentDetailCardId, currentDetailData);
 }
 
+// 프사 좌측 하단 하트(좋아요)를 켜고 끕니다. 카드 본문(messages)은 관리자만
+// 쓸 수 있어서(firestore.rules), 이 토글도 관리자만 누를 수 있습니다 — 유저는
+// 관리자가 찜해둔 하트(꽉 찬 상태)만 보고, 직접 누르진 못합니다.
+async function toggleMessageLike(msgIndex) {
+  if (!isAdmin) return;
+  const updatedMessages = currentDetailData.messages.map((m, i) =>
+    i === msgIndex ? { ...m, liked: !m.liked } : m
+  );
+  await updateDoc(doc(db, "cards", currentDetailCardId), { messages: updatedMessages });
+  currentDetailData = { ...currentDetailData, messages: updatedMessages };
+  openDetail(currentDetailCardId, currentDetailData);
+}
+
 function renderMessageRow(msg, msgIndex, commentKey, comments) {
   const row = document.createElement("div");
   row.className = "message-row";
@@ -622,6 +640,26 @@ function renderMessageRow(msg, msgIndex, commentKey, comments) {
   // 항상 "새" 코멘트 작성 창을 엽니다 (기존 코멘트가 있어도 그대로 두고 하나 더 추가).
   addCommentBtn.addEventListener("click", () => openTweetCommentCompose(commentKey));
   row.appendChild(addCommentBtn);
+
+  // 프사 좌측 하단 하트: 관리자만 누를 수 있고, 유저는 관리자가 찜해둔
+  // 꽉 찬 하트만 봅니다(안 찜했으면 유저에게는 아무것도 안 보임).
+  if (isAdmin) {
+    const likeBtn = document.createElement("button");
+    likeBtn.type = "button";
+    likeBtn.className = "message-like-btn" + (msg.liked ? " liked" : "");
+    likeBtn.innerHTML = HEART_ICON_SVG;
+    likeBtn.setAttribute("aria-label", "좋아요");
+    likeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleMessageLike(msgIndex);
+    });
+    row.appendChild(likeBtn);
+  } else if (msg.liked) {
+    const likeIndicator = document.createElement("span");
+    likeIndicator.className = "message-like-btn liked";
+    likeIndicator.innerHTML = HEART_ICON_SVG;
+    row.appendChild(likeIndicator);
+  }
 
   const avatarCol = document.createElement("div");
   avatarCol.className = "avatar-col";
