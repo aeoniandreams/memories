@@ -1677,10 +1677,6 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("x", currentDetailCardId, state.commentKey, type);
-      // 말풍선은 화면 단위로 알림이 묶이므로(말풍선은 관리자만 쓸 수 있어서
-      // 이 화면의 말풍선 알림은 전부 내가 쓴 것뿐입니다), 화면 전체를 확인
-      // 처리해야 알림창에도 자기 코멘트가 뜨지 않습니다.
-      if (type === "message-circle") markSectionMessageCircleSeen("x");
       closeTweetCommentPanel();
       // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
       openDetail(currentDetailCardId, currentDetailData);
@@ -2994,7 +2990,6 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("kakao", currentKakaoDetailId, String(state.msgIndex), type);
-      if (type === "message-circle") markSectionMessageCircleSeen("kakao");
       closeKakaoCommentPanel();
       // "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
       openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
@@ -3432,7 +3427,6 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("sumone", currentSumoneDetailId, "main", type);
-      if (type === "message-circle") markSectionMessageCircleSeen("sumone");
       closeSumoneCommentPanel();
       openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
     }
@@ -3686,44 +3680,25 @@ const NOTIF_TEXT_BY_TYPE = {
 // 어느 카드·트윗에 달렸든, 첫 코멘트가 달린 뒤 7일 안에 추가로 여러 개가
 // 달려도 알림창엔 한 줄로만 뜨고, 표시 시각(과 컨텍스트로 보여줄 카드)은
 // 그 묶음의 가장 마지막 코멘트 기준입니다. 첫 코멘트로부터 7일이 지난 뒤
-// 또 달리면 별개의 새 묶음(=새 줄)으로 칩니다.
+// 또 달리면 별개의 새 묶음(=새 줄)으로 칩니다. 다만 "이 줄을 계속 보여줄지"는
+// 묶음 전체가 아니라, 묶음 안 코멘트 하나하나가 실제로 확인됐는지(각자의
+// targetSeenMap, 보기 버튼과 완전히 같은 기준)로 판단합니다 — 그래야 트윗
+// A에 달린 말풍선은 안 보고 트윗 B의 커피만 확인했을 때, 커피 알림은 없어지고
+// 말풍선 알림은 그대로 남는 게 맞습니다(반대로 되면 안 됨).
 const NOTIF_MC_COALESCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 function coalesceMessageCircleEntries(entriesSortedAsc) {
   const groups = [];
   let current = null;
   entriesSortedAsc.forEach((e) => {
     if (!current || e.createdAt - current.firstAt > NOTIF_MC_COALESCE_WINDOW_MS) {
-      current = { firstAt: e.createdAt, lastAt: e.createdAt, lastEntry: e };
+      current = { firstAt: e.createdAt, lastAt: e.createdAt, entries: [e] };
       groups.push(current);
     } else {
       current.lastAt = e.createdAt;
-      current.lastEntry = e;
+      current.entries.push(e);
     }
   });
   return groups;
-}
-
-// 말풍선 묶음은 화면(section) 전체를 기준으로 하나로 치기 때문에, 특정
-// 코멘트가 아니라 "이 화면의 말풍선 알림을 마지막으로 언제 확인했는지"를
-// 따로 기억해둡니다. 기존 targetSeenMap/notifSeen 저장 구조를 그대로
-// 재사용하되, 카드/트윗 자리에 고정 문자열을 넣어 화면 단위 키를 만듭니다.
-function notifSectionMessageCircleKey(section) {
-  return notifTargetKey(section, "_section_", "_all_", "message-circle");
-}
-function isSectionMessageCircleUnseen(section, lastAt) {
-  const seenAt = targetSeenMap.get(notifSectionMessageCircleKey(section)) || 0;
-  return lastAt > seenAt;
-}
-async function markSectionMessageCircleSeen(section) {
-  if (!currentUid) return;
-  const key = notifSectionMessageCircleKey(section);
-  const now = Date.now();
-  targetSeenMap.set(key, now);
-  try {
-    await setDoc(doc(db, "notifSeen", currentUid, "targetMarks", key), { seenAt: now });
-  } catch (e) {
-    console.error("말풍선 알림 확인 표시 저장에 실패했습니다.", e);
-  }
 }
 
 // 알림창 한 줄이 어느 카드/대화에서 온 건지 보여주는 짧은 문구. 이미
@@ -3768,8 +3743,12 @@ function buildNotifRows() {
     list.sort((a, b) => a.createdAt - b.createdAt);
     const groups = coalesceMessageCircleEntries(list);
     groups.forEach((g) => {
-      if (isSectionMessageCircleUnseen(section, g.lastAt)) {
-        rows.push({ type: "message-circle", time: g.lastAt, section, cardId: g.lastEntry.cardId });
+      const hasUnseen = g.entries.some((e) =>
+        isTargetTypeUnseen(e.section, e.cardId, e.targetKey, "message-circle", e.createdAt)
+      );
+      if (hasUnseen) {
+        const lastEntry = g.entries[g.entries.length - 1];
+        rows.push({ type: "message-circle", time: g.lastAt, section, cardId: lastEntry.cardId });
       }
     });
   });
@@ -3829,12 +3808,8 @@ async function openNotifPanel(anchorBtn) {
     notifPanel.style.right = "";
     notifBackdrop.hidden = false;
   }
-  // 말풍선 알림은 카드 하나가 아니라 화면(X/카카오/SumOne) 전체를 기준으로
-  // 묶이므로, 커피/와인처럼 특정 코멘트를 직접 열어야 확인되는 방식 대신
-  // 알림창을 연 시점 자체를 "확인함"으로 칩니다.
-  ["x", "kakao", "sumone"].forEach((section) => markSectionMessageCircleSeen(section));
   // 벨 아이콘 점은 알림창(목록)과 별개로, "알림창을 열어봤는지"만 봅니다.
-  // 커피/와인 알림이 목록엔 아직 남아 있어도(코멘트를 직접 열어야 없어짐),
+  // 목록 안의 줄(커피/와인/말풍선 전부)은 그 코멘트를 직접 열어야 없어지지만,
   // 벨 점 자체는 알림창을 여는 순간 사라집니다.
   markBellSeen();
   updateNotifBellDots();
