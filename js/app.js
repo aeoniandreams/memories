@@ -449,7 +449,26 @@ function renderCardGrid() {
         : first.dateDisplay;
     const metaEl = document.createElement("span");
     metaEl.className = "card-meta";
-    metaEl.textContent = [first.handle, dateLabel].filter(Boolean).join(" · ");
+    // 아이디/날짜를 각각 별도 span으로 나눠서, 모바일에서만 그 사이에 줄바꿈이
+    // 되도록 CSS로 조절할 수 있게 합니다(데스크탑은 " · "로 이어진 한 줄 그대로).
+    if (first.handle) {
+      const handleEl = document.createElement("span");
+      handleEl.className = "card-meta-handle";
+      handleEl.textContent = first.handle;
+      metaEl.appendChild(handleEl);
+    }
+    if (first.handle && dateLabel) {
+      const sepEl = document.createElement("span");
+      sepEl.className = "card-meta-sep";
+      sepEl.textContent = " · ";
+      metaEl.appendChild(sepEl);
+    }
+    if (dateLabel) {
+      const dateEl = document.createElement("span");
+      dateEl.className = "card-meta-date";
+      dateEl.textContent = dateLabel;
+      metaEl.appendChild(dateEl);
+    }
     headText.append(nickEl, metaEl);
     head.appendChild(headText);
 
@@ -3525,8 +3544,11 @@ async function loadNotifEntries() {
   updateNotifBellDots();
 }
 
+// 알림은 "상대가 쓴 코멘트"만 보이게 합니다: 관리자(message-circle/coffee
+// 작성자)는 상대인 유저가 쓴 wine 알림만 보고, 유저는 관리자가 쓴
+// message-circle/coffee 알림만 봅니다.
 function isNotifEntryVisible(entry) {
-  if (isAdmin) return true;
+  if (isAdmin) return entry.type === "wine";
   return entry.type === "message-circle" || entry.type === "coffee";
 }
 
