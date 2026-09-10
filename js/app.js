@@ -3849,12 +3849,12 @@ const NOTIF_TEXT_BY_TYPE = {
 // (예전엔 "묶음 안 코멘트를 하나하나 다 확인해야 줄이 없어진다"는 방식이었는데,
 // 예전에 확인 안 하고 잊어버린 말풍선 코멘트가 하나라도 남아있으면 방금 새로
 // 확인한 것까지 포함해서 줄 전체가 계속 떠 있는 문제가 있었습니다. 그래서
-// 말풍선 알림창 줄은 "확인했는지"가 아니라 "생긴 지 20일이 지났는지"로만
-// 없어지도록 바꿨습니다 — 묶음 안에 아직 20일이 안 지난 코멘트가 하나라도
-// 있으면 줄이 남고, 전부 20일이 지나면 그때 완전히 사라집니다. 보기 버튼의
-// 강조색(개별 코멘트 확인 표시)은 이 변경과 별개로 그대로 유지됩니다.)
+// 알림창의 모든 줄(말풍선/커피/와인)은 이제 "확인했는지"와 무관하게 "생긴 지
+// 20일이 지났는지"로만 없어집니다 — 말풍선 묶음은 그 안 가장 최근 코멘트
+// 기준 20일. 보기 버튼의 강조색(개별 코멘트 확인 표시)은 이 변경과 별개로
+// 그대로 유지됩니다.)
 const NOTIF_MC_COALESCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-const NOTIF_MC_EXPIRE_MS = 20 * 24 * 60 * 60 * 1000;
+const NOTIF_EXPIRE_MS = 20 * 24 * 60 * 60 * 1000;
 function coalesceMessageCircleEntries(entriesSortedAsc) {
   const groups = [];
   let current = null;
@@ -3882,25 +3882,28 @@ function getNotifContextLabel(section) {
   return NOTIF_SECTION_LABEL[section] || "";
 }
 
-// 알림창에 한 번에 너무 많은 줄이 쌓이지 않도록, 최신 7개만 남기고 나머지
-// (오래된 것)는 그냥 버립니다 — 오래된 알림은 어차피 카드/보기 버튼 쪽
-// 표시(점, 강조색)로 계속 남아있으니 알림창에서는 개수만 제한해도 됩니다.
-const NOTIF_MAX_ROWS = 7;
+// 알림창엔 확인(보기 버튼 클릭) 여부와 상관없이, 각 알림이 생긴 지 20일이
+// 지나면 그때 사라지고, 말풍선/커피/와인을 다 합쳐서 최신 15개만 남기고
+// 나머지(오래된 것)는 버립니다 — 확인 표시(점, 보기 버튼 강조색)는 이것과
+// 별개로 그대로 유지됩니다.
+const NOTIF_MAX_ROWS = 15;
 
 function buildNotifRows() {
   const visible = notifEntriesCache.filter(isNotifEntryVisible);
   const rows = []; // { type, time, section, cardId }
+  const now = Date.now();
 
-  // 커피/와인: 안 본 코멘트 하나하나가 각자 한 줄.
+  // 커피/와인: 코멘트 하나하나가 각자 한 줄, 생긴 지 20일 안 됐으면 계속 뜸.
   visible
     .filter((e) => e.type === "coffee" || e.type === "wine")
     .forEach((e) => {
-      if (!isTargetTypeUnseen(e.section, e.cardId, e.targetKey, e.type, e.createdAt)) return;
+      if (now - e.createdAt >= NOTIF_EXPIRE_MS) return;
       rows.push({ type: e.type, time: e.createdAt, section: e.section, cardId: e.cardId });
     });
 
   // 말풍선: 화면(섹션) 단위로 묶어서, 그 화면 안 어느 카드/트윗에 달렸든
-  // 7일 이내 묶음은 한 줄로.
+  // 7일 이내 묶음은 한 줄로. 그 줄이 사라지는 시점은 묶음 안 가장 최근
+  // 코멘트를 기준으로 20일입니다.
   const bySection = new Map();
   visible
     .filter((e) => e.type === "message-circle")
@@ -3911,13 +3914,10 @@ function buildNotifRows() {
   bySection.forEach((list, section) => {
     list.sort((a, b) => a.createdAt - b.createdAt);
     const groups = coalesceMessageCircleEntries(list);
-    const now = Date.now();
     groups.forEach((g) => {
-      const hasUnexpired = g.entries.some((e) => now - e.createdAt < NOTIF_MC_EXPIRE_MS);
-      if (hasUnexpired) {
-        const lastEntry = g.entries[g.entries.length - 1];
-        rows.push({ type: "message-circle", time: g.lastAt, section, cardId: lastEntry.cardId });
-      }
+      if (now - g.lastAt >= NOTIF_EXPIRE_MS) return;
+      const lastEntry = g.entries[g.entries.length - 1];
+      rows.push({ type: "message-circle", time: g.lastAt, section, cardId: lastEntry.cardId });
     });
   });
 
