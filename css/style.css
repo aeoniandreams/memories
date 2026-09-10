@@ -98,18 +98,18 @@ body {
   padding: 9px 12px;
 }
 
-/* 로그아웃 버튼: 글자 없이 아이콘만 있는, 다른 헤더 아이콘 버튼(벨/메뉴)과
-   같은 크기의 원형 버튼입니다(모바일/데스크탑 공통). */
+/* 로그아웃 버튼: 글자 없이 아이콘만 있는 원형 버튼입니다(모바일/데스크탑
+   공통). 다른 헤더 아이콘 버튼(벨/메뉴)보다 아주 살짝만 작게 뒀습니다. */
 #logout-btn,
 #kakao-logout-btn,
 #sumone-logout-btn {
-  padding: 9px 12px;
+  padding: 8px 11px;
 }
 #logout-btn svg,
 #kakao-logout-btn svg,
 #sumone-logout-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .theme-toggle-btn svg {
