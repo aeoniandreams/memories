@@ -1285,6 +1285,13 @@ function captureThreadSelection(threadEl, rowSelector, isEditingFn, onCaptured) 
   });
 }
 
+// 발췌(드래그로 문구 선택) 기능은 모바일 터치 환경에서 제대로 동작하지
+// 않아서, 모바일에서는 안내 문구를 다른 걸로 보여줍니다. CSS의 모바일
+// 기준(480px 이하 + 터치 전용 기기)과 똑같은 조건을 씁니다.
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 480px) and (hover: none) and (pointer: coarse)").matches;
+}
+
 // 코멘트 작성/수정 패널 안에, 지금까지 고른 문구들을 칩(chip) 목록으로 보여줍니다.
 // x를 누르면 목록에서 빼고 다시 그립니다(패널+스레드 강조 둘 다 rerender가 갱신).
 function renderHighlightPicker(container, highlights, rerender) {
@@ -1292,7 +1299,9 @@ function renderHighlightPicker(container, highlights, rerender) {
   wrap.className = "comment-highlight-picker";
   const hint = document.createElement("p");
   hint.className = "comment-highlight-hint";
-  hint.textContent = "왼쪽 대화에서 관련 문구를 드래그하면 이 코멘트에 연결됩니다 (여러 개 가능).";
+  hint.textContent = isMobileViewport()
+    ? "모바일 환경에서는 발췌 기능을 지원하지 않습니다."
+    : "왼쪽 대화에서 관련 문구를 드래그하면 이 코멘트에 연결됩니다 (여러 개 가능).";
   wrap.appendChild(hint);
   if (highlights.length > 0) {
     const chipRow = document.createElement("div");
