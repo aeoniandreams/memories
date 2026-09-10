@@ -1982,6 +1982,7 @@ h1 {
    HTML로 저장합니다(이 창은 관리자만 쓸 수 있어서, 관리자가 자기 자신을
    상대로 뭔가를 주입할 위험만 있는 수준이라 innerHTML을 그대로 써도 안전). */
 .app-info-toolbar {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1989,6 +1990,59 @@ h1 {
 }
 .app-info-toolbar[hidden] {
   display: none;
+}
+
+/* 아이콘 삽입 팝업. 아이콘 삽입 버튼 바로 아래에 뜨도록 JS가 위치(top/left)를
+   계산해서 넣어줍니다. */
+.app-info-icon-picker {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, 32px);
+  gap: 4px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+.app-info-icon-picker[hidden] {
+  display: none;
+}
+.app-info-icon-picker-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+}
+.app-info-icon-picker-btn:hover {
+  border-color: var(--accent);
+}
+.app-info-icon-picker-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 글 중간에 삽입된 아이콘. 글자와 같은 줄에 나란히 놓이도록 inline-flex로
+   두고, 색은 currentColor라 주변 글씨 색(서식 도구로 바꾼 색 포함)을
+   그대로 따라갑니다. */
+.app-info-inline-icon {
+  display: inline-flex;
+  vertical-align: -3px;
+  width: 18px;
+  height: 18px;
+  margin: 0 2px;
+}
+.app-info-inline-icon svg {
+  width: 100%;
+  height: 100%;
 }
 .app-info-format-btn {
   width: 30px;

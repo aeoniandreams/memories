@@ -175,6 +175,43 @@ const HEART_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 
 // CHEVRON_RIGHT_ICON_SVG를 그대로 씁니다.
 const CHEVRON_DOWN_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
 
+// ---------- 앱 설명란에 글 중간중간 넣을 수 있는 아이콘들 ----------
+// 헤더의 알림/로그아웃 아이콘은 HTML에 바로 박혀 있어서 여기서 따로
+// 상수로 둡니다(앱 다른 곳 아이콘과 똑같은 모양을 재사용).
+const BELL_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>`;
+const LOG_OUT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>`;
+const INFO_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`;
+const HELP_CIRCLE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>`;
+const STAR_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></svg>`;
+const CHECK_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+const X_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+const ALERT_TRIANGLE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
+const SMILE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>`;
+const THUMBS_UP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>`;
+
+// 아이콘 삽입 팝업에 나열할 목록. 아이콘의 "의미"를 글로 설명하고 싶을 때
+// 쓰라고 만든 기능이라, 앱 안에서 이미 쓰이는 아이콘들(말풍선/커피/와인/
+// 하트/알림종/로그아웃/토글 화살표)을 우선 넣고, 일반적인 문서 작성용
+// 아이콘 몇 개를 추가했습니다.
+const APP_INFO_ICON_CHOICES = [
+  { id: "message-circle", label: "말풍선", svg: MESSAGE_CIRCLE_ICON_SVG },
+  { id: "coffee", label: "커피", svg: COFFEE_ICON_SVG },
+  { id: "wine", label: "와인", svg: WINE_ICON_SVG },
+  { id: "heart", label: "하트", svg: HEART_ICON_SVG },
+  { id: "bell", label: "알림종", svg: BELL_ICON_SVG },
+  { id: "log-out", label: "로그아웃", svg: LOG_OUT_ICON_SVG },
+  { id: "chevron-right", label: "화살표(접힘)", svg: CHEVRON_RIGHT_ICON_SVG },
+  { id: "chevron-down", label: "화살표(펼침)", svg: CHEVRON_DOWN_ICON_SVG },
+  { id: "info", label: "정보", svg: INFO_ICON_SVG },
+  { id: "help-circle", label: "물음표", svg: HELP_CIRCLE_ICON_SVG },
+  { id: "star", label: "별", svg: STAR_ICON_SVG },
+  { id: "check", label: "체크", svg: CHECK_ICON_SVG },
+  { id: "x", label: "엑스", svg: X_ICON_SVG },
+  { id: "alert-triangle", label: "주의", svg: ALERT_TRIANGLE_ICON_SVG },
+  { id: "smile", label: "웃음", svg: SMILE_ICON_SVG },
+  { id: "thumbs-up", label: "좋아요", svg: THUMBS_UP_ICON_SVG },
+];
+
 // 코멘트에 저장된 type 문자열로 어떤 아이콘을 보여줄지 결정합니다.
 const COMMENT_TYPE_ICONS = {
   "message-circle": MESSAGE_CIRCLE_ICON_SVG,
@@ -2382,8 +2419,10 @@ function buildAppInfoToggleHtml() {
 }
 // execCommand("insertHTML")는 중첩된 div/버튼처럼 서식 태그가 아닌 구조를
 // 넣으면 브라우저가 자기 나름대로 "정리"하면서 구조를 흐트러뜨리는 경우가
-// 있어서(Chrome에서 확인됨), 토글 블록만은 Range API로 직접 노드를 넣습니다.
-document.querySelector(".app-info-toggle-insert-btn").addEventListener("click", () => {
+// 있어서(Chrome에서 확인됨), 토글 블록/아이콘처럼 직접 만든 노드는 모두
+// Range API로 직접 넣습니다. 커서가 편집칸 밖에 있거나 아직 없으면(예:
+// 편집칸을 열자마자 바로 버튼을 누른 경우) 편집칸 맨 끝에 넣습니다.
+function insertNodeAtAppInfoCursor(node) {
   appInfoEditor.focus();
   const sel = window.getSelection();
   if (savedAppInfoRange && appInfoEditor.contains(savedAppInfoRange.startContainer)) {
@@ -2399,14 +2438,16 @@ document.querySelector(".app-info-toggle-insert-btn").addEventListener("click", 
   }
   const range = sel.getRangeAt(0);
   range.deleteContents();
-  const wrapper = document.createElement("div");
-  wrapper.innerHTML = buildAppInfoToggleHtml();
-  const node = wrapper.firstElementChild;
   range.insertNode(node);
   range.setStartAfter(node);
   range.collapse(true);
   sel.removeAllRanges();
   sel.addRange(range);
+}
+document.querySelector(".app-info-toggle-insert-btn").addEventListener("click", () => {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = buildAppInfoToggleHtml();
+  insertNodeAtAppInfoCursor(wrapper.firstElementChild);
 });
 
 // 이미지 삽입: URL만 입력받아 <img>로 넣습니다. 토글 블록 안에서 커서를 두고
@@ -2416,6 +2457,44 @@ document.querySelector(".app-info-image-insert-btn").addEventListener("click", (
   if (!url) return;
   restoreAppInfoSelection();
   document.execCommand("insertImage", false, url);
+});
+
+// 아이콘 삽입: 글 중간에 lucide류 아이콘을 넣고 바로 옆에 설명을 적을 수
+// 있게 합니다. 버튼을 누르면 아이콘 목록 팝업이 뜨고, 하나를 고르면 그
+// 자리에 들어갑니다.
+const appInfoIconInsertBtn = document.querySelector(".app-info-icon-insert-btn");
+const appInfoIconPicker = document.getElementById("app-info-icon-picker");
+APP_INFO_ICON_CHOICES.forEach((choice, i) => {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "app-info-icon-picker-btn";
+  btn.innerHTML = choice.svg;
+  btn.setAttribute("aria-label", choice.label);
+  btn.title = choice.label;
+  // 이 버튼을 눌러도 편집칸의 커서 위치(선택 범위)가 안 풀리도록, 위의
+  // 서식 버튼들과 같은 방식으로 mousedown 기본 동작을 막습니다.
+  btn.addEventListener("mousedown", (e) => e.preventDefault());
+  btn.addEventListener("click", () => {
+    const wrapper = document.createElement("span");
+    wrapper.innerHTML = `<span class="app-info-inline-icon" contenteditable="false">${choice.svg}</span>`;
+    insertNodeAtAppInfoCursor(wrapper.firstElementChild);
+    appInfoIconPicker.hidden = true;
+  });
+  appInfoIconPicker.appendChild(btn);
+});
+appInfoIconInsertBtn.addEventListener("click", () => {
+  if (!appInfoIconPicker.hidden) {
+    appInfoIconPicker.hidden = true;
+    return;
+  }
+  appInfoIconPicker.style.left = appInfoIconInsertBtn.offsetLeft + "px";
+  appInfoIconPicker.style.top = appInfoIconInsertBtn.offsetHeight + 6 + "px";
+  appInfoIconPicker.hidden = false;
+});
+document.addEventListener("click", (e) => {
+  if (appInfoIconPicker.hidden) return;
+  if (appInfoIconPicker.contains(e.target) || appInfoIconInsertBtn.contains(e.target)) return;
+  appInfoIconPicker.hidden = true;
 });
 
 // 토글 블록의 화살표 버튼을 누르면 열림/닫힘을 바꿉니다. 보기 화면(app-info-text)과
