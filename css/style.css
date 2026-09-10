@@ -94,11 +94,11 @@ body {
 }
 
 /* 앱 화면 헤더 안: 다른 헤더 버튼들과 같은 줄에 자연스럽게 배치. 살짝
-   오른쪽으로 치우쳐 보여서 1px만 왼쪽으로 옮겼습니다. */
+   오른쪽으로 치우쳐 보여서 왼쪽으로 옮겼습니다(총 3px). */
 .header-actions .theme-toggle-btn {
   padding: 9px 12px;
   position: relative;
-  left: -1px;
+  left: -3px;
 }
 
 /* 로그아웃 버튼: 글자 없이 아이콘만 있는 원형 버튼입니다(모바일/데스크탑
