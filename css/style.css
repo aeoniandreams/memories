@@ -2215,4 +2215,15 @@ h1 {
   .header-actions {
     gap: 1px;
   }
+
+  /* 코멘트 보기/작성 바텀시트: 안쪽 내용(.tweet-comment-panel-body)을 5px
+     아래로 내리고, 그만큼 잘리지 않도록 바텀시트 자체의 세로 높이도 5px
+     늘려서 균형을 맞춥니다. X/카카오/SumOne 모두 같은 클래스를 써서 한
+     번에 적용됩니다. */
+  .tweet-comment-panel-card {
+    max-height: calc(70vh + 5px);
+  }
+  .tweet-comment-panel-body {
+    margin-top: 5px;
+  }
 }
