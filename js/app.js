@@ -2274,13 +2274,23 @@ async function openAppInfo() {
 function closeAppInfo() {
   appInfoModal.hidden = true;
 }
+// 수정 중(편집칸이 보이는 상태)에 저장하지 않은 내용이 있는 채로 뒤로가기
+// 버튼이나 바깥 공간을 눌러서 닫으려 하면 확인창을 띄워서 실수로 잃어버리지
+// 않게 합니다. 아무것도 안 고쳤으면(불러온 내용과 그대로 같으면) 그냥 닫습니다.
+function hasUnsavedAppInfoChanges() {
+  return !appInfoEditor.hidden && appInfoEditor.innerHTML.trim() !== appInfoLoadedContent;
+}
+function tryCloseAppInfo() {
+  if (hasUnsavedAppInfoChanges() && !confirm("저장하지 않은 내용이 있습니다. 닫으시겠습니까?")) return;
+  closeAppInfo();
+}
 sidebarHelpBtn.addEventListener("click", () => {
   openAppInfo();
   closeSidebar();
 });
-appInfoCloseBtn.addEventListener("click", closeAppInfo);
+appInfoCloseBtn.addEventListener("click", tryCloseAppInfo);
 appInfoModal.addEventListener("click", (e) => {
-  if (e.target === appInfoModal) closeAppInfo();
+  if (e.target === appInfoModal) tryCloseAppInfo();
 });
 
 appInfoEditBtn.addEventListener("click", () => {
