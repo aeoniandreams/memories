@@ -726,7 +726,12 @@ h1 {
   line-height: 1.5;
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  /* 같은 줄에 이미지 있는 카드가 있으면 그리드 stretch로 세로 폭이 늘어나는데,
+     예전엔 여기서 4줄로 딱 잘라서 그 늘어난 공간이 그냥 낭비됐습니다. 6줄로
+     늘려서(요청대로 1~2줄 정도만 더) 그 공간을 좀 더 활용합니다. 이미지 없는
+     카드끼리만 있는 줄은 원래도 카드 높이가 내용에 맞춰 늘어나는 구조라 문제
+     없습니다. */
+  -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
   color: var(--text);
