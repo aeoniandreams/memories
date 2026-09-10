@@ -658,7 +658,7 @@ h1 {
 
 .card-thumb {
   width: 100%;
-  height: 160px;
+  height: 150px;
   object-fit: cover;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -2011,8 +2011,8 @@ h1 {
    줄여줍니다. */
 .app-info-toggle-insert-btn svg,
 .app-info-image-insert-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 .app-info-color-btn {
   width: 20px;
