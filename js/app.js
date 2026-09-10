@@ -2325,11 +2325,29 @@ document.querySelectorAll(".app-info-format-btn").forEach((btn) => {
 });
 // 글씨 색: 회색(--muted)과 테마 색 2종(--accent 파란색, --danger 빨간색)만
 // 고를 수 있습니다. 지금 테마에서 실제 적용되는 색상 값을 읽어서 적용합니다.
+// 이미 그 색이 적용된 상태에서 같은 버튼을 한 번 더 누르면 기본 글씨색(--text)으로
+// 되돌립니다(토글). 색 값 형식이 서로 달라도(#hex vs rgb(...)) 비교할 수 있게
+// 임시 엘리먼트에 색을 입혀서 항상 브라우저가 계산한 rgb(...) 형태로 바꿔 비교합니다.
+function toRgbColorString(colorValue) {
+  const el = document.createElement("span");
+  el.style.color = colorValue;
+  document.body.appendChild(el);
+  const rgb = getComputedStyle(el).color;
+  document.body.removeChild(el);
+  return rgb;
+}
 document.querySelectorAll(".app-info-color-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     restoreAppInfoSelection();
     const color = getComputedStyle(document.documentElement).getPropertyValue(btn.dataset.colorVar).trim();
-    document.execCommand("foreColor", false, color);
+    const currentColor = document.queryCommandValue("foreColor");
+    const isSameColor = currentColor && toRgbColorString(currentColor) === toRgbColorString(color);
+    if (isSameColor) {
+      const defaultColor = getComputedStyle(document.documentElement).getPropertyValue("--text").trim();
+      document.execCommand("foreColor", false, defaultColor);
+    } else {
+      document.execCommand("foreColor", false, color);
+    }
   });
 });
 
