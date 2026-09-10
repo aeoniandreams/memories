@@ -56,13 +56,22 @@
   // 기다리는 동안 보여주는 화면이라 그 실행을 기다리면 안 됩니다 — 그래서
   // 이 스크립트는 일반 스크립트로 두고 페이지가 파싱되는 즉시 바로 시작합니다.
   (function () {
+    // .webp로 바꾸고(투명 배경 유지, 용량은 원래 PNG의 20% 안팎으로 감소)
+    // 5장을 미리 다 받아둡니다. 그냥 무작위로 src만 바꾸면 처음 등장하는
+    // 순간마다 그제서야 네트워크 요청이 나가서 화면이 잠깐 멈춘 것처럼
+    // 보이는데, new Image()로 미리 받아두면 브라우저 캐시에 이미 있어서
+    // 2초마다 바뀔 때 끊김 없이 바로 표시됩니다.
     var LOADING_IMAGES = [
-      "images/loading/1.png",
-      "images/loading/2.png",
-      "images/loading/3.png",
-      "images/loading/4.png",
-      "images/loading/5.png",
+      "images/loading/1.webp",
+      "images/loading/2.webp",
+      "images/loading/3.webp",
+      "images/loading/4.webp",
+      "images/loading/5.webp",
     ];
+    LOADING_IMAGES.forEach(function (src) {
+      var preload = new Image();
+      preload.src = src;
+    });
 
     var dotsEl = document.getElementById("loading-dots");
     var dotsCount = 0;
