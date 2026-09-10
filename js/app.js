@@ -3844,12 +3844,17 @@ const NOTIF_TEXT_BY_TYPE = {
 // 어느 카드·트윗에 달렸든, 첫 코멘트가 달린 뒤 7일 안에 추가로 여러 개가
 // 달려도 알림창엔 한 줄로만 뜨고, 표시 시각(과 컨텍스트로 보여줄 카드)은
 // 그 묶음의 가장 마지막 코멘트 기준입니다. 첫 코멘트로부터 7일이 지난 뒤
-// 또 달리면 별개의 새 묶음(=새 줄)으로 칩니다. 다만 "이 줄을 계속 보여줄지"는
-// 묶음 전체가 아니라, 묶음 안 코멘트 하나하나가 실제로 확인됐는지(각자의
-// targetSeenMap, 보기 버튼과 완전히 같은 기준)로 판단합니다 — 그래야 트윗
-// A에 달린 말풍선은 안 보고 트윗 B의 커피만 확인했을 때, 커피 알림은 없어지고
-// 말풍선 알림은 그대로 남는 게 맞습니다(반대로 되면 안 됨).
+// 또 달리면 별개의 새 묶음(=새 줄)으로 칩니다.
+//
+// (예전엔 "묶음 안 코멘트를 하나하나 다 확인해야 줄이 없어진다"는 방식이었는데,
+// 예전에 확인 안 하고 잊어버린 말풍선 코멘트가 하나라도 남아있으면 방금 새로
+// 확인한 것까지 포함해서 줄 전체가 계속 떠 있는 문제가 있었습니다. 그래서
+// 말풍선 알림창 줄은 "확인했는지"가 아니라 "생긴 지 20일이 지났는지"로만
+// 없어지도록 바꿨습니다 — 묶음 안에 아직 20일이 안 지난 코멘트가 하나라도
+// 있으면 줄이 남고, 전부 20일이 지나면 그때 완전히 사라집니다. 보기 버튼의
+// 강조색(개별 코멘트 확인 표시)은 이 변경과 별개로 그대로 유지됩니다.)
 const NOTIF_MC_COALESCE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const NOTIF_MC_EXPIRE_MS = 20 * 24 * 60 * 60 * 1000;
 function coalesceMessageCircleEntries(entriesSortedAsc) {
   const groups = [];
   let current = null;
@@ -3906,11 +3911,10 @@ function buildNotifRows() {
   bySection.forEach((list, section) => {
     list.sort((a, b) => a.createdAt - b.createdAt);
     const groups = coalesceMessageCircleEntries(list);
+    const now = Date.now();
     groups.forEach((g) => {
-      const hasUnseen = g.entries.some((e) =>
-        isTargetTypeUnseen(e.section, e.cardId, e.targetKey, "message-circle", e.createdAt)
-      );
-      if (hasUnseen) {
+      const hasUnexpired = g.entries.some((e) => now - e.createdAt < NOTIF_MC_EXPIRE_MS);
+      if (hasUnexpired) {
         const lastEntry = g.entries[g.entries.length - 1];
         rows.push({ type: "message-circle", time: g.lastAt, section, cardId: lastEntry.cardId });
       }
