@@ -2219,16 +2219,24 @@ function closeSidebar() {
   appSidebar.classList.remove("open");
 }
 sidebarMenuBtns.forEach((btn) => {
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation(); // 아래 document 클릭 리스너가 곧바로 다시 닫아버리지 않도록
+  btn.addEventListener("click", () => {
     appSidebar.classList.toggle("open");
   });
 });
-document.addEventListener("click", (e) => {
-  if (!appSidebar.classList.contains("open")) return;
-  if (appSidebar.contains(e.target)) return;
-  closeSidebar();
-});
+// 캡처 단계(capture: true)에서 가로채서 stopPropagation을 걸어야, 그 클릭이
+// 카드 같은 아래쪽 요소까지 도달하기 전에 막을 수 있습니다(버블 단계에서
+// 막으면 이미 늦어서 카드가 열리는 것까지 같이 일어났었습니다). 사이드바
+// 안쪽 클릭은 그대로 통과시킵니다.
+document.addEventListener(
+  "click",
+  (e) => {
+    if (!appSidebar.classList.contains("open")) return;
+    if (appSidebar.contains(e.target)) return;
+    e.stopPropagation();
+    closeSidebar();
+  },
+  true
+);
 
 // ---------- 앱 설명 (사이드바 하단 물음표 아이콘) ----------
 // 로그인한 사람은 누구나 볼 수 있고, 관리자만 고칠 수 있습니다. 문서
