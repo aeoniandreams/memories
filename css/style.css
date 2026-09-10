@@ -1875,8 +1875,8 @@ h1 {
 }
 /* ---------- SumOne 카드 ---------- */
 .sumone-card-title {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 500;
   margin: 0;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -2005,6 +2005,14 @@ h1 {
 }
 .app-info-format-btn:hover {
   border-color: var(--accent);
+}
+/* 토글/이미지 삽입 버튼은 svg 아이콘이라 굵게/기울임/취소선(글자) 버튼과
+   달리 아무 크기 지정이 없으면 버튼 안쪽 여백이 거의 없어져서 따로
+   줄여줍니다. */
+.app-info-toggle-insert-btn svg,
+.app-info-image-insert-btn svg {
+  width: 16px;
+  height: 16px;
 }
 .app-info-color-btn {
   width: 20px;
