@@ -377,16 +377,29 @@ h1 {
   background: var(--border);
 }
 
-/* 앱 설명 버튼은 사이드바 맨 아래에 붙입니다(사이드바가 flex column이라
-   margin-top:auto를 주면 그 위 남는 공간을 전부 밀어내고 바닥에 붙음).
-   아이콘만 있는 버튼이라 다른 항목(20px)보다 살짝 크게(24px) 키웠습니다
-   (모바일/데스크탑 공통). */
-.app-sidebar-help-btn {
+/* 사이드바 맨 아래 줄은 사이드바가 flex column이라 margin-top:auto를 주면
+   그 위 남는 공간을 전부 밀어내고 바닥에 붙습니다. 왼쪽엔 앱 설명 아이콘,
+   오른쪽엔 계정 표시(@ae0niandreams)를 나란히 둡니다. */
+.app-sidebar-footer {
   margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+/* 아이콘만 있는 버튼이라 다른 항목(20px)보다 살짝 크게(24px) 키웠습니다
+   (모바일/데스크탑 공통). 이제 옆에 계정 표시와 나란히 두므로 폭은 내용만큼만. */
+.app-sidebar-help-btn {
+  width: auto;
+  flex-shrink: 0;
 }
 .app-sidebar-help-btn svg {
   width: 24px;
   height: 24px;
+}
+.app-sidebar-credit {
+  color: var(--muted);
+  font-size: 12px;
+  padding-right: 8px;
 }
 
 .sidebar-menu-btn svg {
@@ -2295,7 +2308,7 @@ h1 {
 .gallery-subcategory-title {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px 14px;
+  padding: 10px 24px 14px;
   font-size: 14px;
   font-weight: 600;
   color: var(--muted);

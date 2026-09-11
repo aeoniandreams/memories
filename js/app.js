@@ -727,8 +727,15 @@ async function toggleMessageLike(msgIndex) {
     i === msgIndex ? { ...m, liked: !m.liked } : m
   );
   await updateDoc(doc(db, "cards", currentDetailCardId), { messages: updatedMessages });
-  currentDetailData = { ...currentDetailData, messages: updatedMessages };
-  openDetail(currentDetailCardId, currentDetailData);
+  // 카드 목록(loadedCards)이 들고 있는 것과 같은 객체를 그대로 고쳐서(참조 유지),
+  // 상세보기를 닫았다가 다시 열어도(즉 카드 목록의 이 카드를 다시 클릭해도) 방금
+  // 누른 하트가 되돌아가지 않고 그대로 남아있게 합니다.
+  currentDetailData.messages = updatedMessages;
+  // 여기서 openDetail을 다시 불러 전체를 새로 그리면 스레드가 스크롤 맨 위로
+  // 돌아가버리므로(보던 위치를 잃음), 이 하트 버튼 하나만 직접 토글합니다.
+  const row = detailThread.children[msgIndex];
+  const likeBtn = row && row.querySelector(".message-like-btn");
+  if (likeBtn) likeBtn.classList.toggle("liked", !!updatedMessages[msgIndex].liked);
 }
 
 function renderMessageRow(msg, msgIndex, commentKey, comments) {
