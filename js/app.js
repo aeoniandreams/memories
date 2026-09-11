@@ -191,11 +191,21 @@ const X_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 const ALERT_TRIANGLE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
 const SMILE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" x2="9.01" y1="9" y2="9"/><line x1="15" x2="15.01" y1="9" y2="9"/></svg>`;
 const THUMBS_UP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>`;
+// 아래는 이 사이트 다른 곳에서 이미 쓰이고 있지만 아이콘 삽입 목록엔
+// 없었던 아이콘들을 위해 새로 상수로 뺀 것들입니다(원래 자리엔 그대로
+// 있는 인라인 SVG와 모양이 같습니다).
+const MENU_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>`;
+const BACK_ARROW_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`;
+const IMAGE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`;
+const DIVIDER_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="12" y2="12"/></svg>`;
+const X_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
+const KAKAO_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.74c0 2.72 1.822 5.11 4.573 6.478-.201.75-.727 2.72-.833 3.142-.13.522.19.516.402.375.166-.11 2.638-1.79 3.708-2.52.696.103 1.417.157 2.15.157 5.523 0 10-3.463 10-7.632C22 6.463 17.523 3 12 3Z"/></svg>`;
+const SUMONE_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-10-3.55.04-7.14 5.66-7.5 10-.37 4.43 1.27 9.95 7.5 10z"/></svg>`;
 
 // 아이콘 삽입 팝업에 나열할 목록. 아이콘의 "의미"를 글로 설명하고 싶을 때
-// 쓰라고 만든 기능이라, 앱 안에서 이미 쓰이는 아이콘들(말풍선/커피/와인/
-// 하트/알림종/로그아웃/토글 화살표)을 우선 넣고, 일반적인 문서 작성용
-// 아이콘 몇 개를 추가했습니다.
+// 쓰라고 만든 기능이라, 이 사이트에서 실제로 쓰이는 아이콘을 전부 넣고
+// (코멘트 종류, 헤더/사이드바 아이콘, 섹션 로고 등), 일반적인 문서
+// 작성용 아이콘 몇 개를 더했습니다.
 const APP_INFO_ICON_CHOICES = [
   { id: "message-circle", label: "말풍선", svg: MESSAGE_CIRCLE_ICON_SVG },
   { id: "coffee", label: "커피", svg: COFFEE_ICON_SVG },
@@ -203,6 +213,23 @@ const APP_INFO_ICON_CHOICES = [
   { id: "heart", label: "하트", svg: HEART_ICON_SVG },
   { id: "bell", label: "알림종", svg: BELL_ICON_SVG },
   { id: "log-out", label: "로그아웃", svg: LOG_OUT_ICON_SVG },
+  { id: "message-circle-plus", label: "코멘트 작성", svg: MESSAGE_CIRCLE_PLUS_ICON_SVG },
+  { id: "message-square", label: "말풍선(사각형)", svg: MESSAGE_SQUARE_ICON_SVG },
+  { id: "message-circle-fill", label: "말풍선(채움)", svg: MESSAGE_CIRCLE_BUBBLE_FILL_SVG },
+  { id: "menu", label: "메뉴", svg: MENU_ICON_SVG },
+  { id: "plus", label: "추가", svg: PLUS_ICON_SVG },
+  { id: "pencil", label: "연필(수정)", svg: PENCIL_ICON_SVG },
+  { id: "pin", label: "고정", svg: PIN_ICON_SVG },
+  { id: "grip", label: "드래그 손잡이", svg: GRIP_ICON_SVG },
+  { id: "image", label: "이미지", svg: IMAGE_ICON_SVG },
+  { id: "divider", label: "구분선", svg: DIVIDER_ICON_SVG },
+  { id: "sun", label: "해(라이트 모드)", svg: SUN_ICON_SVG },
+  { id: "moon", label: "달(다크 모드)", svg: MOON_ICON_SVG },
+  { id: "x-logo", label: "X(트위터)", svg: X_LOGO_SVG },
+  { id: "kakao-logo", label: "카카오톡", svg: KAKAO_LOGO_SVG },
+  { id: "sumone-logo", label: "SumOne", svg: SUMONE_LOGO_SVG },
+  { id: "back-arrow", label: "뒤로가기", svg: BACK_ARROW_ICON_SVG },
+  { id: "chevron-left", label: "화살표(왼쪽)", svg: CHEVRON_LEFT_ICON_SVG },
   { id: "chevron-right", label: "화살표(접힘)", svg: CHEVRON_RIGHT_ICON_SVG },
   { id: "chevron-down", label: "화살표(펼침)", svg: CHEVRON_DOWN_ICON_SVG },
   { id: "info", label: "정보", svg: INFO_ICON_SVG },
