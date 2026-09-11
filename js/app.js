@@ -2416,7 +2416,9 @@ function setActiveGallerySubcategory(subId) {
     btn.classList.toggle("selected", btn.dataset.sub === subId);
   });
   const sub = GALLERY_SUBCATEGORIES.find((s) => s.id === subId);
-  gallerySubcategoryTitle.textContent = sub ? sub.name : "";
+  gallerySubcategoryTitle.innerHTML = sub
+    ? `Gallery <span class="gallery-subcategory-title-chevron">${CHEVRON_RIGHT_ICON_SVG}</span> ${sub.name}`
+    : "";
   renderGalleryMasonry();
 }
 

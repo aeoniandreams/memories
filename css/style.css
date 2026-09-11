@@ -1966,7 +1966,7 @@ h1 {
 /* ---------- SumOne 카드 ---------- */
 .sumone-card-title {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0;
   line-height: 1.4;
   white-space: pre-wrap;
@@ -2312,6 +2312,17 @@ h1 {
   font-size: 21px;
   font-weight: 600;
   color: var(--muted);
+}
+.gallery-subcategory-title-chevron {
+  display: inline-flex;
+  vertical-align: -3px;
+  width: 16px;
+  height: 16px;
+  margin: 0 2px;
+}
+.gallery-subcategory-title-chevron svg {
+  width: 100%;
+  height: 100%;
 }
 .reference-masonry {
   display: flex;
