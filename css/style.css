@@ -4,6 +4,8 @@
   --border: #e5e7eb;
   --text: #0f1419;
   --muted: #667085;
+  /* 앱 설명란의 "회색 글씨" 서식 전용. --muted보다 더 옅은 회색입니다. */
+  --muted-pale: #9aa4b2;
   --accent: #1d9bf0;
   --accent-hover: #1a8cd8;
   --danger: #e0245e;
@@ -24,6 +26,7 @@
     --border: #2f3336;
     --text: #e7e9ea;
     --muted: #8b98a5;
+    --muted-pale: #6b7684;
     --accent: #1d9bf0;
     --accent-hover: #4db5f5;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -41,6 +44,7 @@
   --border: #2f3336;
   --text: #e7e9ea;
   --muted: #8b98a5;
+  --muted-pale: #6b7684;
   --accent: #1d9bf0;
   --accent-hover: #4db5f5;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -2151,7 +2155,7 @@ h1 {
   padding: 0;
 }
 .app-info-color-gray {
-  background: var(--muted);
+  background: var(--muted-pale);
 }
 .app-info-color-accent {
   background: var(--accent);
