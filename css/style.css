@@ -400,6 +400,8 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   padding-right: 8px;
+  position: relative;
+  top: 7px;
 }
 
 .sidebar-menu-btn svg {
