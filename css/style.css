@@ -2137,12 +2137,13 @@ h1 {
 .app-info-format-btn:hover {
   border-color: var(--accent);
 }
-/* 토글/이미지/아이콘 삽입 버튼은 svg 아이콘이라 굵게/기울임/취소선(글자)
-   버튼과 달리 아무 크기 지정이 없으면 버튼 안쪽 여백이 거의 없어져서
-   따로 줄여줍니다. */
+/* 토글/이미지/아이콘/구분선 삽입 버튼은 svg 아이콘이라 굵게/기울임/취소선
+   (글자) 버튼과 달리 아무 크기 지정이 없으면 버튼 안쪽 여백이 거의
+   없어져서 따로 줄여줍니다. */
 .app-info-toggle-insert-btn svg,
 .app-info-image-insert-btn svg,
-.app-info-icon-insert-btn svg {
+.app-info-icon-insert-btn svg,
+.app-info-divider-insert-btn svg {
   width: 14px;
   height: 14px;
 }
@@ -2187,6 +2188,13 @@ h1 {
 .app-info-editor img {
   max-width: 100%;
   border-radius: 8px;
+}
+
+.app-info-text hr,
+.app-info-editor hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
 }
 
 /* 토글(접기/펼치기) 블록. 화살표(chevron-right/chevron-down)를 누르면

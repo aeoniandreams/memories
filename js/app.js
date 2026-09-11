@@ -2570,6 +2570,12 @@ document.addEventListener("click", (e) => {
   appInfoIconPicker.hidden = true;
 });
 
+// 구분선 삽입: 글 내용을 단락별로 나눠 보이게 하는 가로줄(<hr>)을 커서
+// 위치에 넣습니다.
+document.querySelector(".app-info-divider-insert-btn").addEventListener("click", () => {
+  insertNodeAtAppInfoCursor(document.createElement("hr"));
+});
+
 // 토글 블록의 화살표 버튼을 누르면 열림/닫힘을 바꿉니다. 보기 화면(app-info-text)과
 // 편집 화면(app-info-editor) 양쪽에서 다 동작해야 해서 이벤트 위임으로 둘 다 처리합니다.
 function handleAppInfoToggleClick(e) {
