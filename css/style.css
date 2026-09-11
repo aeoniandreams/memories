@@ -2043,11 +2043,11 @@ h1 {
 
 /* ---------- 앱 설명 ---------- */
 .app-info-body {
-  padding: 20px;
+  padding: 22px;
 }
 .app-info-text {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 13.5px;
   line-height: 1.6;
   word-break: break-word;
   color: var(--text);
@@ -2175,7 +2175,7 @@ h1 {
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-size: 14.5px;
+  font-size: 13.5px;
   line-height: 1.6;
   overflow-wrap: break-word;
 }
@@ -2206,6 +2206,12 @@ h1 {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+/* 보기 화면에서는 제목을 눌러도 펼쳐지므로 커서로 알려줍니다. 편집
+   화면에서는 제목이 그대로 타이핑해서 고치는 텍스트라 화살표만 눌러야
+   토글되고(js 참고), 커서 모양도 기본값 그대로 둡니다. */
+.app-info-text .app-info-toggle-head {
+  cursor: pointer;
 }
 .app-info-toggle-btn {
   flex-shrink: 0;
