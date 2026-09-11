@@ -2308,8 +2308,8 @@ h1 {
 .gallery-subcategory-title {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 10px 24px 14px;
-  font-size: 14px;
+  padding: 22px 24px 14px;
+  font-size: 21px;
   font-weight: 600;
   color: var(--muted);
 }
