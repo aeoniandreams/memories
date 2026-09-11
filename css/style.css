@@ -2243,6 +2243,261 @@ h1 {
   display: none;
 }
 
+/* ---------- 사이드바 Gallery 카테고리 (헤드 + 펼침/접힘 하위 목록) ---------- */
+.app-sidebar-category-head {
+  justify-content: flex-start;
+}
+.app-sidebar-category-chevron {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.app-sidebar-category-head[aria-expanded="true"] .app-sidebar-category-chevron {
+  transform: rotate(180deg);
+}
+.app-sidebar-sublist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 0 2px 14px;
+}
+.app-sidebar-sublist[hidden] {
+  display: none;
+}
+.app-sidebar-sub-btn {
+  width: 100%;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  padding: 8px 8px 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.app-sidebar-sub-btn.selected {
+  background: var(--accent);
+  color: #fff;
+}
+.app-sidebar-sub-btn:not(.selected):hover {
+  background: var(--border);
+}
+
+/* ---------- Gallery 화면: 마소너리 레이아웃 + 호버(모바일은 탭) 오버레이 ----------
+   aeoniandreams/lookbook의 홈 화면/레퍼런스 토글 레이아웃을 그대로 참고했습니다.
+   컬럼 배치는 CSS가 아니라 JS(js/app.js의 layoutGalleryMasonry)가 담당합니다 —
+   CSS 다단(column) 레이아웃은 이미지를 위→아래로 채워서 읽는 순서(왼쪽 위부터
+   오른쪽으로)가 뒤죽박죽되기 때문에, 각 컬럼에 순서대로 나눠 담는 JS 방식을
+   그대로 가져왔습니다. */
+.gallery-subcategory-title {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.reference-masonry {
+  display: flex;
+  gap: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+}
+.reference-masonry-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.reference-item {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+.reference-item img {
+  width: 100%;
+  display: block;
+  background: var(--border);
+  transition: filter 0.15s ease;
+}
+.reference-comment {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 10px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  background: linear-gradient(to top, rgba(20, 16, 35, 0.75), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.reference-comment:empty {
+  display: none;
+}
+.reference-comment-text {
+  width: 100%;
+}
+.reference-item:hover .reference-comment,
+.reference-item.revealed .reference-comment {
+  opacity: 1;
+}
+.reference-item:hover img,
+.reference-item.revealed img {
+  filter: brightness(0.6);
+}
+
+/* ---------- Gallery 이미지 관리 모달(관리자 전용) ---------- */
+.gallery-manage-body {
+  padding: 20px 22px;
+}
+.gallery-manage-add-btn {
+  width: 100%;
+  margin-bottom: 12px;
+}
+.gallery-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.gallery-manage-empty-hint {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 12px 0;
+}
+.gallery-manage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.gallery-manage-row.dragging {
+  opacity: 0.4;
+}
+.gallery-manage-row.drag-over-top {
+  box-shadow: inset 0 3px 0 0 var(--accent);
+}
+.gallery-manage-row.drag-over-bottom {
+  box-shadow: inset 0 -3px 0 0 var(--accent);
+}
+.gallery-drag-handle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+  color: var(--muted);
+}
+.gallery-drag-handle:active {
+  cursor: grabbing;
+}
+.gallery-drag-handle svg {
+  width: 14px;
+  height: 14px;
+}
+.gallery-manage-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 7px;
+  background: var(--border);
+}
+.gallery-manage-thumb.broken {
+  visibility: hidden;
+}
+.gallery-manage-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gallery-manage-fields input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.gallery-manage-fields input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.gallery-title-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.gallery-title-editable {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.gallery-title-editable:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.gallery-title-editable:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+.gallery-title-bold-btn {
+  flex-shrink: 0;
+  width: 30px;
+  border-radius: 7px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.gallery-title-bold-btn:hover {
+  background: var(--border);
+}
+.gallery-remove-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.gallery-remove-btn:hover {
+  background: var(--border);
+  color: var(--danger);
+}
+.gallery-remove-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* 모바일(휴대폰) 전용 오버라이드. CSS 우선순위가 같은 규칙끼리는 파일에서 더
    나중에 나오는 쪽이 이기기 때문에, 이 블록이 위쪽의 다른 어떤 기본(데스크탑)
    규칙보다도 반드시 뒤에 오도록 파일 맨 끝에 둡니다 (안 그러면 이 미디어 쿼리

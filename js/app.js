@@ -418,6 +418,7 @@ function applyAdminUI() {
   sumoneNewCardBtn.hidden = !isAdmin;
   sumoneDetailEditBtn.hidden = !isAdmin;
   sumoneDetailDeleteBtn.hidden = !isAdmin;
+  galleryManageBtn.hidden = !isAdmin;
 }
 
 loginForm.addEventListener("submit", async (e) => {
@@ -1230,6 +1231,11 @@ function openImageViewer(url) {
 function closeImageViewer() {
   imageViewerModal.hidden = true;
   imageViewerImg.src = "";
+  // 모바일에서 두 번째 탭으로 원본을 열었던 갤러리 항목은, 닫으면 코멘트가
+  // 가려진 처음 모습으로 되돌려놓습니다(aeoniandreams/lookbook의 라이트박스와 같은 동작).
+  document.querySelectorAll(".reference-item.revealed").forEach((el) => {
+    el.classList.remove("revealed");
+  });
 }
 
 imageViewerCloseBtn.addEventListener("click", closeImageViewer);
@@ -2286,11 +2292,12 @@ let currentSumoneDetailId = null;
 let currentSumoneDetailData = null;
 let currentSumoneComments = { user: [], admin: [] }; // 카드 하나당 코멘트 대상이 하나뿐이라 Map이 필요 없음
 
-function switchSection(section) {
+function switchSection(section, gallerySub) {
   currentSection = section;
   appView.hidden = section !== "x";
   kakaoAppView.hidden = section !== "kakao";
   sumoneAppView.hidden = section !== "sumone";
+  galleryAppView.hidden = section !== "gallery";
   sidebarXBtn.classList.toggle("selected", section === "x");
   sidebarKakaoBtn.classList.toggle("selected", section === "kakao");
   sidebarSumoneBtn.classList.toggle("selected", section === "sumone");
@@ -2301,6 +2308,13 @@ function switchSection(section) {
   if (section === "sumone" && !sumoneCardsLoaded) {
     sumoneCardsLoaded = true;
     loadSumoneCards();
+  }
+  if (section === "gallery") {
+    setActiveGallerySubcategory(gallerySub || currentGallerySub);
+    if (!galleryImagesLoaded) {
+      galleryImagesLoaded = true;
+      loadGalleryImages();
+    }
   }
 }
 sidebarXBtn.addEventListener("click", () => {
@@ -2345,6 +2359,362 @@ document.addEventListener(
   },
   true
 );
+
+// ---------- Gallery (사이드바 Gallery 카테고리: 中ゆん / 明) ----------
+// 그림을 전시하기만 하는 화면입니다. 마소너리 배치와 호버(모바일은 탭)
+// 오버레이 동작은 aeoniandreams/lookbook의 홈 화면을 그대로 참고했고,
+// "이동할 링크" 입력란만 뺐습니다(대신 클릭하면 항상 원본 이미지를 봅니다).
+const GALLERY_SUBCATEGORIES = [
+  { id: "jungyun", name: "中ゆん" },
+  { id: "myeong", name: "明" },
+];
+
+const sidebarGalleryHead = document.getElementById("sidebar-gallery-head");
+const sidebarGallerySublist = document.getElementById("sidebar-gallery-sublist");
+const gallerySubBtns = document.querySelectorAll(".app-sidebar-sub-btn");
+const galleryAppView = document.getElementById("gallery-app-view");
+const galleryLogoutBtn = document.getElementById("gallery-logout-btn");
+const gallerySubcategoryTitle = document.getElementById("gallery-subcategory-title");
+const galleryMasonry = document.getElementById("gallery-masonry");
+const galleryEmptyState = document.getElementById("gallery-empty-state");
+const galleryManageBtn = document.getElementById("gallery-manage-btn");
+const galleryManageModal = document.getElementById("gallery-manage-modal");
+const galleryManageCloseBtn = document.getElementById("gallery-manage-close-btn");
+const galleryManageSaveBtn = document.getElementById("gallery-manage-save-btn");
+const galleryManageAddBtn = document.getElementById("gallery-manage-add-btn");
+const galleryManageList = document.getElementById("gallery-manage-list");
+
+galleryLogoutBtn.addEventListener("click", () => signOut(auth));
+
+let currentGallerySub = GALLERY_SUBCATEGORIES[0].id;
+let galleryImagesLoaded = false; // Gallery 섹션에 처음 들어갈 때 전체를 한 번만 불러옵니다
+const galleryImagesBySub = new Map(); // subcategoryId -> [{id, url, title, order}] (order로 정렬됨)
+
+sidebarGalleryHead.addEventListener("click", () => {
+  const willOpen = sidebarGallerySublist.hidden;
+  sidebarGallerySublist.hidden = !willOpen;
+  sidebarGalleryHead.setAttribute("aria-expanded", String(willOpen));
+});
+
+gallerySubBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    switchSection("gallery", btn.dataset.sub);
+    closeSidebar();
+  });
+});
+
+function setActiveGallerySubcategory(subId) {
+  currentGallerySub = subId;
+  gallerySubBtns.forEach((btn) => {
+    btn.classList.toggle("selected", btn.dataset.sub === subId);
+  });
+  const sub = GALLERY_SUBCATEGORIES.find((s) => s.id === subId);
+  gallerySubcategoryTitle.textContent = sub ? sub.name : "";
+  renderGalleryMasonry();
+}
+
+// 컬럼 수/탭-펼침 기준(760px)은 lookbook 레이아웃을 그대로 따온 것이라, 이
+// 앱의 다른 기능들이 쓰는 반응형 기준(예: 480px)과는 별개입니다.
+function galleryMasonryIsMobile() {
+  return window.matchMedia("(max-width: 760px)").matches;
+}
+function galleryMasonryColumnCount() {
+  return galleryMasonryIsMobile() ? 2 : 3;
+}
+
+function galleryItemHTML(item) {
+  const hasTitle = !!(item.title && item.title.trim());
+  return `<div class="reference-item" data-id="${escapeForAttr(item.id)}">
+    <img src="${escapeForAttr(safeImgSrc(item.url))}" alt="" loading="lazy">
+    ${hasTitle ? `<div class="reference-comment"><div class="reference-comment-text">${item.title}</div></div>` : ""}
+  </div>`;
+}
+
+function layoutGalleryMasonry() {
+  const items = Array.from(galleryMasonry.querySelectorAll(".reference-item"));
+  if (!items.length) {
+    galleryMasonry.innerHTML = "";
+    return;
+  }
+  const columnCount = galleryMasonryColumnCount();
+  const cols = Array.from({ length: columnCount }, () => {
+    const col = document.createElement("div");
+    col.className = "reference-masonry-col";
+    return col;
+  });
+  items.forEach((item, i) => cols[i % columnCount].appendChild(item));
+  galleryMasonry.innerHTML = "";
+  cols.forEach((col) => galleryMasonry.appendChild(col));
+}
+
+function renderGalleryMasonry() {
+  const images = (galleryImagesBySub.get(currentGallerySub) || []).filter((img) => safeImgSrc(img.url));
+  galleryEmptyState.hidden = images.length > 0;
+  galleryMasonry.innerHTML = images.map(galleryItemHTML).join("");
+  layoutGalleryMasonry();
+}
+
+let galleryMasonryResizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(galleryMasonryResizeTimer);
+  galleryMasonryResizeTimer = setTimeout(() => {
+    if (!galleryAppView.hidden) layoutGalleryMasonry();
+  }, 150);
+});
+
+galleryMasonry.addEventListener("click", (e) => {
+  const item = e.target.closest(".reference-item");
+  if (!item) return;
+  // 모바일에서는 첫 탭에 코멘트(제목) 오버레이만 보여주고, 이미 펼쳐진
+  // 상태에서 한 번 더 탭해야 원본이 뜹니다. 데스크탑은 호버로 이미 보이는
+  // 상태라 한 번 클릭으로 바로 엽니다(lookbook의 홈 화면과 같은 규칙).
+  const isMobile = galleryMasonryIsMobile();
+  const hasComment = !!item.querySelector(".reference-comment");
+  if (isMobile && hasComment && !item.classList.contains("revealed")) {
+    item.classList.add("revealed");
+    return;
+  }
+  const img = item.querySelector("img");
+  if (img) openImageViewer(img.src);
+});
+
+async function loadGalleryImages() {
+  try {
+    const snapshot = await getDocs(collection(db, "galleryImages"));
+    const bySub = new Map();
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const subId = data.subcategoryId;
+      if (!bySub.has(subId)) bySub.set(subId, []);
+      bySub.get(subId).push({
+        id: docSnap.id,
+        url: data.url || "",
+        title: data.title || "",
+        order: typeof data.order === "number" ? data.order : 0,
+      });
+    });
+    bySub.forEach((list, subId) => {
+      list.sort((a, b) => a.order - b.order);
+      galleryImagesBySub.set(subId, list);
+    });
+  } catch (e) {
+    console.error("갤러리 이미지를 불러오지 못했습니다.", e);
+  }
+  renderGalleryMasonry();
+}
+
+// 관리 모달의 제목 입력칸은 굵게/줄바꿈만 허용합니다(다른 서식은 저장하지
+// 않습니다). contenteditable에서 엔터를 치면 브라우저에 따라 <br> 대신
+// <div>로 줄을 감쌀 수 있어서, 그런 경우도 줄바꿈으로 봐서 처리합니다.
+function stripToBoldOnly(html) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html;
+  function walk(node) {
+    const fragment = document.createDocumentFragment();
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        fragment.appendChild(document.createTextNode(child.textContent));
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName.toLowerCase();
+        if (tag === "br") {
+          fragment.appendChild(document.createElement("br"));
+        } else if (tag === "b" || tag === "strong") {
+          const b = document.createElement("b");
+          b.appendChild(walk(child));
+          fragment.appendChild(b);
+        } else if (tag === "div" || tag === "p") {
+          if (fragment.childNodes.length > 0) fragment.appendChild(document.createElement("br"));
+          fragment.appendChild(walk(child));
+        } else {
+          fragment.appendChild(walk(child));
+        }
+      }
+    });
+    return fragment;
+  }
+  const out = document.createElement("div");
+  out.appendChild(walk(wrapper));
+  return out.innerHTML;
+}
+
+let workingGalleryImages = [];
+let galleryManageOriginalIds = [];
+let galleryManageSnapshot = null;
+
+function openGalleryManageModal() {
+  const existing = galleryImagesBySub.get(currentGallerySub) || [];
+  workingGalleryImages = existing.map((img) => ({ ...img }));
+  galleryManageOriginalIds = existing.map((img) => img.id);
+  renderGalleryManageList();
+  galleryManageModal.hidden = false;
+  galleryManageSnapshot = JSON.stringify(workingGalleryImages);
+}
+function isGalleryManageDirty() {
+  return galleryManageSnapshot !== JSON.stringify(workingGalleryImages);
+}
+function closeGalleryManageModal() {
+  galleryManageModal.hidden = true;
+  workingGalleryImages = [];
+}
+function tryCloseGalleryManageModal() {
+  if (isGalleryManageDirty() && !confirm("저장하지 않은 내용이 있습니다. 닫으시겠습니까?")) return;
+  closeGalleryManageModal();
+}
+galleryManageBtn.addEventListener("click", openGalleryManageModal);
+galleryManageCloseBtn.addEventListener("click", tryCloseGalleryManageModal);
+galleryManageModal.addEventListener("click", (e) => {
+  if (e.target === galleryManageModal) tryCloseGalleryManageModal();
+});
+
+// 드래그로 순서 바꾸기(lookbook의 홈 이미지 관리 목록과 같은 방식)
+let dragGalleryImageId = null;
+
+function reorderGalleryImage(fromId, toId, after) {
+  const fromIndex = workingGalleryImages.findIndex((i) => i.id === fromId);
+  if (fromIndex === -1) return;
+  const [moved] = workingGalleryImages.splice(fromIndex, 1);
+  let toIndex = workingGalleryImages.findIndex((i) => i.id === toId);
+  if (toIndex === -1) {
+    workingGalleryImages.push(moved);
+    return;
+  }
+  if (after) toIndex += 1;
+  workingGalleryImages.splice(toIndex, 0, moved);
+}
+
+function buildGalleryManageRow(item) {
+  const row = document.createElement("div");
+  row.className = "gallery-manage-row";
+  row.innerHTML = `
+    <span class="gallery-drag-handle" draggable="true" title="드래그해서 순서 바꾸기">${GRIP_ICON_SVG}</span>
+    <img class="gallery-manage-thumb" src="${escapeForAttr(item.url || "")}" alt="" onerror="this.classList.add('broken')">
+    <div class="gallery-manage-fields">
+      <input type="url" class="gallery-url-input" placeholder="이미지 주소(URL)" value="${escapeForAttr(item.url || "")}">
+      <div class="gallery-title-row">
+        <button type="button" class="gallery-title-bold-btn" title="굵게"><b>B</b></button>
+        <div class="gallery-title-editable" contenteditable="true" data-placeholder="제목 (호버/탭 시 표시, 엔터로 줄바꿈 가능)"></div>
+      </div>
+    </div>
+    <button type="button" class="gallery-remove-btn" title="삭제">${X_ICON_SVG}</button>
+  `;
+  const thumb = row.querySelector(".gallery-manage-thumb");
+  row.querySelector(".gallery-url-input").addEventListener("input", (e) => {
+    item.url = e.target.value;
+    thumb.classList.remove("broken");
+    thumb.src = item.url;
+  });
+
+  const titleEditable = row.querySelector(".gallery-title-editable");
+  titleEditable.innerHTML = item.title || "";
+  titleEditable.addEventListener("input", () => {
+    item.title = titleEditable.innerHTML;
+  });
+  titleEditable.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, text);
+  });
+  const boldBtn = row.querySelector(".gallery-title-bold-btn");
+  boldBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  boldBtn.addEventListener("click", () => {
+    titleEditable.focus();
+    document.execCommand("bold", false, null);
+    titleEditable.dispatchEvent(new Event("input"));
+  });
+
+  row.querySelector(".gallery-remove-btn").addEventListener("click", () => {
+    workingGalleryImages = workingGalleryImages.filter((i) => i.id !== item.id);
+    renderGalleryManageList();
+  });
+
+  const handle = row.querySelector(".gallery-drag-handle");
+  handle.addEventListener("dragstart", (e) => {
+    dragGalleryImageId = item.id;
+    row.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", item.id);
+  });
+  handle.addEventListener("dragend", () => {
+    dragGalleryImageId = null;
+    galleryManageList.querySelectorAll(".gallery-manage-row").forEach((r) => {
+      r.classList.remove("dragging", "drag-over-top", "drag-over-bottom");
+    });
+  });
+  row.addEventListener("dragover", (e) => {
+    if (dragGalleryImageId === null) return;
+    e.preventDefault();
+    const isAfter = e.clientY - row.getBoundingClientRect().top > row.offsetHeight / 2;
+    row.classList.toggle("drag-over-top", !isAfter);
+    row.classList.toggle("drag-over-bottom", isAfter);
+  });
+  row.addEventListener("dragleave", () => {
+    row.classList.remove("drag-over-top", "drag-over-bottom");
+  });
+  row.addEventListener("drop", (e) => {
+    e.preventDefault();
+    row.classList.remove("drag-over-top", "drag-over-bottom");
+    if (dragGalleryImageId === null || dragGalleryImageId === item.id) return;
+    const isAfter = e.clientY - row.getBoundingClientRect().top > row.offsetHeight / 2;
+    reorderGalleryImage(dragGalleryImageId, item.id, isAfter);
+    dragGalleryImageId = null;
+    renderGalleryManageList();
+  });
+
+  return row;
+}
+
+function renderGalleryManageList() {
+  galleryManageList.innerHTML = "";
+  if (!workingGalleryImages.length) {
+    galleryManageList.innerHTML = `<p class="gallery-manage-empty-hint">아직 추가된 이미지가 없어요.</p>`;
+  } else {
+    workingGalleryImages.forEach((item) => galleryManageList.appendChild(buildGalleryManageRow(item)));
+  }
+}
+
+galleryManageAddBtn.addEventListener("click", () => {
+  workingGalleryImages.push({ id: "new_" + genCommentId(), url: "", title: "" });
+  renderGalleryManageList();
+});
+
+galleryManageSaveBtn.addEventListener("click", async () => {
+  galleryManageSaveBtn.disabled = true;
+  try {
+    const items = workingGalleryImages
+      .filter((it) => it.url && it.url.trim())
+      .map((it, index) => ({
+        id: it.id,
+        url: it.url.trim(),
+        title: stripToBoldOnly(it.title || ""),
+        order: index,
+      }));
+    const finalExistingIds = new Set(items.filter((it) => !it.id.startsWith("new_")).map((it) => it.id));
+    const removedIds = galleryManageOriginalIds.filter((id) => !finalExistingIds.has(id));
+    for (const id of removedIds) {
+      await deleteDoc(doc(db, "galleryImages", id));
+    }
+    for (const item of items) {
+      const payload = {
+        subcategoryId: currentGallerySub,
+        url: item.url,
+        title: item.title,
+        order: item.order,
+      };
+      if (item.id.startsWith("new_")) {
+        await addDoc(collection(db, "galleryImages"), payload);
+      } else {
+        await setDoc(doc(db, "galleryImages", item.id), payload);
+      }
+    }
+    await loadGalleryImages();
+    closeGalleryManageModal();
+  } catch (e) {
+    console.error("갤러리 이미지를 저장하지 못했습니다.", e);
+    alert("저장에 실패했습니다. 네트워크를 확인해주세요.");
+  } finally {
+    galleryManageSaveBtn.disabled = false;
+  }
+});
 
 // ---------- 앱 설명 (사이드바 하단 물음표 아이콘) ----------
 // 로그인한 사람은 누구나 볼 수 있고, 관리자만 고칠 수 있습니다. 문서

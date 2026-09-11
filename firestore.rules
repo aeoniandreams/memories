@@ -93,6 +93,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 갤러리 이미지(사이드바 Gallery 카테고리). 로그인한 사람은 누구나 볼 수
+    // 있고, 관리자만 추가/수정/삭제할 수 있습니다.
+    match /galleryImages/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
     // 알림창은 collectionGroup(전체 카드를 통틀어 tweetComments/kakaoComments/
     // sumoneComments를 한 번에 조회)으로 코멘트를 모아 옵니다. 그런데 위의
     // match /cards/{cardId} { match /tweetComments/{messageId} {...} } 같은
