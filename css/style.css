@@ -610,6 +610,75 @@ h1 {
   margin: 0 auto;
 }
 
+/* 태그 필터 드롭다운. aeoniandreams/lookbook의 커스텀 정렬 드롭다운과 같은
+   구조(버튼 + 절대배치 목록)를 이 사이트 색상 변수로 옮겨왔습니다. 별도
+   미디어 쿼리 없이 모바일/데스크탑에 동일하게 적용됩니다. */
+.tag-filter-dropdown {
+  position: relative;
+}
+.tag-filter-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tag-filter-dropdown-btn:hover {
+  border-color: var(--accent);
+}
+.tag-filter-dropdown.open .tag-filter-dropdown-btn {
+  border-color: var(--accent);
+}
+.tag-filter-dropdown-chevron {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.tag-filter-dropdown.open .tag-filter-dropdown-chevron {
+  transform: rotate(180deg);
+}
+.tag-filter-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 130px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+.tag-filter-dropdown-menu.hidden {
+  display: none;
+}
+.tag-filter-dropdown-option {
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+.tag-filter-dropdown-option:hover {
+  background: var(--border);
+}
+.tag-filter-dropdown-option.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
 /* ---------- 카드 그리드 ---------- */
 .card-grid {
   display: grid;

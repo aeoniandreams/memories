@@ -191,7 +191,13 @@
   </header>
 
   <div class="toolbar">
-    <select id="tag-filter-select" class="btn-secondary"></select>
+    <div class="tag-filter-dropdown" id="tag-filter-dropdown">
+      <button type="button" class="tag-filter-dropdown-btn" id="tag-filter-dropdown-btn" aria-haspopup="listbox" aria-expanded="false">
+        <span class="tag-filter-dropdown-label" id="tag-filter-dropdown-label">전체 태그</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tag-filter-dropdown-chevron"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <ul class="tag-filter-dropdown-menu hidden" id="tag-filter-dropdown-menu" role="listbox"></ul>
+    </div>
     <button id="sort-toggle-btn" class="btn-secondary" type="button">최신순 ▾</button>
   </div>
 

@@ -70,7 +70,10 @@ const sumoneAppView = document.getElementById("sumone-app-view");
 const sumoneLogoutBtn = document.getElementById("sumone-logout-btn");
 
 const sortToggleBtn = document.getElementById("sort-toggle-btn");
-const tagFilterSelect = document.getElementById("tag-filter-select");
+const tagFilterDropdown = document.getElementById("tag-filter-dropdown");
+const tagFilterDropdownBtn = document.getElementById("tag-filter-dropdown-btn");
+const tagFilterDropdownLabel = document.getElementById("tag-filter-dropdown-label");
+const tagFilterDropdownMenu = document.getElementById("tag-filter-dropdown-menu");
 const cardGrid = document.getElementById("card-grid");
 const emptyState = document.getElementById("empty-state");
 
@@ -420,31 +423,67 @@ async function loadCards() {
   renderCardGrid();
 }
 
-// 필터 드롭다운은 TAG_OPTIONS 고정 목록을 그대로 보여줍니다. 페이지 로드 시 한 번만 채우면 됩니다.
+// 태그 필터: lookbook(aeoniandreams/lookbook)의 커스텀 정렬 드롭다운과 같은
+// 방식(버튼 + 절대배치 목록, 클릭으로 열고 닫음)을 이 사이트 색상에 맞춰
+// 옮겨왔습니다. TAG_OPTIONS 고정 목록을 그대로 보여줍니다.
 function renderTagFilterOptions() {
-  tagFilterSelect.innerHTML = "";
-  const allOpt = document.createElement("option");
-  allOpt.value = "";
-  allOpt.textContent = "전체 태그";
-  tagFilterSelect.appendChild(allOpt);
-  TAG_OPTIONS.forEach((t) => {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    tagFilterSelect.appendChild(opt);
+  tagFilterDropdownMenu.innerHTML = "";
+  const options = [
+    { value: "", label: "전체 태그" },
+    ...TAG_OPTIONS.map((t) => ({ value: t, label: t })),
+    { value: NO_TAG_FILTER_VALUE, label: "태그 없음" },
+  ];
+  options.forEach((opt) => {
+    const li = document.createElement("li");
+    li.className = "tag-filter-dropdown-option";
+    li.textContent = opt.label;
+    li.dataset.value = opt.value;
+    li.setAttribute("role", "option");
+    const isActive = opt.value === filterTag;
+    li.classList.toggle("active", isActive);
+    li.setAttribute("aria-selected", String(isActive));
+    li.addEventListener("click", () => {
+      filterTag = opt.value;
+      tagFilterDropdownLabel.textContent = opt.label;
+      tagFilterDropdownMenu.querySelectorAll(".tag-filter-dropdown-option").forEach((o) => {
+        o.classList.toggle("active", o === li);
+        o.setAttribute("aria-selected", String(o === li));
+      });
+      closeTagFilterDropdown();
+      renderCardGrid();
+    });
+    tagFilterDropdownMenu.appendChild(li);
   });
-  const noTagOpt = document.createElement("option");
-  noTagOpt.value = NO_TAG_FILTER_VALUE;
-  noTagOpt.textContent = "태그 없음";
-  tagFilterSelect.appendChild(noTagOpt);
-  tagFilterSelect.value = filterTag;
+  const current = options.find((o) => o.value === filterTag);
+  tagFilterDropdownLabel.textContent = current ? current.label : "전체 태그";
 }
 renderTagFilterOptions();
 
-tagFilterSelect.addEventListener("change", () => {
-  filterTag = tagFilterSelect.value;
-  renderCardGrid();
+function closeTagFilterDropdown() {
+  tagFilterDropdownMenu.classList.add("hidden");
+  tagFilterDropdown.classList.remove("open");
+  tagFilterDropdownBtn.setAttribute("aria-expanded", "false");
+}
+tagFilterDropdownBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const willOpen = tagFilterDropdownMenu.classList.contains("hidden");
+  tagFilterDropdownMenu.classList.toggle("hidden", !willOpen);
+  tagFilterDropdown.classList.toggle("open", willOpen);
+  tagFilterDropdownBtn.setAttribute("aria-expanded", String(willOpen));
 });
+// 캡처 단계 + stopPropagation: 사이드바 바깥 클릭과 같은 이유로, 열려있는
+// 채로 바깥(카드 등)을 클릭하면 그 클릭이 카드까지 도달해 카드가 함께
+// 열리는 걸 막습니다.
+document.addEventListener(
+  "click",
+  (e) => {
+    if (tagFilterDropdownMenu.classList.contains("hidden")) return;
+    if (tagFilterDropdown.contains(e.target)) return;
+    e.stopPropagation();
+    closeTagFilterDropdown();
+  },
+  true
+);
 
 function renderCardGrid() {
   cardGrid.innerHTML = "";
