@@ -2464,18 +2464,44 @@ function toRgbColorString(colorValue) {
   document.body.removeChild(el);
   return rgb;
 }
+// 삽입된 아이콘(.app-info-inline-icon, contenteditable="false")은 텍스트가
+// 없는 노드라 execCommand("foreColor")가 손을 못 대서, 선택 범위 안에 있는
+// 아이콘은 style.color를 직접 넣고 빼는 식으로 따로 처리합니다.
+function getIconsInAppInfoRange(range) {
+  if (!range) return [];
+  return Array.from(appInfoEditor.querySelectorAll(".app-info-inline-icon")).filter((icon) => range.intersectsNode(icon));
+}
 document.querySelectorAll(".app-info-color-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     restoreAppInfoSelection();
     const color = getComputedStyle(document.documentElement).getPropertyValue(btn.dataset.colorVar).trim();
-    const currentColor = document.queryCommandValue("foreColor");
-    const isSameColor = currentColor && toRgbColorString(currentColor) === toRgbColorString(color);
-    if (isSameColor) {
-      const defaultColor = getComputedStyle(document.documentElement).getPropertyValue("--text").trim();
-      document.execCommand("foreColor", false, defaultColor);
-    } else {
-      document.execCommand("foreColor", false, color);
+    const sel = window.getSelection();
+    const range = sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+
+    // execCommand가 실행되는 동안 범위 안 아이콘의 style 속성을 건드려(지워)
+    // 버리는 경우가 있어서, 목표 색은 미리 계산해두고 execCommand가 끝난
+    // 뒤에 마지막으로 다시 적용합니다.
+    const iconTargets = getIconsInAppInfoRange(range).map((icon) => {
+      const isSameIconColor = icon.style.color && toRgbColorString(icon.style.color) === toRgbColorString(color);
+      return { icon, value: isSameIconColor ? "" : color };
+    });
+
+    // 선택 범위 안에 실제 글자가 있을 때만 execCommand를 실행합니다
+    // (아이콘만 선택돼 있으면 텍스트가 없어서 실행해도 아무 효과가 없음).
+    if (range && range.toString().length > 0) {
+      const currentColor = document.queryCommandValue("foreColor");
+      const isSameColor = currentColor && toRgbColorString(currentColor) === toRgbColorString(color);
+      if (isSameColor) {
+        const defaultColor = getComputedStyle(document.documentElement).getPropertyValue("--text").trim();
+        document.execCommand("foreColor", false, defaultColor);
+      } else {
+        document.execCommand("foreColor", false, color);
+      }
     }
+
+    iconTargets.forEach(({ icon, value }) => {
+      icon.style.color = value;
+    });
   });
 });
 
@@ -2576,19 +2602,33 @@ document.querySelector(".app-info-divider-insert-btn").addEventListener("click",
   insertNodeAtAppInfoCursor(document.createElement("hr"));
 });
 
-// 토글 블록의 화살표 버튼을 누르면 열림/닫힘을 바꿉니다. 보기 화면(app-info-text)과
-// 편집 화면(app-info-editor) 양쪽에서 다 동작해야 해서 이벤트 위임으로 둘 다 처리합니다.
-function handleAppInfoToggleClick(e) {
-  const btn = e.target.closest(".app-info-toggle-btn");
-  if (!btn) return;
-  const block = btn.closest(".app-info-toggle");
-  if (!block) return;
+// 토글 블록을 열고 닫습니다.
+function toggleAppInfoBlock(block) {
+  const btn = block.querySelector(".app-info-toggle-btn");
   const wasOpen = block.dataset.open !== "false";
   block.dataset.open = wasOpen ? "false" : "true";
   btn.innerHTML = wasOpen ? CHEVRON_RIGHT_ICON_SVG : CHEVRON_DOWN_ICON_SVG;
 }
-appInfoText.addEventListener("click", handleAppInfoToggleClick);
-appInfoEditor.addEventListener("click", handleAppInfoToggleClick);
+// 보기 화면(app-info-text)에서는 화살표뿐 아니라 제목을 눌러도 펼쳐지도록
+// .app-info-toggle-head(화살표+제목을 함께 감싸는 영역) 전체를 클릭 대상으로
+// 잡습니다. 편집 화면(app-info-editor)에서는 제목이 그대로 타이핑해서 고칠
+// 수 있는 텍스트라, 제목을 눌렀을 때는 커서만 놓이게 두고 화살표를 눌렀을
+// 때만 토글되게 합니다(안 그러면 제목을 고치려고 클릭할 때마다 접혔다
+// 펼쳐졌다 해서 불편함).
+appInfoText.addEventListener("click", (e) => {
+  const head = e.target.closest(".app-info-toggle-head");
+  if (!head) return;
+  const block = head.closest(".app-info-toggle");
+  if (!block) return;
+  toggleAppInfoBlock(block);
+});
+appInfoEditor.addEventListener("click", (e) => {
+  const btn = e.target.closest(".app-info-toggle-btn");
+  if (!btn) return;
+  const block = btn.closest(".app-info-toggle");
+  if (!block) return;
+  toggleAppInfoBlock(block);
+});
 
 appInfoSaveBtn.addEventListener("click", async () => {
   const content = stripAppInfoBackgroundStyles(appInfoEditor.innerHTML.trim());
