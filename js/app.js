@@ -2339,6 +2339,22 @@ const appInfoEditor = document.getElementById("app-info-editor");
 // 저장되기 때문입니다.
 let appInfoLoadedContent = "";
 
+// 다른 곳(웹페이지, 문서 등)에서 복사한 내용을 붙여넣으면 브라우저가 배경색
+// 같은 서식까지 같이 가져오는데, 이 앱은 글자색 3종 외의 서식은 지원하지
+// 않아서 배경색이 지워지지 않고 계속 남는 문제가 있었습니다. 저장된 내용을
+// 불러올 때마다 남아있는 background(-color) 인라인 스타일을 지워서, 예전에
+// 이미 붙여넣기로 생긴 배경도 다음에 열 때 사라지게 합니다.
+function stripAppInfoBackgroundStyles(html) {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html;
+  wrapper.querySelectorAll("[style]").forEach((el) => {
+    el.style.removeProperty("background");
+    el.style.removeProperty("background-color");
+    if (!el.getAttribute("style")) el.removeAttribute("style");
+  });
+  return wrapper.innerHTML;
+}
+
 async function openAppInfo() {
   appInfoModal.hidden = false;
   appInfoEditBtn.hidden = !isAdmin;
@@ -2349,7 +2365,8 @@ async function openAppInfo() {
   appInfoText.textContent = "불러오는 중...";
   try {
     const snap = await getDoc(doc(db, "appInfo", "main"));
-    appInfoLoadedContent = snap.exists() ? snap.data().content || "" : "";
+    const rawContent = snap.exists() ? snap.data().content || "" : "";
+    appInfoLoadedContent = stripAppInfoBackgroundStyles(rawContent);
     appInfoText.innerHTML = appInfoLoadedContent;
   } catch (e) {
     appInfoText.textContent = "설명을 불러오지 못했습니다.";
@@ -2412,6 +2429,14 @@ function restoreAppInfoSelection() {
     sel.addRange(savedAppInfoRange);
   }
 }
+// 다른 곳에서 복사한 서식(특히 배경색)이 같이 딸려 들어오지 않도록, 붙여넣기는
+// 항상 텍스트만 가져오게 합니다. 글자색/굵게 등은 이 창의 서식 버튼으로만
+// 적용합니다.
+appInfoEditor.addEventListener("paste", (e) => {
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+  document.execCommand("insertText", false, text);
+});
 document.querySelectorAll(".app-info-format-btn, .app-info-color-btn").forEach((btn) => {
   btn.addEventListener("mousedown", (e) => {
     captureAppInfoSelection();
@@ -2560,7 +2585,7 @@ appInfoText.addEventListener("click", handleAppInfoToggleClick);
 appInfoEditor.addEventListener("click", handleAppInfoToggleClick);
 
 appInfoSaveBtn.addEventListener("click", async () => {
-  const content = appInfoEditor.innerHTML.trim();
+  const content = stripAppInfoBackgroundStyles(appInfoEditor.innerHTML.trim());
   try {
     await setDoc(doc(db, "appInfo", "main"), { content, updatedAt: serverTimestamp() }, { merge: true });
     appInfoLoadedContent = content;
