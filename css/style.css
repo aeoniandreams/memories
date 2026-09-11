@@ -2331,7 +2331,7 @@ h1 {
   gap: 10px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px 48px;
+  padding: 5px 24px 48px;
 }
 .reference-masonry-col {
   flex: 1 1 0;
