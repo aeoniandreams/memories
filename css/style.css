@@ -401,7 +401,7 @@ h1 {
   font-size: 12px;
   padding-right: 8px;
   position: relative;
-  top: 7px;
+  top: 3px;
 }
 
 .sidebar-menu-btn svg {
@@ -2637,6 +2637,12 @@ h1 {
   #new-card-btn,
   #kakao-new-card-btn,
   #sumone-new-card-btn {
+    display: none;
+  }
+
+  /* "이미지 관리" 버튼(관리자만 보임)은 모바일에서 글자를 빼고 아이콘만
+     남깁니다(버튼 자체는 그대로 둡니다 — 위 +버튼들처럼 아예 숨기는 게 아님). */
+  #gallery-manage-btn .btn-label {
     display: none;
   }
 
