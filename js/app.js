@@ -2263,8 +2263,15 @@ const kakaoEditSaveBtn = document.getElementById("kakao-edit-save-btn");
 const kakaoEditRows = document.getElementById("kakao-edit-rows");
 
 const sumoneNewCardBtn = document.getElementById("sumone-new-card-btn");
+const sumoneSortToggleBtn = document.getElementById("sumone-sort-toggle-btn");
 const sumoneCardGrid = document.getElementById("sumone-card-grid");
 const sumoneEmptyState = document.getElementById("sumone-empty-state");
+let sumoneSortDirection = "desc"; // "desc" = 최신순, "asc" = 오래된순
+sumoneSortToggleBtn.addEventListener("click", () => {
+  sumoneSortDirection = sumoneSortDirection === "desc" ? "asc" : "desc";
+  sumoneSortToggleBtn.textContent = sumoneSortDirection === "desc" ? "최신순 ▾" : "오래된순 ▾";
+  renderSumoneCardGrid();
+});
 
 const sumoneFormModal = document.getElementById("sumone-form-modal");
 const sumoneFormCloseBtn = document.getElementById("sumone-form-close-btn");
@@ -3893,7 +3900,13 @@ function renderSumoneCardGrid() {
   }
   sumoneEmptyState.hidden = true;
 
-  loadedSumoneCards.forEach(({ id, data }) => {
+  const sorted = [...loadedSumoneCards].sort((a, b) => {
+    const aSort = a.data.dateSort || "";
+    const bSort = b.data.dateSort || "";
+    return sumoneSortDirection === "asc" ? aSort.localeCompare(bSort) : bSort.localeCompare(aSort);
+  });
+
+  sorted.forEach(({ id, data }) => {
     const card = document.createElement("button");
     card.type = "button";
     card.className = "card";
