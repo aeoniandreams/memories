@@ -2226,7 +2226,7 @@ h1 {
   background: transparent;
   border: none;
   padding: 0;
-  color: var(--text);
+  color: var(--accent);
   cursor: pointer;
 }
 .app-info-toggle-btn svg {
