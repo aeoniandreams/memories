@@ -2391,6 +2391,14 @@ async function openAppInfo() {
     const rawContent = snap.exists() ? snap.data().content || "" : "";
     appInfoLoadedContent = stripAppInfoBackgroundStyles(rawContent);
     appInfoText.innerHTML = appInfoLoadedContent;
+    // 저장된 상태(열림/닫힘)와 상관없이, 보기 화면을 열 때마다 토글은 항상
+    // 닫힌 채로 시작합니다. 저장된 원본(appInfoLoadedContent)은 그대로 두기
+    // 때문에 수정 모드로 들어가면 저장했던 상태 그대로 보입니다.
+    appInfoText.querySelectorAll(".app-info-toggle").forEach((block) => {
+      block.dataset.open = "false";
+      const btn = block.querySelector(".app-info-toggle-btn");
+      if (btn) btn.innerHTML = CHEVRON_RIGHT_ICON_SVG;
+    });
   } catch (e) {
     appInfoText.textContent = "설명을 불러오지 못했습니다.";
     console.error("앱 설명을 불러오지 못했습니다.", e);
