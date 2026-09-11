@@ -2074,7 +2074,7 @@ h1 {
   position: absolute;
   z-index: 20;
   display: grid;
-  grid-template-columns: repeat(4, 32px);
+  grid-template-columns: repeat(6, 32px);
   gap: 4px;
   padding: 6px;
   background: var(--surface);

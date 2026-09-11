@@ -197,7 +197,6 @@ const THUMBS_UP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0
 const MENU_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg>`;
 const BACK_ARROW_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>`;
 const IMAGE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`;
-const DIVIDER_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="12" y2="12"/></svg>`;
 const X_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`;
 const KAKAO_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C6.477 3 2 6.463 2 10.74c0 2.72 1.822 5.11 4.573 6.478-.201.75-.727 2.72-.833 3.142-.13.522.19.516.402.375.166-.11 2.638-1.79 3.708-2.52.696.103 1.417.157 2.15.157 5.523 0 10-3.463 10-7.632C22 6.463 17.523 3 12 3Z"/></svg>`;
 const SUMONE_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c6.23-.05 7.87-5.57 7.5-10-.36-4.34-3.95-9.96-7.5-10-3.55.04-7.14 5.66-7.5 10-.37 4.43 1.27 9.95 7.5 10z"/></svg>`;
@@ -214,15 +213,12 @@ const APP_INFO_ICON_CHOICES = [
   { id: "bell", label: "알림종", svg: BELL_ICON_SVG },
   { id: "log-out", label: "로그아웃", svg: LOG_OUT_ICON_SVG },
   { id: "message-circle-plus", label: "코멘트 작성", svg: MESSAGE_CIRCLE_PLUS_ICON_SVG },
-  { id: "message-square", label: "말풍선(사각형)", svg: MESSAGE_SQUARE_ICON_SVG },
-  { id: "message-circle-fill", label: "말풍선(채움)", svg: MESSAGE_CIRCLE_BUBBLE_FILL_SVG },
   { id: "menu", label: "메뉴", svg: MENU_ICON_SVG },
   { id: "plus", label: "추가", svg: PLUS_ICON_SVG },
   { id: "pencil", label: "연필(수정)", svg: PENCIL_ICON_SVG },
   { id: "pin", label: "고정", svg: PIN_ICON_SVG },
   { id: "grip", label: "드래그 손잡이", svg: GRIP_ICON_SVG },
   { id: "image", label: "이미지", svg: IMAGE_ICON_SVG },
-  { id: "divider", label: "구분선", svg: DIVIDER_ICON_SVG },
   { id: "sun", label: "해(라이트 모드)", svg: SUN_ICON_SVG },
   { id: "moon", label: "달(다크 모드)", svg: MOON_ICON_SVG },
   { id: "x-logo", label: "X(트위터)", svg: X_LOGO_SVG },
