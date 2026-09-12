@@ -4632,3 +4632,46 @@ document.addEventListener("click", (e) => {
   if (Array.from(notifBellBtns).some((b) => b.contains(e.target))) return;
   closeNotifPanel();
 });
+
+// ---------- 모바일 코멘트 바텀시트: 시트 바깥(어두운 배경)에서 뒤 대화창 스크롤 ----------
+// .tweet-comment-panel(트윗/카카오/SumOne 코멘트, 이미지 코멘트 공용)은 모바일에서
+// position:fixed로 화면 전체를 덮는 바텀시트라, 그냥 두면 시트 카드 바깥(어두운
+// 배경) 부분에서 손가락을 움직여도 뒤에 있는 대화창이 스크롤되지 않습니다. 시트
+// 카드 자신(.tweet-comment-panel-card)은 원래 스크롤대로 두고, 그 바깥 배경
+// 부분에서의 터치만 뒤 대화창의 스크롤로 그대로 옮겨줍니다.
+function resolveCommentPanelScrollTarget(panel) {
+  const overlay = panel.closest(".modal-overlay");
+  if (overlay) return overlay.querySelector(".modal-panel");
+  // #comment-modal(이미지 코멘트)은 대화 상세 모달(#detail-modal) 밖의 형제
+  // 엘리먼트라 위 방법으로 못 찾으므로, 그 대화창을 직접 가리킵니다.
+  if (panel.id === "comment-modal") return detailModal.querySelector(".modal-panel");
+  return null;
+}
+document.querySelectorAll(".tweet-comment-panel").forEach((panel) => {
+  let lastY = null;
+  let scrollTarget = null;
+  panel.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.target.closest(".tweet-comment-panel-card")) return; // 시트 카드 안쪽은 카드 자신이 스크롤 처리
+      lastY = e.touches[0].clientY;
+      scrollTarget = resolveCommentPanelScrollTarget(panel);
+    },
+    { passive: true }
+  );
+  panel.addEventListener(
+    "touchmove",
+    (e) => {
+      if (lastY === null || !scrollTarget) return;
+      const currentY = e.touches[0].clientY;
+      scrollTarget.scrollTop += lastY - currentY;
+      lastY = currentY;
+      e.preventDefault(); // 배경 자체가 스크롤/바운스되지 않고, 뒤 대화창만 움직이게 합니다.
+    },
+    { passive: false }
+  );
+  panel.addEventListener("touchend", () => {
+    lastY = null;
+    scrollTarget = null;
+  });
+});

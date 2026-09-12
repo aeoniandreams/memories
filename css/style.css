@@ -354,6 +354,12 @@ h1 {
   font-size: 11px;
   margin-bottom: 5px;
 }
+/* display:block을 위에서 지정해두면 hidden 속성의 기본 동작(display:none)이
+   묻혀서, 관리자가 아닌데도 "관리자 모드" 글자가 그대로 보이는 문제가
+   있었습니다. hidden일 때는 명시적으로 다시 안 보이게 합니다. */
+.app-sidebar-admin-badge[hidden] {
+  display: none;
+}
 
 .app-sidebar-btn {
   width: 100%;
