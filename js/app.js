@@ -3080,6 +3080,19 @@ appInfoEditor.addEventListener("click", (e) => {
   if (!block) return;
   toggleAppInfoBlock(block);
 });
+// 삽입된 아이콘(contenteditable="false")은 그냥 클릭하면 커서가 옆으로 옮겨질
+// 뿐 "선택"되지 않아서(드래그로 감싸듯 골라야만 선택됨), 색 버튼을 눌러도
+// 아무 효과가 없었습니다. 아이콘을 클릭하면 그 아이콘 자체를 선택 범위로
+// 잡아줘서, 드래그 없이 클릭만으로도 색을 바꿀 수 있게 합니다.
+appInfoEditor.addEventListener("click", (e) => {
+  const icon = e.target.closest(".app-info-inline-icon");
+  if (!icon) return;
+  const range = document.createRange();
+  range.selectNode(icon);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+});
 
 appInfoSaveBtn.addEventListener("click", async () => {
   const content = stripAppInfoBackgroundStyles(appInfoEditor.innerHTML.trim());
