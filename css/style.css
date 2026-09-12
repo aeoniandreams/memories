@@ -608,7 +608,8 @@ h1 {
   justify-content: center;
 }
 /* "이미지 관리" 버튼(연필 아이콘, 관리자만 보임)도 위 +버튼들과 같은 방식의
-   글자 없는 원형 버튼으로 통일합니다(데스크탑/모바일 공통). */
+   글자 없는 원형 버튼으로 통일합니다(데스크탑/모바일 공통). 13px 왼쪽으로
+   옮긴 위치도 데스크탑/모바일 공통입니다. */
 #gallery-manage-btn .btn-label {
   display: none;
 }
@@ -617,6 +618,8 @@ h1 {
   height: 34px;
   padding: 0;
   justify-content: center;
+  position: relative;
+  left: -13px;
 }
 
 .btn-secondary {
@@ -2654,13 +2657,6 @@ h1 {
   #kakao-new-card-btn,
   #sumone-new-card-btn {
     display: none;
-  }
-
-  /* "이미지 관리" 버튼(관리자만 보임)은 모바일에서만 13px(6px+7px) 왼쪽으로
-     옮깁니다(데스크탑은 원래 위치 그대로). */
-  #gallery-manage-btn {
-    position: relative;
-    left: -13px;
   }
 
   /* 로그아웃/알림/야간모드/사이드바 메뉴 아이콘 사이 간격을 모바일에서만
