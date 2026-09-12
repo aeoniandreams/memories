@@ -2490,12 +2490,12 @@ window.addEventListener("resize", () => {
 galleryMasonry.addEventListener("click", (e) => {
   const item = e.target.closest(".reference-item");
   if (!item) return;
-  // 모바일에서는 첫 탭에 코멘트(제목) 오버레이만 보여주고, 이미 펼쳐진
-  // 상태에서 한 번 더 탭해야 원본이 뜹니다. 데스크탑은 호버로 이미 보이는
-  // 상태라 한 번 클릭으로 바로 엽니다(lookbook의 홈 화면과 같은 규칙).
+  // 모바일에서는 제목 유무와 상관없이 첫 탭엔 호버 오버레이(어두워짐 +
+  // 제목이 있으면 제목까지)만 보여주고, 이미 펼쳐진 상태에서 한 번 더
+  // 탭해야 원본이 뜹니다. 데스크탑은 호버로 이미 보이는 상태라 한 번
+  // 클릭으로 바로 엽니다.
   const isMobile = galleryMasonryIsMobile();
-  const hasComment = !!item.querySelector(".reference-comment");
-  if (isMobile && hasComment && !item.classList.contains("revealed")) {
+  if (isMobile && !item.classList.contains("revealed")) {
     item.classList.add("revealed");
     return;
   }
