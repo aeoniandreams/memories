@@ -3567,29 +3567,10 @@ function renderKakaoCardGrid() {
     card.className = "card";
     card.addEventListener("click", () => openKakaoDetail(id, data));
 
-    const head = document.createElement("div");
-    head.className = "card-head";
-    const avatar = document.createElement("div");
-    avatar.className = "kakao-card-avatar";
-    avatar.textContent = (data.roomName || "?").trim().charAt(0);
-    head.appendChild(avatar);
-
-    const headText = document.createElement("div");
-    headText.className = "card-head-text";
-    const nickEl = document.createElement("span");
-    nickEl.className = "card-nickname";
-    nickEl.textContent = data.roomName || "(이름 없음)";
-    const metaEl = document.createElement("span");
-    metaEl.className = "card-meta kakao-card-date";
-    metaEl.textContent = dateLabel;
-    headText.append(nickEl, metaEl);
-    head.appendChild(headText);
-
-    const textEl = document.createElement("p");
-    textEl.className = "card-text";
-    textEl.textContent = (last.text || "").split("\n")[0];
-
-    card.append(head, textEl);
+    const dateEl = document.createElement("p");
+    dateEl.className = "kakao-card-date";
+    dateEl.textContent = dateLabel;
+    card.appendChild(dateEl);
     appendNotifDots(card, "kakao", id);
     kakaoCardGrid.appendChild(card);
   });

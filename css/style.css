@@ -830,11 +830,9 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* 카드 썸네일의 날짜만 아이디보다 1px 크게(14px). X 카드는 .card-meta
-   안의 자식 span(.card-meta-date)에 이 크기가 적용되고, 카카오 카드는
-   날짜만 있어서 별도 클래스(.kakao-card-date)로 모바일/데스크탑 공통 적용합니다. */
-.card-meta-date,
-.kakao-card-date {
+/* X 카드 썸네일의 날짜만 아이디보다 1px 크게(14px). .card-meta 안의
+   자식 span(.card-meta-date)에 적용됩니다. */
+.card-meta-date {
   font-size: 14px;
 }
 
@@ -1690,9 +1688,12 @@ h1 {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --kakao-bg: var(--bg);
-    --kakao-bubble-other: var(--surface);
+    /* 기본 모드처럼 상대(왼쪽)는 밝은 회색으로 튀게, 나(오른쪽)는 배경과
+       거의 구분 안 되는 검은색으로 — 다만 야간 모드 배경(--bg: #15181c)에
+       맞춰 기본 모드 색상을 그대로 쓰지 않고 상대적인 밝기 관계만 옮겨왔습니다. */
+    --kakao-bubble-other: #3a3f47;
     --kakao-text-other: var(--text);
-    --kakao-bubble-me: #2c2c2e;
+    --kakao-bubble-me: #1a1d21;
     --kakao-text-me: #ffffff;
     --kakao-time: var(--muted);
     --kakao-avatar-bg: #3a3a3c;
@@ -1700,9 +1701,9 @@ h1 {
 }
 :root[data-theme="dark"] {
   --kakao-bg: var(--bg);
-  --kakao-bubble-other: var(--surface);
+  --kakao-bubble-other: #3a3f47;
   --kakao-text-other: var(--text);
-  --kakao-bubble-me: #2c2c2e;
+  --kakao-bubble-me: #1a1d21;
   --kakao-text-me: #ffffff;
   --kakao-time: var(--muted);
   --kakao-avatar-bg: #3a3a3c;
@@ -1890,22 +1891,6 @@ h1 {
   color: var(--accent);
 }
 
-/* 카카오톡 카드 썸네일: 아바타 자리에 프사 대신 이름 첫 글자를 원 안에 보여줍니다
-   (카카오톡 텍스트 내보내기엔 프사 이미지가 없음). */
-.kakao-card-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
 /* 파일(.eml/.txt) 선택 버튼. <input type="file">를 숨기고 <label>을
    버튼처럼 씁니다. */
 .kakao-file-label {
@@ -1999,6 +1984,17 @@ h1 {
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 카카오톡 카드 썸네일: 날짜만 남기고(방 이름/아바타/마지막 메시지 미리보기
+   없음), 옅은 회색(--muted) 대신 기본 글자색을 쓰고, 크기/굵기는 SumOne
+   카드 제목과 같은 값으로 맞춥니다. */
+.kakao-card-date {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.4;
+  color: var(--text);
 }
 
 .sumone-form {
