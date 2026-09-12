@@ -1068,11 +1068,20 @@ function closeDetail() {
   renderCardGrid();
 }
 
-// 휴대폰의 뒤로가기(브라우저 popstate)를 누르면, 대화창이 열려 있는 동안엔
-// 사이트를 나가는 대신 대화창만 닫습니다. 대화창이 닫혀 있는(홈 화면) 상태에서
-// 뒤로가기를 누르면 여기서 할 일이 없어서 브라우저 기본 동작(사이트 나가기)이
-// 그대로 진행됩니다.
+// 휴대폰의 뒤로가기(브라우저 popstate)를 누르면, 대화창/설명창이 열려 있는
+// 동안엔 사이트를 나가는 대신 그 창만 닫습니다(홈 화면+사이드바 상태로
+// 돌아옴). 둘 다 닫혀 있는(홈 화면) 상태에서 뒤로가기를 누르면 여기서 할
+// 일이 없어서 브라우저 기본 동작(사이트 나가기)이 그대로 진행됩니다.
 window.addEventListener("popstate", () => {
+  if (!appInfoModal.hidden) {
+    if (hasUnsavedAppInfoChanges() && !confirm("저장하지 않은 내용이 있습니다. 뒤로 가시겠어요?")) {
+      history.pushState({ memoriesAppInfoOpen: true }, "");
+      return;
+    }
+    appInfoHistoryPushed = false;
+    appInfoModal.hidden = true;
+    return;
+  }
   if (detailModal.hidden) return;
   // 코멘트를 쓰거나 고치는 중에 폰 뒤로가기를 누르면, 확인 없이 바로
   // 나가는 대신 먼저 물어봅니다. 취소하면 방금 소비된 히스토리 항목을
@@ -2747,6 +2756,10 @@ const appInfoEditor = document.getElementById("app-info-editor");
 // 그대로 그려도 안전합니다 — 굵게/기울임/취소선/글씨색 서식이 HTML 그대로
 // 저장되기 때문입니다.
 let appInfoLoadedContent = "";
+// 대화 상세보기(detailHistoryPushed)와 같은 방식: 설명창을 열 때 히스토리를
+// 하나 쌓아둬서, 모바일에서 뒤로가기를 눌러도 사이트 자체를 나가는 대신
+// 설명창만 닫히고 홈 화면(+사이드바 상태)으로 돌아오게 합니다.
+let appInfoHistoryPushed = false;
 
 // 다른 곳(웹페이지, 문서 등)에서 복사한 내용을 붙여넣으면 브라우저가 배경색
 // 같은 서식까지 같이 가져오는데, 이 앱은 글자색 3종 외의 서식은 지원하지
@@ -2766,6 +2779,8 @@ function stripAppInfoBackgroundStyles(html) {
 
 async function openAppInfo() {
   appInfoModal.hidden = false;
+  history.pushState({ memoriesAppInfoOpen: true }, "");
+  appInfoHistoryPushed = true;
   appInfoEditBtn.hidden = !isAdmin;
   appInfoSaveBtn.hidden = true;
   appInfoToolbar.hidden = true;
@@ -2792,6 +2807,10 @@ async function openAppInfo() {
 }
 function closeAppInfo() {
   appInfoModal.hidden = true;
+  if (appInfoHistoryPushed) {
+    appInfoHistoryPushed = false;
+    history.back();
+  }
 }
 // 수정 중(편집칸이 보이는 상태)에 저장하지 않은 내용이 있는 채로 뒤로가기
 // 버튼이나 바깥 공간을 눌러서 닫으려 하면 확인창을 띄워서 실수로 잃어버리지

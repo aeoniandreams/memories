@@ -603,6 +603,18 @@ h1 {
   justify-content: center;
 }
 
+/* "이미지 관리" 버튼(연필 아이콘, 관리자만 보임)도 위 +버튼들과 같은 방식의
+   글자 없는 원형 버튼으로 통일합니다(데스크탑/모바일 공통). */
+#gallery-manage-btn .btn-label {
+  display: none;
+}
+#gallery-manage-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  justify-content: center;
+}
+
 .btn-secondary {
   background: var(--surface);
   color: var(--text);
@@ -2640,10 +2652,11 @@ h1 {
     display: none;
   }
 
-  /* "이미지 관리" 버튼(관리자만 보임)은 모바일에서 글자를 빼고 아이콘만
-     남깁니다(버튼 자체는 그대로 둡니다 — 위 +버튼들처럼 아예 숨기는 게 아님). */
-  #gallery-manage-btn .btn-label {
-    display: none;
+  /* "이미지 관리" 버튼(관리자만 보임)은 모바일에서만 6px 왼쪽으로 옮깁니다
+     (데스크탑은 원래 위치 그대로). */
+  #gallery-manage-btn {
+    position: relative;
+    left: -6px;
   }
 
   /* 로그아웃/알림/야간모드/사이드바 메뉴 아이콘 사이 간격을 모바일에서만
