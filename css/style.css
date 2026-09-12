@@ -286,12 +286,17 @@ h1 {
   gap: 8px;
 }
 
-/* "새 대화/카드 추가"(+) 버튼만 다른 헤더 버튼보다 살짝 아래로 내립니다. */
-#new-card-btn,
-#kakao-new-card-btn,
+/* "새 대화/카드 추가"(+) 버튼만 다른 헤더 버튼보다 살짝 아래로 내립니다.
+   트위터/카카오는 이후 2px 더 위로 옮겨서 원래 위치(0px)로 돌아왔고,
+   SumOne만 원래 값(2px 아래)을 유지합니다. */
 #sumone-new-card-btn {
   position: relative;
   top: 2px;
+}
+#new-card-btn,
+#kakao-new-card-btn {
+  position: relative;
+  top: 0px;
 }
 
 /* ---------- 우측 사이드바 (X 백업 / 카카오톡 백업 전환) ----------
@@ -602,7 +607,6 @@ h1 {
   padding: 0;
   justify-content: center;
 }
-
 /* "이미지 관리" 버튼(연필 아이콘, 관리자만 보임)도 위 +버튼들과 같은 방식의
    글자 없는 원형 버튼으로 통일합니다(데스크탑/모바일 공통). */
 #gallery-manage-btn .btn-label {
@@ -2652,11 +2656,11 @@ h1 {
     display: none;
   }
 
-  /* "이미지 관리" 버튼(관리자만 보임)은 모바일에서만 6px 왼쪽으로 옮깁니다
-     (데스크탑은 원래 위치 그대로). */
+  /* "이미지 관리" 버튼(관리자만 보임)은 모바일에서만 13px(6px+7px) 왼쪽으로
+     옮깁니다(데스크탑은 원래 위치 그대로). */
   #gallery-manage-btn {
     position: relative;
-    left: -6px;
+    left: -13px;
   }
 
   /* 로그아웃/알림/야간모드/사이드바 메뉴 아이콘 사이 간격을 모바일에서만
