@@ -877,6 +877,10 @@ h1 {
   max-height: calc(100vh - 48px);
   border-radius: 16px;
   overflow-y: auto;
+  /* 뒤로가기/홈 버튼(제스처 바) 등 폰 하단 시스템 UI가 화면을 덮는
+     기기에서, 내용 맨 아래가 그 뒤에 가려지지 않도록 여유를 둡니다
+     (그런 기기가 아니면 0이라 평소엔 아무 영향이 없습니다). */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* 이미지 원본 크게 보기. .modal-overlay(어두운 배경 + 화면 전체 덮기)는 그대로
@@ -1512,6 +1516,10 @@ h1 {
   max-height: 70vh;
   border-radius: 16px 16px 0 0;
   overflow-y: auto;
+  /* 바텀시트가 화면 맨 아래에 붙어 있어서, 뒤로가기/홈 버튼(제스처 바) 같은
+     폰 하단 시스템 UI에 본문 끝부분이 가려지는 문제가 있었습니다. 그 UI가
+     차지하는 만큼 안쪽 여백을 더 둬서 스크롤해도 항상 다 보이게 합니다. */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .tweet-comment-panel-body {
