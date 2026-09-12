@@ -2838,6 +2838,13 @@ appInfoModal.addEventListener("click", (e) => {
   if (e.target === appInfoModal) tryCloseAppInfo();
 });
 
+// 툴바를 대화창 헤더(.modal-header) 바로 밑에 sticky로 붙이려면, 헤더의
+// 실제 렌더링 높이만큼 top 값을 줘야 스크롤해도 자리가 안 바뀝니다.
+function updateAppInfoToolbarStickyOffset() {
+  const header = appInfoModal.querySelector(".modal-header");
+  if (header) appInfoToolbar.style.top = header.offsetHeight + "px";
+}
+
 appInfoEditBtn.addEventListener("click", () => {
   appInfoEditor.innerHTML = appInfoLoadedContent;
   appInfoText.hidden = true;
@@ -2845,6 +2852,7 @@ appInfoEditBtn.addEventListener("click", () => {
   appInfoEditor.hidden = false;
   appInfoEditBtn.hidden = true;
   appInfoSaveBtn.hidden = false;
+  updateAppInfoToolbarStickyOffset();
 });
 
 // 굵게/기울임/취소선/색: 선택한 부분에 execCommand로 바로 적용합니다.
