@@ -3580,7 +3580,7 @@ function renderKakaoCardGrid() {
     nickEl.className = "card-nickname";
     nickEl.textContent = data.roomName || "(이름 없음)";
     const metaEl = document.createElement("span");
-    metaEl.className = "card-meta";
+    metaEl.className = "card-meta kakao-card-date";
     metaEl.textContent = dateLabel;
     headText.append(nickEl, metaEl);
     head.appendChild(headText);
