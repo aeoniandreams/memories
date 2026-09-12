@@ -636,7 +636,7 @@ function renderCardGrid() {
       card.appendChild(badge);
     }
 
-    appendNotifDots(card, "x", id);
+    markCardHasNewComment(card, "x", id);
 
     card.addEventListener("click", () => openDetail(id, data));
     cardGrid.appendChild(card);
@@ -3571,7 +3571,7 @@ function renderKakaoCardGrid() {
     dateEl.className = "kakao-card-date";
     dateEl.textContent = dateLabel;
     card.appendChild(dateEl);
-    appendNotifDots(card, "kakao", id);
+    markCardHasNewComment(card, "kakao", id);
     kakaoCardGrid.appendChild(card);
   });
 }
@@ -3923,7 +3923,7 @@ function renderSumoneCardGrid() {
     titleEl.className = "sumone-card-title";
     titleEl.textContent = data.title || "(제목 없음)";
     card.appendChild(titleEl);
-    appendNotifDots(card, "sumone", id);
+    markCardHasNewComment(card, "sumone", id);
 
     sumoneCardGrid.appendChild(card);
   });
@@ -4377,13 +4377,6 @@ function isTargetTypeUnseen(section, cardId, targetKey, type, createdAt) {
   return createdAt > seenAt;
 }
 
-// 카드 우측 상단에 찍을 점의 색(코멘트 종류별). 말풍선은 테마 색을 그대로 씁니다.
-const NOTIF_DOT_COLOR = {
-  "message-circle": "var(--accent)",
-  coffee: "#B8E2DC",
-  wine: "#7E212A",
-};
-
 // 이 카드에서 아직 안 본 코멘트 종류들을 돌려줍니다(최대 3개: message-circle/coffee/wine).
 function getUnseenTypesForCard(section, cardId) {
   const seenAt = cardSeenMap.get(notifCardKey(section, cardId)) || 0;
@@ -4396,25 +4389,11 @@ function getUnseenTypesForCard(section, cardId) {
   return Array.from(types);
 }
 
-// 홈 화면 카드(.card, position:relative)의 좌측 상단 꼭짓점에 새 코멘트 점을
-// 붙입니다. 여러 개면 왼쪽 점이 오른쪽 점을 절반 정도 덮도록, 먼저 만든
-// 점일수록 z-index를 높게 줍니다.
-function appendNotifDots(cardEl, section, cardId) {
-  const types = getUnseenTypesForCard(section, cardId);
-  if (types.length === 0) return;
-  // 새 코멘트가 있는 카드는 테두리도 테마 컬러로 강조합니다. 카드를 열어
-  // 확인하면(markCardSeen) 목록이 다시 그려지면서 이 클래스도 자연히 빠집니다.
+// 새 코멘트가 있는 카드는 테두리를 테마 컬러로 강조합니다. 카드를 열어
+// 확인하면(markCardSeen) 목록이 다시 그려지면서 이 클래스도 자연히 빠집니다.
+function markCardHasNewComment(cardEl, section, cardId) {
+  if (getUnseenTypesForCard(section, cardId).length === 0) return;
   cardEl.classList.add("has-new-comment");
-  const row = document.createElement("div");
-  row.className = "notif-dot-row";
-  types.forEach((type, i) => {
-    const dot = document.createElement("span");
-    dot.className = "notif-dot";
-    dot.style.background = NOTIF_DOT_COLOR[type] || "var(--accent)";
-    dot.style.zIndex = String(types.length - i);
-    row.appendChild(dot);
-  });
-  cardEl.appendChild(row);
 }
 
 // 와인/커피/말풍선 코멘트가 새로 달렸을 때 보기 버튼의 말풍선 배경색을 그
