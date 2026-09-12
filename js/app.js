@@ -1239,9 +1239,14 @@ function toOriginalQualityImageUrl(url) {
   return url;
 }
 
-function openImageViewer(url) {
+// sourceItem: 갤러리에서 열었을 때만 그 항목(.reference-item) 엘리먼트를 넘겨줍니다.
+// 닫을 때 그 항목 하나만 revealed를 풀기 위해 기억해두는 용도라, 갤러리가
+// 아닌 곳(트윗/카톡/SumOne 이미지 등)에서 열 때는 생략하면 됩니다.
+let imageViewerSourceItem = null;
+function openImageViewer(url, sourceItem) {
   imageViewerImg.src = toOriginalQualityImageUrl(url);
   imageViewerModal.hidden = false;
+  imageViewerSourceItem = sourceItem || null;
 }
 
 function closeImageViewer() {
@@ -1249,9 +1254,11 @@ function closeImageViewer() {
   imageViewerImg.src = "";
   // 모바일에서 두 번째 탭으로 원본을 열었던 갤러리 항목은, 닫으면 코멘트가
   // 가려진 처음 모습으로 되돌려놓습니다(aeoniandreams/lookbook의 라이트박스와 같은 동작).
-  document.querySelectorAll(".reference-item.revealed").forEach((el) => {
-    el.classList.remove("revealed");
-  });
+  // 원본을 연 그 항목만 되돌리고, 다른 항목이 우연히 펼쳐져 있어도 건드리지 않습니다.
+  if (imageViewerSourceItem) {
+    imageViewerSourceItem.classList.remove("revealed");
+    imageViewerSourceItem = null;
+  }
 }
 
 imageViewerCloseBtn.addEventListener("click", closeImageViewer);
@@ -2500,7 +2507,7 @@ galleryMasonry.addEventListener("click", (e) => {
     return;
   }
   const img = item.querySelector("img");
-  if (img) openImageViewer(img.src);
+  if (img) openImageViewer(img.src, item);
 });
 
 async function loadGalleryImages() {
