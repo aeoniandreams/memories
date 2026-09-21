@@ -1685,10 +1685,10 @@ h1 {
   /* 기본 모드에선 검은 말풍선이 밝은 배경 위라 충분히 구분되니 테두리가
      필요 없습니다(투명). */
   --kakao-bubble-me-border: transparent;
-  /* 코멘트 보기 버튼 바탕색: 기본 모드에선 각자 "상대쪽" 말풍선 색을
-     그대로 씁니다(상대 버튼=검은색, 내 버튼=흰색). */
+  /* 코멘트 보기 버튼 바탕색: 기본 모드에선 상대/내 버튼 둘 다 검은
+     말풍선 색(--kakao-bubble-me)으로 통일합니다. */
   --kakao-view-btn-other-bg: var(--kakao-bubble-me);
-  --kakao-view-btn-me-bg: var(--kakao-bubble-other);
+  --kakao-view-btn-me-bg: var(--kakao-bubble-me);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -1891,11 +1891,10 @@ h1 {
   color: #fff;
 }
 
-/* 코멘트 보기 버튼의 바탕색(말풍선 배경). 기본 모드에선 "상대쪽" 말풍선
-   색을 그대로 써서 상대(흰) 말풍선 버튼=검은색, 내(검은) 말풍선 버튼=흰색이
-   되고, 야간 모드에선 --kakao-view-btn-*-bg가 둘 다 기본 모드의 상대(흰)
-   말풍선 색(#e8e8e8)으로 통일되어 양쪽 다 그 톤의 바탕이 됩니다(각 값의
-   정의는 위 :root 블록 참고). */
+/* 코멘트 보기 버튼의 바탕색(말풍선 배경). 기본 모드에선 상대/내 버튼 둘 다
+   검은 말풍선 색으로 통일하고, 야간 모드에선 --kakao-view-btn-*-bg가 둘 다
+   기본 모드의 상대(흰) 말풍선 색(#e8e8e8)으로 통일되어 그 톤의 바탕이
+   됩니다(각 값의 정의는 위 :root 블록 참고). */
 .kakao-message-group.other .kakao-comment-view-stack .tweet-comment-view-btn .bubble-shape {
   color: var(--kakao-view-btn-other-bg);
 }
