@@ -300,14 +300,18 @@ h1 {
 }
 
 /* ---------- 우측 사이드바 (X 백업 / 카카오톡 백업 전환) ----------
-   평소엔 숨겨져 있다가, 헤더의 메뉴(☰) 아이콘을 누르면 뜨는 오버레이
-   패널입니다. 본문 위에 떠 있는 방식이라(레이아웃 공간을 미리 차지하지
-   않음) 다시 누르거나 바깥을 클릭하면 사라집니다. */
+   평소엔 화면 오른쪽 바깥으로 밀려나 있다가, 헤더의 메뉴(☰) 아이콘을
+   누르면 슬라이드되어 들어오는 오버레이 패널입니다. 본문 위에 떠 있는
+   방식이라(레이아웃 공간을 미리 차지하지 않음) 다시 누르거나 바깥을
+   클릭하면 다시 슬라이드되어 나갑니다. display:none으로 감추면 transform
+   전환이 걸리지 않아서, 대신 항상 flex로 렌더링해두고 translateX로
+   화면 밖에 두는 방식을 씁니다([hidden] 상태(로그아웃 등)는 여전히
+   display:none으로 완전히 감춥니다). */
 .app-sidebar[hidden] {
   display: none;
 }
 .app-sidebar {
-  display: none;
+  display: flex;
   position: fixed;
   top: 0;
   right: 0;
@@ -320,9 +324,11 @@ h1 {
   border-left: 1px solid var(--border);
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.12);
   z-index: 30;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .app-sidebar.open {
-  display: flex;
+  transform: translateX(0);
 }
 
 .app-sidebar-close-btn {
@@ -1689,6 +1695,8 @@ h1 {
      말풍선 색(--kakao-bubble-me)으로 통일합니다. */
   --kakao-view-btn-other-bg: var(--kakao-bubble-me);
   --kakao-view-btn-me-bg: var(--kakao-bubble-me);
+  /* 기본 모드에서는 버튼에 포인트 컬러로 얇은 아웃라인을 둡니다. */
+  --kakao-view-btn-outline: var(--accent);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -1709,6 +1717,9 @@ h1 {
        색(#e8e8e8)으로 통일합니다(순백색보다 살짝 회색빛이 도는 톤). */
     --kakao-view-btn-other-bg: #e8e8e8;
     --kakao-view-btn-me-bg: #e8e8e8;
+    /* 야간 모드에서는 버튼 배경이 이미 밝은 색이라 아웃라인이 필요
+       없습니다(투명). */
+    --kakao-view-btn-outline: transparent;
   }
 }
 :root[data-theme="dark"] {
@@ -1722,6 +1733,7 @@ h1 {
   --kakao-bubble-me-border: rgba(255, 255, 255, 0.22);
   --kakao-view-btn-other-bg: #e8e8e8;
   --kakao-view-btn-me-bg: #e8e8e8;
+  --kakao-view-btn-outline: transparent;
 }
 
 .kakao-thread {
@@ -1907,6 +1919,18 @@ h1 {
 .kakao-message-group.other .kakao-comment-view-stack .tweet-comment-view-btn.is-open .bubble-shape,
 .kakao-message-group.me .kakao-comment-view-stack .tweet-comment-view-btn.is-open .bubble-shape {
   color: var(--accent);
+}
+
+/* 버튼 바탕(말풍선 모양)에 포인트 컬러로 얇은 아웃라인을 둡니다. border는
+   버튼이 사각형이 아니라 꼬리 달린 말풍선 실루엣이라 안 맞아서, 대신 그
+   실루엣을 따라가는 drop-shadow 4장을 겹쳐 흉내냅니다. 코멘트를 보는
+   중(is-open)에는 바탕이 이미 포인트 컬러라 아웃라인이 필요 없어 뺍니다. */
+.kakao-comment-view-stack .tweet-comment-view-btn:not(.is-open) .bubble-shape svg {
+  filter:
+    drop-shadow(1px 0 0 var(--kakao-view-btn-outline))
+    drop-shadow(-1px 0 0 var(--kakao-view-btn-outline))
+    drop-shadow(0 1px 0 var(--kakao-view-btn-outline))
+    drop-shadow(0 -1px 0 var(--kakao-view-btn-outline));
 }
 
 .kakao-preview-section {
