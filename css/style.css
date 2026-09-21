@@ -1838,10 +1838,17 @@ h1 {
 }
 
 /* 코멘트 보기 버튼(트윗 코멘트 보기 버튼과 같은 컴포넌트, .tweet-comment-view-btn)을
-   해당 말풍선 밑이 아니라 옆(시간 표시/코멘트 작성 버튼과 같은, 가운데를 향한 쪽)에
-   세로로 쌓아 붙입니다. kakao-bubble-row 자체가 other는 그대로, me는
-   row-reverse라서, 같은 자리(time과 addBtn 사이)에 두기만 하면 흰 말풍선(other)
-   쪽은 자연히 오른쪽에, 검은 말풍선(me) 쪽은 자연히 왼쪽에 놓입니다. */
+   시간 표시 바로 위에 쌓아 붙입니다. kakao-time-col이 시간 자리를 대신 차지하는
+   [보기 버튼들, 시간] 세로 묶음이라 kakao-bubble-row 자체가 other는 그대로, me는
+   row-reverse라서 그 자리에 두기만 하면 흰 말풍선(other) 쪽은 자연히 오른쪽에,
+   검은 말풍선(me) 쪽은 자연히 왼쪽에 놓입니다. */
+.kakao-time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
 .kakao-comment-view-stack {
   display: flex;
   flex-direction: column;

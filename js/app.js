@@ -3373,8 +3373,10 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
 
   // 코멘트 보기 버튼: 트윗 코멘트 보기 버튼과 완전히 같은 모양(말풍선 배경 +
   // 종류별 아이콘)이고 동작도 같습니다 — 열려 있는 버튼을 다시 누르면 패널이
-  // 닫히고, 지금 보고 있는 버튼만 강조 표시됩니다.
-  function makeKakaoCommentViewBtn(msgIndex, role, commentEntry) {
+  // 닫히고, 지금 보고 있는 버튼만 강조 표시됩니다. 코멘트 작성 버튼과 마찬가지로
+  // 말풍선(bubble-shape)의 꼬리가 항상 자기 말풍선 쪽을 향하도록 나(isMe)일
+  // 때만 좌우로 뒤집습니다(아이콘 자체는 뒤집지 않습니다).
+  function makeKakaoCommentViewBtn(msgIndex, role, commentEntry, isMe) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "tweet-comment-view-btn";
@@ -3382,6 +3384,10 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     const bubbleShape = document.createElement("span");
     bubbleShape.className = "bubble-shape";
     bubbleShape.innerHTML = MESSAGE_CIRCLE_BUBBLE_FILL_SVG;
+    if (isMe) {
+      const bubbleSvg = bubbleShape.querySelector("svg");
+      if (bubbleSvg) bubbleSvg.style.transform = "scaleX(-1)";
+    }
     const icon = document.createElement("span");
     icon.className = "bubble-icon";
     icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
@@ -3450,6 +3456,7 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     const row = document.createElement("div");
     row.className = "kakao-bubble-row";
     row.dataset.commentKey = String(index);
+    let timeEl = null; // 코멘트 보기 버튼을 이 시간 표시 "위"에 쌓아야 해서 참조를 들고 있습니다.
 
     if (msg.type === "image") {
       const img = document.createElement("img");
@@ -3478,13 +3485,15 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       time.className = "kakao-time";
       time.textContent = msg.timeDisplay;
       row.append(bubble, time);
+      timeEl = time;
     }
 
     if (cardId) {
       // 코멘트는 여러 개 있을 수 있어서(유저 여러 개 + 관리자 여러 개), 작성
-      // 시각(createdAt) 순으로 정렬해 위에서부터 쌓습니다. 말풍선 밑이 아니라
-      // 말풍선 옆(시간 표시/코멘트 작성 버튼과 같은, 가운데를 향한 쪽)에
-      // 붙도록 row 안에 (시간 표시와 작성 버튼 사이에) 끼워 넣습니다.
+      // 시각(createdAt) 순으로 정렬해 위에서부터 쌓습니다. 정확한 위치는 시간
+      // 표시 "바로 위"라, 시간(kakao-time) 자리를 [보기 버튼들 위, 시간 아래]
+      // 세로 묶음(kakao-time-col)으로 바꿔치기합니다. 이미지 메시지처럼 시간
+      // 표시가 없는 경우엔 예전처럼 그냥 옆(addBtn 앞)에 붙입니다.
       const commentDoc = currentKakaoComments.get(String(index));
       const viewEntries = [];
       (commentDoc && commentDoc.user ? commentDoc.user : []).forEach((entry) => viewEntries.push({ role: "user", entry }));
@@ -3494,8 +3503,16 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       if (viewEntries.length > 0) {
         const viewStack = document.createElement("div");
         viewStack.className = "kakao-comment-view-stack";
-        viewEntries.forEach(({ role, entry }) => viewStack.appendChild(makeKakaoCommentViewBtn(index, role, entry)));
-        row.appendChild(viewStack);
+        viewEntries.forEach(({ role, entry }) => viewStack.appendChild(makeKakaoCommentViewBtn(index, role, entry, isMe)));
+
+        if (timeEl) {
+          const timeCol = document.createElement("div");
+          timeCol.className = "kakao-time-col";
+          timeEl.replaceWith(timeCol);
+          timeCol.append(viewStack, timeEl);
+        } else {
+          row.appendChild(viewStack);
+        }
       }
 
       row.appendChild(makeKakaoCommentAddBtn(index, isMe));
