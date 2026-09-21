@@ -1194,6 +1194,12 @@ h1 {
 .tweet-comment-view-btn .bubble-shape {
   grid-area: 1 / 1;
   color: var(--border);
+  /* z-index를 안 주면(auto) 보통 DOM 순서상 이 다음에 오는 bubble-icon이
+     위에 그려지지만, 카카오 쪽에서 이 안의 svg에 좌우 반전(transform)을
+     걸면 그 svg가 새 스택 컨텍스트를 만들면서 브라우저가 이 말풍선 배경을
+     오히려 위로 그려버려 아이콘이 안 보이는 경우가 있었습니다. z-index를
+     명시해서 항상 배경이 아래, 아이콘이 위가 되도록 고정합니다. */
+  z-index: 0;
 }
 .tweet-comment-view-btn .bubble-shape svg {
   width: 100%;
@@ -1205,6 +1211,7 @@ h1 {
   grid-area: 1 / 1;
   place-self: center;
   color: var(--text);
+  z-index: 1;
 }
 .tweet-comment-view-btn .bubble-icon svg {
   width: 15px;
