@@ -3375,7 +3375,10 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
   // 종류별 아이콘)이고 동작도 같습니다 — 열려 있는 버튼을 다시 누르면 패널이
   // 닫히고, 지금 보고 있는 버튼만 강조 표시됩니다. 코멘트 작성 버튼과 마찬가지로
   // 말풍선(bubble-shape)의 꼬리가 항상 자기 말풍선 쪽을 향하도록 나(isMe)일
-  // 때만 좌우로 뒤집습니다(아이콘 자체는 뒤집지 않습니다).
+  // 때만 좌우로 뒤집습니다. message-circle 아이콘은 배경과 똑같은 꼬리 달린
+  // 말풍선 모양이라, 배경만 뒤집고 아이콘은 안 뒤집으면 두 꼬리 방향이
+  // 어긋나 보여서 아이콘도 같이 뒤집습니다(wine/coffee처럼 꼬리가 없는
+  // 아이콘은 뒤집어도 모양이 똑같아서 문제 없습니다).
   function makeKakaoCommentViewBtn(msgIndex, role, commentEntry, isMe) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -3384,13 +3387,15 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     const bubbleShape = document.createElement("span");
     bubbleShape.className = "bubble-shape";
     bubbleShape.innerHTML = MESSAGE_CIRCLE_BUBBLE_FILL_SVG;
-    if (isMe) {
-      const bubbleSvg = bubbleShape.querySelector("svg");
-      if (bubbleSvg) bubbleSvg.style.transform = "scaleX(-1)";
-    }
     const icon = document.createElement("span");
     icon.className = "bubble-icon";
     icon.innerHTML = COMMENT_TYPE_ICONS[commentEntry.type] || MESSAGE_CIRCLE_ICON_SVG;
+    if (isMe) {
+      const bubbleSvg = bubbleShape.querySelector("svg");
+      if (bubbleSvg) bubbleSvg.style.transform = "scaleX(-1)";
+      const iconSvg = icon.querySelector("svg");
+      if (iconSvg) iconSvg.style.transform = "scaleX(-1)";
+    }
     btn.append(bubbleShape, icon);
     applyNotifViewBtnColor(
       bubbleShape,
