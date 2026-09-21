@@ -1682,9 +1682,9 @@ h1 {
     /* 기본 모드처럼 상대(왼쪽)는 밝은 회색으로 튀게, 나(오른쪽)는 배경과
        거의 구분 안 되는 검은색으로 — 다만 야간 모드 배경(--bg: #15181c)에
        맞춰 기본 모드 색상을 그대로 쓰지 않고 상대적인 밝기 관계만 옮겨왔습니다. */
-    --kakao-bubble-other: #3a3f47;
+    --kakao-bubble-other: #42474f;
     --kakao-text-other: var(--text);
-    --kakao-bubble-me: #1a1d21;
+    --kakao-bubble-me: #202327;
     --kakao-text-me: #ffffff;
     --kakao-time: var(--muted);
     --kakao-avatar-bg: #3a3a3c;
@@ -1692,9 +1692,9 @@ h1 {
 }
 :root[data-theme="dark"] {
   --kakao-bg: var(--bg);
-  --kakao-bubble-other: #3a3f47;
+  --kakao-bubble-other: #42474f;
   --kakao-text-other: var(--text);
-  --kakao-bubble-me: #1a1d21;
+  --kakao-bubble-me: #202327;
   --kakao-text-me: #ffffff;
   --kakao-time: var(--muted);
   --kakao-avatar-bg: #3a3a3c;
