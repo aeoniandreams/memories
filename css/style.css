@@ -1922,15 +1922,16 @@ h1 {
 }
 
 /* 버튼 바탕(말풍선 모양)에 포인트 컬러로 얇은 아웃라인을 둡니다. border는
-   버튼이 사각형이 아니라 꼬리 달린 말풍선 실루엣이라 안 맞아서, 대신 그
-   실루엣을 따라가는 drop-shadow 4장을 겹쳐 흉내냅니다. 코멘트를 보는
-   중(is-open)에는 바탕이 이미 포인트 컬러라 아웃라인이 필요 없어 뺍니다. */
-.kakao-comment-view-stack .tweet-comment-view-btn:not(.is-open) .bubble-shape svg {
-  filter:
-    drop-shadow(1px 0 0 var(--kakao-view-btn-outline))
-    drop-shadow(-1px 0 0 var(--kakao-view-btn-outline))
-    drop-shadow(0 1px 0 var(--kakao-view-btn-outline))
-    drop-shadow(0 -1px 0 var(--kakao-view-btn-outline));
+   버튼이 사각형이 아니라 꼬리 달린 말풍선 실루엣이라 안 맞아서, 실루엣을
+   그대로 따라가는 svg path의 stroke를 씁니다(4방향 drop-shadow를 겹쳐
+   흉내내던 이전 방식은 겹치는 자리가 두꺼워지고 곡선 구간은 얇아져
+   두께가 들쑥날쑥해 보이는 문제가 있었습니다). vector-effect로 확대/축소와
+   무관하게 항상 같은 화면 두께를 유지합니다. 코멘트를 보는 중(is-open)에는
+   바탕이 이미 포인트 컬러라 아웃라인이 필요 없어 뺍니다. */
+.kakao-comment-view-stack .tweet-comment-view-btn:not(.is-open) .bubble-shape svg path {
+  stroke: var(--kakao-view-btn-outline);
+  stroke-width: 1.4px;
+  vector-effect: non-scaling-stroke;
 }
 
 .kakao-preview-section {

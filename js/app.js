@@ -2513,13 +2513,15 @@ function galleryItemHTML(item) {
   </div>`;
 }
 
+let galleryMasonryLastColumnCount = null;
 function layoutGalleryMasonry() {
   const items = Array.from(galleryMasonry.querySelectorAll(".reference-item"));
+  const columnCount = galleryMasonryColumnCount();
+  galleryMasonryLastColumnCount = columnCount;
   if (!items.length) {
     galleryMasonry.innerHTML = "";
     return;
   }
-  const columnCount = galleryMasonryColumnCount();
   const cols = Array.from({ length: columnCount }, () => {
     const col = document.createElement("div");
     col.className = "reference-masonry-col";
@@ -2538,10 +2540,18 @@ function renderGalleryMasonry() {
 }
 
 let galleryMasonryResizeTimer = null;
+// 모바일에서 스크롤하면 주소창이 접히거나 펼쳐지면서 뷰포트 "높이"만
+// 바뀌어도 window의 resize 이벤트가 뜨는데, 예전엔 그때마다 무조건 다시
+// 배치해서(컬럼 안 DOM을 다 옮기는 재배치라 화면이 크게 다시 그려짐)
+// 스크롤할 때마다 이미지들이 이리저리 흔들리는 것처럼 보였습니다. 실제로
+// 컬럼 개수(너비 기준, galleryMasonryColumnCount)가 바뀔 때만 다시
+// 배치하도록 걸러냅니다.
 window.addEventListener("resize", () => {
   clearTimeout(galleryMasonryResizeTimer);
   galleryMasonryResizeTimer = setTimeout(() => {
-    if (!galleryAppView.hidden) layoutGalleryMasonry();
+    if (galleryAppView.hidden) return;
+    if (galleryMasonryColumnCount() === galleryMasonryLastColumnCount) return;
+    layoutGalleryMasonry();
   }, 150);
 });
 
