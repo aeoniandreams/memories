@@ -1207,8 +1207,8 @@ h1 {
   color: var(--text);
 }
 .tweet-comment-view-btn .bubble-icon svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   display: block;
 }
 
