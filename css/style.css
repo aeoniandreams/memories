@@ -1682,6 +1682,9 @@ h1 {
   --kakao-text-me: #ffffff;
   --kakao-time: rgba(0, 0, 0, 0.45);
   --kakao-avatar-bg: #000000;
+  /* 기본 모드에선 검은 말풍선이 밝은 배경 위라 충분히 구분되니 테두리가
+     필요 없습니다(투명). */
+  --kakao-bubble-me-border: transparent;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -1695,6 +1698,9 @@ h1 {
     --kakao-text-me: #ffffff;
     --kakao-time: var(--muted);
     --kakao-avatar-bg: #3a3a3c;
+    /* 야간 모드에서는 검은 말풍선이 배경과 거의 안 구분돼서, 얇고 흰
+       아웃라인으로 경계를 살짝 드러냅니다. */
+    --kakao-bubble-me-border: rgba(255, 255, 255, 0.22);
   }
 }
 :root[data-theme="dark"] {
@@ -1705,6 +1711,7 @@ h1 {
   --kakao-text-me: #ffffff;
   --kakao-time: var(--muted);
   --kakao-avatar-bg: #3a3a3c;
+  --kakao-bubble-me-border: rgba(255, 255, 255, 0.22);
 }
 
 .kakao-thread {
@@ -1816,6 +1823,9 @@ h1 {
   background: var(--kakao-bubble-me);
   color: var(--kakao-text-me);
   border-top-right-radius: 4px;
+  /* 야간 모드에서만 --kakao-bubble-me-border가 흰색이 되어(기본 모드는
+     transparent) 검은 말풍선과 배경이 잘 구분되도록 얇은 테두리를 더합니다. */
+  border: 1px solid var(--kakao-bubble-me-border);
 }
 
 .kakao-time {
@@ -1869,6 +1879,40 @@ h1 {
 }
 .kakao-comment-view-stack .tweet-comment-view-btn.is-open .bubble-icon {
   color: #fff;
+}
+
+/* 코멘트 보기 버튼의 바탕색(말풍선 배경)을 "상대쪽" 말풍선 색으로 칠합니다 —
+   상대(흰) 말풍선에 달린 버튼은 나(검은) 말풍선 색으로, 나(검은) 말풍선에
+   달린 버튼은 상대(흰) 말풍선 색으로. 기본 모드에선 결과적으로 흰 말풍선
+   버튼=검은색, 검은 말풍선 버튼=흰색이 되고, 야간 모드에서도 같은 방식(서로
+   바뀐 색)이 그대로 적용됩니다. */
+.kakao-message-group.other .kakao-comment-view-stack .tweet-comment-view-btn .bubble-shape {
+  color: var(--kakao-bubble-me);
+}
+.kakao-message-group.me .kakao-comment-view-stack .tweet-comment-view-btn .bubble-shape {
+  color: var(--kakao-bubble-other);
+}
+/* 코멘트를 보고 있는 중(is-open)에는 위 색 대신 원래대로 포인트 컬러
+   바탕색 + 흰색 아이콘 조합을 유지합니다(우선순위를 위해 위 두 규칙보다
+   구체적으로 씁니다). */
+.kakao-message-group.other .kakao-comment-view-stack .tweet-comment-view-btn.is-open .bubble-shape,
+.kakao-message-group.me .kakao-comment-view-stack .tweet-comment-view-btn.is-open .bubble-shape {
+  color: var(--accent);
+}
+
+/* 상대(흰) 말풍선 버튼은 배경을 검은 말풍선 색(--kakao-bubble-me)으로
+   칠하는데, 야간 모드에서는 그 색 자체가 --kakao-bubble-me-border를 통해
+   드러나는 것처럼 페이지 배경과 거의 구분이 안 됩니다. border는 버튼이
+   말풍선(꼬리 달린 원) 모양이 아니라 네모난 상자라 어울리지 않아서, 대신
+   말풍선 실루엣을 따라가는 drop-shadow 4장을 겹쳐 얇은 흰 테두리처럼
+   보이게 흉내냅니다(기본 모드에서는 --kakao-bubble-me-border가 transparent라
+   drop-shadow 색도 투명해 아무 효과가 없습니다). */
+.kakao-message-group.other .kakao-comment-view-stack .tweet-comment-view-btn:not(.is-open) .bubble-shape svg {
+  filter:
+    drop-shadow(1px 0 0 var(--kakao-bubble-me-border))
+    drop-shadow(-1px 0 0 var(--kakao-bubble-me-border))
+    drop-shadow(0 1px 0 var(--kakao-bubble-me-border))
+    drop-shadow(0 -1px 0 var(--kakao-bubble-me-border));
 }
 
 .kakao-preview-section {
