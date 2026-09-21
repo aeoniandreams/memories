@@ -738,6 +738,28 @@ async function toggleMessageLike(msgIndex) {
   if (likeBtn) likeBtn.classList.toggle("liked", !!updatedMessages[msgIndex].liked);
 }
 
+// 코멘트 저장/삭제 버튼을 누르면 그때까지 코멘트를 쓰던 입력창의 포커스가
+// 빠지면서(특히 모바일에서) 화면 키보드가 접히는데, 그 접히는 애니메이션이
+// 끝날 때까지 뷰포트 크기가 여러 번 바뀌면서 대화창 스크롤이 다시 흐트러지는
+// 경우가 있습니다. 그래서 버튼을 누른 시점의 스크롤 위치를 기억해뒀다가,
+// 그 애니메이션이 끝날 만한 짧은 시간 동안 같은 위치를 반복해서 다시
+// 붙잡아 둡니다(스레드를 다시 그려서 생기는 스크롤 튐과는 별개의 원인이라
+// 위의 refreshTweetMessageRow 같은 최소 다시 그리기만으로는 못 막습니다).
+function pinScrollPosition(el, target) {
+  if (!el) return;
+  const reapply = () => {
+    if (el.scrollTop !== target) el.scrollTop = target;
+  };
+  reapply();
+  [0, 50, 120, 220, 350, 500].forEach((ms) => setTimeout(reapply, ms));
+  if (window.visualViewport) {
+    const vv = window.visualViewport;
+    const onResize = () => reapply();
+    vv.addEventListener("resize", onResize);
+    setTimeout(() => vv.removeEventListener("resize", onResize), 600);
+  }
+}
+
 // 코멘트를 쓰거나 지운 뒤 "보기" 버튼에 반영할 때 씁니다. openDetail을 다시 불러
 // 스레드 전체를 새로 그리면(위 toggleMessageLike와 같은 이유로) 스크롤이 맨 위로
 // 돌아가버리므로, 코멘트가 바뀐 트윗 한 줄만 새로 그려서 갈아 끼웁니다.
@@ -1847,6 +1869,10 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     return;
   }
 
+  // 저장 버튼을 누르는 시점(키보드가 닫히기 전)의 스크롤 위치를 미리 기억해둡니다.
+  const scrollPanel = detailModal.querySelector(".modal-panel");
+  const scrollTarget = scrollPanel ? scrollPanel.scrollTop : 0;
+
   // 빈 텍스트 블록/URL 없는 이미지 블록은 저장하지 않고 걸러냅니다.
   const content = commentComposeBlocks
     .map((b) =>
@@ -1894,6 +1920,7 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
       closeTweetCommentPanel();
       // 우측 "보기" 버튼에 바로 반영되도록 트윗 한 줄만 다시 그립니다.
       refreshTweetMessageRow(state.commentKey);
+      pinScrollPosition(scrollPanel, scrollTarget);
     }
   );
 });
@@ -1902,6 +1929,9 @@ tweetCommentPanelDeleteBtn.addEventListener("click", async () => {
   const state = tweetCommentPanelState;
   if (!state || state.mode !== "view" || !currentDetailCardId) return;
   if (!confirm("이 코멘트를 삭제할까요? 되돌릴 수 없어요.")) return;
+
+  const scrollPanel = detailModal.querySelector(".modal-panel");
+  const scrollTarget = scrollPanel ? scrollPanel.scrollTop : 0;
 
   const commentDoc = currentTweetComments.get(state.commentKey) || {};
   const arr = (Array.isArray(commentDoc[state.role]) ? commentDoc[state.role] : []).filter(
@@ -1920,6 +1950,7 @@ tweetCommentPanelDeleteBtn.addEventListener("click", async () => {
       });
       closeTweetCommentPanel();
       refreshTweetMessageRow(state.commentKey);
+      pinScrollPosition(scrollPanel, scrollTarget);
     }
   );
 });
@@ -3449,12 +3480,11 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       row.append(bubble, time);
     }
 
-    if (cardId) row.appendChild(makeKakaoCommentAddBtn(index, isMe));
-    currentGroupCol.appendChild(row);
-
     if (cardId) {
       // 코멘트는 여러 개 있을 수 있어서(유저 여러 개 + 관리자 여러 개), 작성
-      // 시각(createdAt) 순으로 정렬해 왼쪽(또는 오른쪽)부터 쌓습니다.
+      // 시각(createdAt) 순으로 정렬해 위에서부터 쌓습니다. 말풍선 밑이 아니라
+      // 말풍선 옆(시간 표시/코멘트 작성 버튼과 같은, 가운데를 향한 쪽)에
+      // 붙도록 row 안에 (시간 표시와 작성 버튼 사이에) 끼워 넣습니다.
       const commentDoc = currentKakaoComments.get(String(index));
       const viewEntries = [];
       (commentDoc && commentDoc.user ? commentDoc.user : []).forEach((entry) => viewEntries.push({ role: "user", entry }));
@@ -3465,9 +3495,12 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
         const viewStack = document.createElement("div");
         viewStack.className = "kakao-comment-view-stack";
         viewEntries.forEach(({ role, entry }) => viewStack.appendChild(makeKakaoCommentViewBtn(index, role, entry)));
-        currentGroupCol.appendChild(viewStack);
+        row.appendChild(viewStack);
       }
+
+      row.appendChild(makeKakaoCommentAddBtn(index, isMe));
     }
+    currentGroupCol.appendChild(row);
 
     if (editable) container.appendChild(makeInsertImageBtn(index + 1));
   });
@@ -3776,6 +3809,10 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
     return;
   }
 
+  // 저장 버튼을 누르는 시점(키보드가 닫히기 전)의 스크롤 위치를 미리 기억해둡니다.
+  const scrollPanel = kakaoDetailModal.querySelector(".modal-panel");
+  const scrollTarget = scrollPanel ? scrollPanel.scrollTop : 0;
+
   // 빈 텍스트 블록/URL 없는 이미지 블록은 저장하지 않고 걸러냅니다.
   const content = kakaoCommentComposeBlocks
     .map((b) =>
@@ -3817,10 +3854,8 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
       closeKakaoCommentPanel();
       // "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러오되, 상세 화면을 통째로
       // 새로 그리면 스크롤이 맨 위로 돌아가버리므로 스크롤 위치를 기억했다가 되돌립니다.
-      const panel = kakaoDetailModal.querySelector(".modal-panel");
-      const scrollTop = panel ? panel.scrollTop : 0;
       openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData).then(() => {
-        if (panel) panel.scrollTop = scrollTop;
+        pinScrollPosition(scrollPanel, scrollTarget);
       });
     }
   );
@@ -3830,6 +3865,9 @@ kakaoCommentPanelDeleteBtn.addEventListener("click", async () => {
   const state = kakaoCommentPanelState;
   if (!state || state.mode !== "view" || !currentKakaoDetailId) return;
   if (!confirm("이 코멘트를 삭제할까요? 되돌릴 수 없어요.")) return;
+
+  const scrollPanel = kakaoDetailModal.querySelector(".modal-panel");
+  const scrollTarget = scrollPanel ? scrollPanel.scrollTop : 0;
 
   const commentDoc = currentKakaoComments.get(String(state.msgIndex)) || {};
   const arr = (Array.isArray(commentDoc[state.role]) ? commentDoc[state.role] : []).filter(
@@ -3843,10 +3881,8 @@ kakaoCommentPanelDeleteBtn.addEventListener("click", async () => {
     "코멘트 삭제에 실패했습니다: ",
     () => {
       closeKakaoCommentPanel();
-      const panel = kakaoDetailModal.querySelector(".modal-panel");
-      const scrollTop = panel ? panel.scrollTop : 0;
       openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData).then(() => {
-        if (panel) panel.scrollTop = scrollTop;
+        pinScrollPosition(scrollPanel, scrollTarget);
       });
     }
   );
@@ -4231,6 +4267,10 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
     return;
   }
 
+  // 저장 버튼을 누르는 시점(키보드가 닫히기 전)의 스크롤 위치를 미리 기억해둡니다.
+  const scrollPanel = sumoneDetailModal.querySelector(".modal-panel");
+  const scrollTarget = scrollPanel ? scrollPanel.scrollTop : 0;
+
   const content = sumoneCommentComposeBlocks
     .map((b) =>
       b.type === "image"
@@ -4271,6 +4311,7 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
       // 상세 화면을 통째로 다시 불러오면(openSumoneDetail) 불필요하게 다시 읽어오고
       // 스크롤도 흐트러질 수 있으니, 코멘트 스택만 다시 그립니다.
       renderSumoneCommentStack();
+      pinScrollPosition(scrollPanel, scrollTarget);
     }
   );
 });
@@ -4279,6 +4320,9 @@ sumoneCommentPanelDeleteBtn.addEventListener("click", async () => {
   const state = sumoneCommentPanelState;
   if (!state || state.mode !== "view" || !currentSumoneDetailId) return;
   if (!confirm("이 코멘트를 삭제할까요? 되돌릴 수 없어요.")) return;
+
+  const scrollPanel = sumoneDetailModal.querySelector(".modal-panel");
+  const scrollTarget = scrollPanel ? scrollPanel.scrollTop : 0;
 
   const arr = (Array.isArray(currentSumoneComments[state.role]) ? currentSumoneComments[state.role] : []).filter(
     (e) => e.id !== state.entryId
@@ -4293,6 +4337,7 @@ sumoneCommentPanelDeleteBtn.addEventListener("click", async () => {
       currentSumoneComments = { ...currentSumoneComments, [state.role]: arr };
       closeSumoneCommentPanel();
       renderSumoneCommentStack();
+      pinScrollPosition(scrollPanel, scrollTarget);
     }
   );
 });

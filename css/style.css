@@ -1838,17 +1838,23 @@ h1 {
 }
 
 /* 코멘트 보기 버튼(트윗 코멘트 보기 버튼과 같은 컴포넌트, .tweet-comment-view-btn)을
-   해당 말풍선 바로 아래에 한 줄로 늘어놓습니다. 트위터 쪽은 코멘트가 여러 개면
-   세로로 쌓이는(position:absolute) 별도 칸을 쓰지만, 카카오는 말풍선 밑에서 자연스럽게
-   다음 줄로 흐르면 되어서 absolute 없이 그냥 가로로 나열하고 넘치면 줄바꿈합니다. */
+   해당 말풍선 밑이 아니라 옆(시간 표시/코멘트 작성 버튼과 같은, 가운데를 향한 쪽)에
+   세로로 쌓아 붙입니다. kakao-bubble-row 자체가 other는 그대로, me는
+   row-reverse라서, 같은 자리(time과 addBtn 사이)에 두기만 하면 흰 말풍선(other)
+   쪽은 자연히 오른쪽에, 검은 말풍선(me) 쪽은 자연히 왼쪽에 놓입니다. */
 .kakao-comment-view-stack {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 4px;
-  margin-top: 4px;
+  flex-shrink: 0;
 }
-.kakao-message-group.me .kakao-comment-view-stack {
-  justify-content: flex-end;
+
+/* 아이콘 선(획) 색을 포인트 컬러로 고정합니다(트윗 쪽 기본값인 --text 대신). */
+.kakao-comment-view-stack .tweet-comment-view-btn .bubble-icon {
+  color: var(--accent);
+}
+.kakao-comment-view-stack .tweet-comment-view-btn.is-open .bubble-icon {
+  color: #fff;
 }
 
 .kakao-preview-section {
