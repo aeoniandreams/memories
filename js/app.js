@@ -738,6 +738,18 @@ async function toggleMessageLike(msgIndex) {
   if (likeBtn) likeBtn.classList.toggle("liked", !!updatedMessages[msgIndex].liked);
 }
 
+// 코멘트를 쓰거나 지운 뒤 "보기" 버튼에 반영할 때 씁니다. openDetail을 다시 불러
+// 스레드 전체를 새로 그리면(위 toggleMessageLike와 같은 이유로) 스크롤이 맨 위로
+// 돌아가버리므로, 코멘트가 바뀐 트윗 한 줄만 새로 그려서 갈아 끼웁니다.
+function refreshTweetMessageRow(commentKey) {
+  const rows = Array.from(detailThread.children);
+  const msgIndex = rows.findIndex((row) => row.dataset.commentKey === commentKey);
+  if (msgIndex === -1) return;
+  const msg = currentDetailData.messages[msgIndex];
+  const newRow = renderMessageRow(msg, msgIndex, commentKey, currentTweetComments.get(commentKey));
+  rows[msgIndex].replaceWith(newRow);
+}
+
 function renderMessageRow(msg, msgIndex, commentKey, comments) {
   const row = document.createElement("div");
   row.className = "message-row";
@@ -1875,9 +1887,13 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("x", currentDetailCardId, state.commentKey, type);
+      currentTweetComments.set(state.commentKey, {
+        ...(currentTweetComments.get(state.commentKey) || {}),
+        [role]: arr,
+      });
       closeTweetCommentPanel();
-      // 우측 "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
-      openDetail(currentDetailCardId, currentDetailData);
+      // 우측 "보기" 버튼에 바로 반영되도록 트윗 한 줄만 다시 그립니다.
+      refreshTweetMessageRow(state.commentKey);
     }
   );
 });
@@ -1898,8 +1914,12 @@ tweetCommentPanelDeleteBtn.addEventListener("click", async () => {
     arr,
     "코멘트 삭제에 실패했습니다: ",
     () => {
+      currentTweetComments.set(state.commentKey, {
+        ...(currentTweetComments.get(state.commentKey) || {}),
+        [state.role]: arr,
+      });
       closeTweetCommentPanel();
-      openDetail(currentDetailCardId, currentDetailData);
+      refreshTweetMessageRow(state.commentKey);
     }
   );
 });
@@ -3795,8 +3815,13 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("kakao", currentKakaoDetailId, String(state.msgIndex), type);
       closeKakaoCommentPanel();
-      // "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러옵니다.
-      openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
+      // "보기" 버튼에 바로 반영되도록 상세 화면을 다시 불러오되, 상세 화면을 통째로
+      // 새로 그리면 스크롤이 맨 위로 돌아가버리므로 스크롤 위치를 기억했다가 되돌립니다.
+      const panel = kakaoDetailModal.querySelector(".modal-panel");
+      const scrollTop = panel ? panel.scrollTop : 0;
+      openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData).then(() => {
+        if (panel) panel.scrollTop = scrollTop;
+      });
     }
   );
 });
@@ -3818,7 +3843,11 @@ kakaoCommentPanelDeleteBtn.addEventListener("click", async () => {
     "코멘트 삭제에 실패했습니다: ",
     () => {
       closeKakaoCommentPanel();
-      openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData);
+      const panel = kakaoDetailModal.querySelector(".modal-panel");
+      const scrollTop = panel ? panel.scrollTop : 0;
+      openKakaoDetail(currentKakaoDetailId, currentKakaoDetailData).then(() => {
+        if (panel) panel.scrollTop = scrollTop;
+      });
     }
   );
 });
@@ -4237,8 +4266,11 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
     () => {
       // 방금 내가 쓴 코멘트가 알림/뱃지에 "새 코멘트"로 뜨지 않도록 바로 확인 처리합니다.
       markTargetSeen("sumone", currentSumoneDetailId, "main", type);
+      currentSumoneComments = { ...currentSumoneComments, [role]: arr };
       closeSumoneCommentPanel();
-      openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
+      // 상세 화면을 통째로 다시 불러오면(openSumoneDetail) 불필요하게 다시 읽어오고
+      // 스크롤도 흐트러질 수 있으니, 코멘트 스택만 다시 그립니다.
+      renderSumoneCommentStack();
     }
   );
 });
@@ -4258,8 +4290,9 @@ sumoneCommentPanelDeleteBtn.addEventListener("click", async () => {
     arr,
     "코멘트 삭제에 실패했습니다: ",
     () => {
+      currentSumoneComments = { ...currentSumoneComments, [state.role]: arr };
       closeSumoneCommentPanel();
-      openSumoneDetail(currentSumoneDetailId, currentSumoneDetailData);
+      renderSumoneCommentStack();
     }
   );
 });
