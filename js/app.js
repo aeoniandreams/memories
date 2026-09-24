@@ -1102,11 +1102,23 @@ function closeDetail() {
   renderCardGrid();
 }
 
-// 휴대폰의 뒤로가기(브라우저 popstate)를 누르면, 대화창/설명창이 열려 있는
-// 동안엔 사이트를 나가는 대신 그 창만 닫습니다(홈 화면+사이드바 상태로
-// 돌아옴). 둘 다 닫혀 있는(홈 화면) 상태에서 뒤로가기를 누르면 여기서 할
-// 일이 없어서 브라우저 기본 동작(사이트 나가기)이 그대로 진행됩니다.
+// 휴대폰의 뒤로가기(브라우저 popstate)를 누르면, 이미지 뷰어/대화창/설명창이
+// 열려 있는 동안엔 사이트를 나가는 대신 그 창만 닫습니다(홈 화면+사이드바
+// 상태로 돌아옴). 이미지 뷰어는 항상 다른 창(대화창/갤러리 등) 위에 뜨는
+// 맨 위 레이어라 제일 먼저 확인합니다. 전부 닫혀 있는(홈 화면) 상태에서
+// 뒤로가기를 누르면 여기서 할 일이 없어서 브라우저 기본 동작(사이트
+// 나가기)이 그대로 진행됩니다.
 window.addEventListener("popstate", () => {
+  if (!imageViewerModal.hidden) {
+    imageViewerHistoryPushed = false;
+    imageViewerModal.hidden = true;
+    imageViewerImg.src = "";
+    if (imageViewerSourceItem) {
+      imageViewerSourceItem.classList.remove("revealed");
+      imageViewerSourceItem = null;
+    }
+    return;
+  }
   if (!appInfoModal.hidden) {
     if (hasUnsavedAppInfoChanges() && !confirm("저장하지 않은 내용이 있습니다. 뒤로 가시겠어요?")) {
       history.pushState({ memoriesAppInfoOpen: true }, "");
@@ -1277,10 +1289,17 @@ function toOriginalQualityImageUrl(url) {
 // 닫을 때 그 항목 하나만 revealed를 풀기 위해 기억해두는 용도라, 갤러리가
 // 아닌 곳(트윗/카톡/SumOne 이미지 등)에서 열 때는 생략하면 됩니다.
 let imageViewerSourceItem = null;
+// 대화창(detailHistoryPushed)과 같은 방식: 이미지 뷰어를 열 때도 히스토리를
+// 하나 쌓아둬서, 폰 뒤로가기를 눌렀을 때 사이트를 나가는 대신 이 뷰어만
+// 닫히게 합니다(전에는 히스토리를 안 쌓아서 뒤로가기를 누르면 사이트
+// 자체가 꺼져버렸습니다).
+let imageViewerHistoryPushed = false;
 function openImageViewer(url, sourceItem) {
   imageViewerImg.src = toOriginalQualityImageUrl(url);
   imageViewerModal.hidden = false;
   imageViewerSourceItem = sourceItem || null;
+  history.pushState({ memoriesImageViewerOpen: true }, "");
+  imageViewerHistoryPushed = true;
 }
 
 function closeImageViewer() {
@@ -1292,6 +1311,10 @@ function closeImageViewer() {
   if (imageViewerSourceItem) {
     imageViewerSourceItem.classList.remove("revealed");
     imageViewerSourceItem = null;
+  }
+  if (imageViewerHistoryPushed) {
+    imageViewerHistoryPushed = false;
+    history.back();
   }
 }
 
