@@ -172,6 +172,7 @@ h1 {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
+  letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--text);
 }
@@ -2660,7 +2661,7 @@ h1 {
   }
   .nickname { font-size: 13px; }
   .handle, .date { font-size: 12px; }
-  .tweet-text { font-size: 12px; }
+  .tweet-text { font-size: 13px; }
   .kakao-bubble { font-size: 13px; }
 
   /* 좌측 코멘트 작성 버튼을 20px -> 16px(아이콘 18px -> 14px)로 줄였습니다.
