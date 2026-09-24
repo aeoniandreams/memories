@@ -2661,8 +2661,7 @@ h1 {
   .nickname { font-size: 13px; }
   .handle, .date { font-size: 12px; }
   .tweet-text { font-size: 12px; }
-  /* 채팅 내용 폰트 크기를 트위터 백업(.tweet-text)의 모바일 크기와 맞춥니다. */
-  .kakao-bubble { font-size: 12px; }
+  .kakao-bubble { font-size: 13px; }
 
   /* 좌측 코멘트 작성 버튼을 20px -> 16px(아이콘 18px -> 14px)로 줄였습니다.
      .message-row는 이 트윗 한 줄 전체(프사+닉네임/아이디/날짜/대화 내용)를 감싸는
