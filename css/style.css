@@ -63,6 +63,29 @@ html {
   text-size-adjust: 100%;
 }
 
+/* 스크롤바를 얇게, 트랙(스크롤바가 지나가는 뒷배경)은 투명하게 합니다.
+   기본 스크롤바는 트랙이 불투명한 밝은 회색/흰색이라, 야간 모드의 어두운
+   배경 위에서 스크롤바 영역만 하얗게 떠 보이는 문제가 있었습니다. 막대
+   (thumb)만 은은하게 보이고 트랙은 페이지 배경이 그대로 비치게 합니다. */
+* {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--border) transparent; /* Firefox: thumb, track */
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
 body {
   margin: 0;
   background: var(--bg);
