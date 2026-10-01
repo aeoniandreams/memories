@@ -2434,7 +2434,7 @@ h1 {
 }
 .app-sidebar-latest-record-hint {
   margin-top: 3px;
-  font-size: 8px;
+  font-size: 10px;
   color: var(--muted);
 }
 
