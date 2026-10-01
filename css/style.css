@@ -16,6 +16,11 @@
   /* 대화창(.modal-panel) 전용 배경색. 기본 모드는 페이지 배경과 동일(--bg)하고,
      야간 모드에서만 --surface 값으로 살짝 밝게 조정합니다(아래 다크모드 블록). */
   --modal-bg: var(--bg);
+  /* 스크롤바 막대/화살표 색. 기본 모드는 --border로 충분히 보이지만,
+     야간 모드에서는 --border가 배경과 거의 구분이 안 돼서 아래
+     다크모드 블록에서 흰색으로 따로 바꿉니다. */
+  --scrollbar-thumb: var(--border);
+  --scrollbar-thumb-hover: var(--muted);
 }
 
 /* OS 설정이 어두운 모드인데 사용자가 수동으로 "밝게"를 고르지 않았을 때 */
@@ -34,6 +39,8 @@
     --comment-btn-bg: rgba(247, 248, 249, 0.55);
     /* 어두워진 배경(오버레이)과 대화창이 잘 구별되도록 대화창만 살짝 밝게. */
     --modal-bg: #1e2126;
+    --scrollbar-thumb: #fff;
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.75);
   }
 }
 
@@ -50,6 +57,8 @@
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   --comment-btn-bg: rgba(247, 248, 249, 0.55);
   --modal-bg: #1e2126;
+  --scrollbar-thumb: #fff;
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.75);
 }
 
 * { box-sizing: border-box; }
@@ -69,7 +78,7 @@ html {
    (thumb)만 은은하게 보이고 트랙은 페이지 배경이 그대로 비치게 합니다. */
 * {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: var(--border) transparent; /* Firefox: thumb, track */
+  scrollbar-color: var(--scrollbar-thumb) transparent; /* Firefox: thumb, track */
 }
 *::-webkit-scrollbar {
   width: 8px;
@@ -79,11 +88,19 @@ html {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: var(--scrollbar-thumb-hover);
+}
+/* 위/아래(또는 좌/우) 끝의 화살표 버튼. 막대와 같은 색으로 맞춰서
+   트랙(투명) 위에서 따로 흐려 보이지 않게 합니다. */
+*::-webkit-scrollbar-button {
+  background: var(--scrollbar-thumb);
+}
+*::-webkit-scrollbar-button:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 body {
