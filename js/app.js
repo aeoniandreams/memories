@@ -65,6 +65,8 @@ const sidebarHelpBtn = document.getElementById("sidebar-help-btn");
 const appSidebarAdminBadge = document.getElementById("app-sidebar-admin-badge");
 const sidebarLatestRecord = document.getElementById("sidebar-latest-record");
 const sidebarLatestRecordDate = document.getElementById("sidebar-latest-record-date");
+const sidebarLatestComment = document.getElementById("sidebar-latest-comment");
+const sidebarLatestCommentDate = document.getElementById("sidebar-latest-comment-date");
 const sidebarMenuBtns = document.querySelectorAll(".sidebar-menu-btn");
 const kakaoAppView = document.getElementById("kakao-app-view");
 const kakaoLogoutBtn = document.getElementById("kakao-logout-btn");
@@ -476,6 +478,36 @@ function renderSidebarLatestRecord() {
   }
   sidebarLatestRecordDate.textContent = bestDisplay;
   sidebarLatestRecord.hidden = false;
+}
+
+// createdAt(ms 타임스탬프)을 "0000.00.00." 형식으로 바꿉니다.
+function formatDotDate(ms) {
+  const d = new Date(ms);
+  const pad2 = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())}.`;
+}
+
+// 사이드바 "최근 코멘트 작성"(관리자 전용): notifEntriesCache(X/카카오/SumOne
+// 코멘트를 전부 모아둔 캐시, loadNotifEntries에서 채워짐) 중 wine을 뺀
+// message-circle/coffee(관리자가 쓰는 종류) 코멘트에서 가장 최근
+// createdAt을 찾습니다. notifEntriesCache가 다시 불러와질 때마다(로그인
+// 시, 알림창을 열 때) 같이 다시 계산되도록 loadNotifEntries 끝에서 부릅니다.
+function renderSidebarLatestComment() {
+  if (!isAdmin) {
+    sidebarLatestComment.hidden = true;
+    return;
+  }
+  let bestCreatedAt = 0;
+  notifEntriesCache.forEach((entry) => {
+    if (entry.type === "wine") return;
+    if (entry.createdAt > bestCreatedAt) bestCreatedAt = entry.createdAt;
+  });
+  if (!bestCreatedAt) {
+    sidebarLatestComment.hidden = true;
+    return;
+  }
+  sidebarLatestCommentDate.textContent = formatDotDate(bestCreatedAt);
+  sidebarLatestComment.hidden = false;
 }
 
 // 태그 필터: lookbook(aeoniandreams/lookbook)의 커스텀 정렬 드롭다운과 같은
@@ -4497,6 +4529,7 @@ async function loadNotifEntries() {
 
   notifEntriesCache = entries;
   updateNotifBellDots();
+  renderSidebarLatestComment();
 }
 
 // 알림은 "상대가 쓴 코멘트"만 보이게 합니다: 관리자(message-circle/coffee
