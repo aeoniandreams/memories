@@ -63,6 +63,8 @@ const sidebarKakaoBtn = document.getElementById("sidebar-kakao-btn");
 const sidebarSumoneBtn = document.getElementById("sidebar-sumone-btn");
 const sidebarHelpBtn = document.getElementById("sidebar-help-btn");
 const appSidebarAdminBadge = document.getElementById("app-sidebar-admin-badge");
+const sidebarLatestRecord = document.getElementById("sidebar-latest-record");
+const sidebarLatestRecordDate = document.getElementById("sidebar-latest-record-date");
 const sidebarMenuBtns = document.querySelectorAll(".sidebar-menu-btn");
 const kakaoAppView = document.getElementById("kakao-app-view");
 const kakaoLogoutBtn = document.getElementById("kakao-logout-btn");
@@ -445,6 +447,35 @@ async function loadCards() {
   const snapshot = await getDocs(q);
   loadedCards = snapshot.docs.map((docSnap) => ({ id: docSnap.id, data: docSnap.data() }));
   renderCardGrid();
+  renderSidebarLatestRecord();
+}
+
+// 사이드바 "가장 최근 기록"(관리자 전용): loadedCards의 모든 메시지를
+// 통틀어 날짜(dateSort)가 가장 늦은 메시지 하나를 찾아 그 dateDisplay를
+// 보여줍니다. 카드의 마지막 메시지가 항상 가장 최근이라고 가정하지 않고
+// (수동 추가 등으로 순서가 어긋날 수 있어서) 메시지 전체를 비교합니다.
+function renderSidebarLatestRecord() {
+  if (!isAdmin) {
+    sidebarLatestRecord.hidden = true;
+    return;
+  }
+  let bestSort = "";
+  let bestDisplay = "";
+  loadedCards.forEach(({ data }) => {
+    (data.messages || []).forEach((m) => {
+      const sort = m.dateSort || toDateSort(m.dateDisplay);
+      if (sort && sort > bestSort) {
+        bestSort = sort;
+        bestDisplay = m.dateDisplay || "";
+      }
+    });
+  });
+  if (!bestDisplay) {
+    sidebarLatestRecord.hidden = true;
+    return;
+  }
+  sidebarLatestRecordDate.textContent = bestDisplay;
+  sidebarLatestRecord.hidden = false;
 }
 
 // 태그 필터: lookbook(aeoniandreams/lookbook)의 커스텀 정렬 드롭다운과 같은

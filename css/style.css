@@ -2407,6 +2407,27 @@ h1 {
   background: var(--border);
 }
 
+/* ---------- 사이드바 "가장 최근 기록" (관리자 전용) ----------
+   Gallery 카테고리 바로 아래 항목이지만 메뉴 버튼이 아니라 정보 표시용이라,
+   margin-top으로 위 항목들과 간격을 좀 더 띄워서 구분되게 합니다. */
+.app-sidebar-latest-record {
+  margin-top: 14px;
+  padding: 8px 8px 0;
+}
+.app-sidebar-latest-record[hidden] {
+  display: none;
+}
+.app-sidebar-latest-record-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.app-sidebar-latest-record-date {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
 /* ---------- Gallery 화면: 마소너리 레이아웃 + 호버(모바일은 탭) 오버레이 ----------
    aeoniandreams/lookbook의 홈 화면/레퍼런스 토글 레이아웃을 그대로 참고했습니다.
    컬럼 배치는 CSS가 아니라 JS(js/app.js의 layoutGalleryMasonry)가 담당합니다 —
