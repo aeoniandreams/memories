@@ -371,6 +371,7 @@
       <div class="modal-header">
         <button id="kakao-comment-panel-back-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
         <div class="modal-header-right">
+          <button id="kakao-comment-panel-excerpt-btn" class="btn-secondary" type="button" hidden>발췌 본문 보기</button>
           <button id="kakao-comment-panel-action-btn" class="btn-secondary" hidden></button>
           <button id="kakao-comment-panel-delete-btn" class="btn-ghost danger" hidden>삭제</button>
         </div>
@@ -475,6 +476,7 @@
       <div class="modal-header">
         <button id="tweet-comment-panel-back-btn" class="btn-ghost"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg></button>
         <div class="modal-header-right">
+          <button id="tweet-comment-panel-excerpt-btn" class="btn-secondary" type="button" hidden>발췌 본문 보기</button>
           <button id="tweet-comment-panel-action-btn" class="btn-secondary" hidden></button>
           <button id="tweet-comment-panel-delete-btn" class="btn-ghost danger" hidden>삭제</button>
         </div>
@@ -546,6 +548,11 @@
     <section id="editable-rows" class="editable-rows"></section>
   </div>
 </div>
+
+<!-- 모바일 전용: 코멘트 창에서 "발췌 본문 보기"를 누르면 코멘트 창을 잠깐 내리고,
+     뒤의 대화창에서 발췌된 문구만 진하게 보이게 합니다. 그동안 화면 아래에 이
+     바를 띄워두고, 누르면 코멘트 창이 다시 올라옵니다. -->
+<button id="excerpt-peek-bar" class="excerpt-peek-bar" type="button" hidden>▲ 코멘트 다시 보기</button>
 
 <script type="module" src="js/app.js"></script>
 </body>

@@ -1590,6 +1590,36 @@ h1 {
   }
 }
 
+/* ---------- 모바일 "발췌 본문 보기" (js/app.js의 enterExcerptPeek) ----------
+   코멘트 창(바텀시트 + 딤)을 잠깐 숨겨서 뒤 대화창의 발췌된 문구를 보게 하고,
+   그동안 화면 아래에 "코멘트 다시 보기" 바를 띄웁니다. 숨김 규칙은 데스크탑용
+   .tweet-comment-panel(display:block)보다 우선하도록 클래스를 두 개 씁니다. */
+.tweet-comment-panel.excerpt-peek {
+  display: none;
+}
+.excerpt-peek-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* 모달 오버레이(z-index:100) 안의 코멘트 창(101)보다 위에 떠야 합니다. */
+  z-index: 110;
+  height: calc(52px + env(safe-area-inset-bottom));
+  padding: 0 16px env(safe-area-inset-bottom);
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  background: var(--modal-bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+.excerpt-peek-bar[hidden] {
+  display: none;
+}
+
 /* ---------- 새 대화 추가 폼 ---------- */
 .import-section {
   padding: 16px;

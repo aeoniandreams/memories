@@ -90,6 +90,7 @@ const detailEditBtn = document.getElementById("detail-edit-btn");
 
 const tweetCommentPanel = document.getElementById("tweet-comment-panel");
 const tweetCommentPanelBackBtn = document.getElementById("tweet-comment-panel-back-btn");
+const tweetCommentPanelExcerptBtn = document.getElementById("tweet-comment-panel-excerpt-btn");
 const tweetCommentPanelActionBtn = document.getElementById("tweet-comment-panel-action-btn");
 const tweetCommentPanelDeleteBtn = document.getElementById("tweet-comment-panel-delete-btn");
 const tweetCommentPanelBody = document.getElementById("tweet-comment-panel-body");
@@ -1503,6 +1504,35 @@ function isMobileViewport() {
   return window.matchMedia("(max-width: 480px) and (hover: none) and (pointer: coarse)").matches;
 }
 
+// 모바일 전용 "발췌 본문 보기": 모바일에선 코멘트 창(바텀시트)이 화면을 많이
+// 덮고 뒤에 딤까지 깔려서, 대화창에서 발췌된 문구를 보기 어렵습니다. 이
+// 버튼을 누르면 코멘트 창을 잠깐 내리고(.excerpt-peek로 숨김) 첫 발췌가 있는
+// 메시지로 스크롤해서, 발췌된 문구만 진하게 보이는 대화창을 그대로 보여줍니다.
+// 그동안 화면 아래의 "코멘트 다시 보기" 바를 누르면 코멘트 창이 돌아옵니다.
+// 코멘트 창 자체의 상태(열려 있음/보던 코멘트)는 건드리지 않고 가리기만 합니다.
+const excerptPeekBar = document.getElementById("excerpt-peek-bar");
+let excerptPeekPanel = null;
+
+function hasExcerpts(highlights) {
+  return Array.isArray(highlights) && highlights.some((h) => h && h.text && h.targetKey !== undefined && h.targetKey !== null);
+}
+
+function enterExcerptPeek(panelEl, threadEl, rowSelector, highlights) {
+  panelEl.classList.add("excerpt-peek");
+  excerptPeekPanel = panelEl;
+  excerptPeekBar.hidden = false;
+  const keys = new Set((highlights || []).filter((h) => h && h.text).map((h) => String(h.targetKey)));
+  const firstRow = Array.from(threadEl.querySelectorAll(rowSelector)).find((row) => keys.has(row.dataset.commentKey));
+  if (firstRow) firstRow.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+function exitExcerptPeek() {
+  if (excerptPeekPanel) excerptPeekPanel.classList.remove("excerpt-peek");
+  excerptPeekPanel = null;
+  excerptPeekBar.hidden = true;
+}
+excerptPeekBar.addEventListener("click", exitExcerptPeek);
+
 // 코멘트 작성/수정 패널 안에, 지금까지 고른 문구들을 칩(chip) 목록으로 보여줍니다.
 // x를 누르면 목록에서 빼고 다시 그립니다(패널+스레드 강조 둘 다 rerender가 갱신).
 function renderHighlightPicker(container, highlights, rerender) {
@@ -1653,6 +1683,7 @@ function openTweetCommentCompose(commentKey) {
 }
 
 function closeTweetCommentPanel() {
+  exitExcerptPeek();
   tweetCommentPanel.hidden = true;
   tweetCommentPanelState = null;
   setActiveTweetCommentViewBtn(null);
@@ -1899,8 +1930,10 @@ function renderCommentBlockEditor(container, blocks, rerender) {
 
 function renderTweetCommentPanel() {
   const state = tweetCommentPanelState;
+  exitExcerptPeek(); // 다른 코멘트를 열었을 때 이전 "발췌 본문 보기" 상태가 남지 않게 합니다.
   applyTweetThreadHighlights(state.highlights || []);
   tweetCommentPanelBody.innerHTML = "";
+  tweetCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isMobileViewport() && hasExcerpts(state.highlights));
 
   if (state.mode === "view") {
     const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
@@ -1940,6 +1973,11 @@ function renderTweetCommentPanel() {
   tweetCommentPanelDeleteBtn.hidden = true; // 수정/작성 중에는 삭제 버튼을 숨깁니다.
 }
 
+tweetCommentPanelExcerptBtn.addEventListener("click", () => {
+  const state = tweetCommentPanelState;
+  if (!state) return;
+  enterExcerptPeek(tweetCommentPanel, detailThread, ".message-row", state.highlights);
+});
 tweetCommentPanelBackBtn.addEventListener("click", tryLeaveTweetCommentPanel);
 tweetCommentPanel.addEventListener("click", (e) => {
   if (e.target === tweetCommentPanel) tryLeaveTweetCommentPanel();
@@ -3809,6 +3847,7 @@ kakaoDetailModal.addEventListener("click", (e) => {
 // 다릅니다.
 const kakaoCommentPanel = document.getElementById("kakao-comment-panel");
 const kakaoCommentPanelBackBtn = document.getElementById("kakao-comment-panel-back-btn");
+const kakaoCommentPanelExcerptBtn = document.getElementById("kakao-comment-panel-excerpt-btn");
 const kakaoCommentPanelActionBtn = document.getElementById("kakao-comment-panel-action-btn");
 const kakaoCommentPanelDeleteBtn = document.getElementById("kakao-comment-panel-delete-btn");
 const kakaoCommentPanelBody = document.getElementById("kakao-comment-panel-body");
@@ -3846,6 +3885,7 @@ function openKakaoCommentCompose(msgIndex) {
 }
 
 function closeKakaoCommentPanel() {
+  exitExcerptPeek();
   kakaoCommentPanel.hidden = true;
   kakaoCommentPanelState = null;
   setActiveKakaoCommentViewBtn(null);
@@ -3875,8 +3915,10 @@ function setActiveKakaoCommentViewBtn(btn) {
 function renderKakaoCommentPanel() {
   const state = kakaoCommentPanelState;
   if (!state) return;
+  exitExcerptPeek();
   applyKakaoThreadHighlights(state.highlights || []);
   kakaoCommentPanelBody.innerHTML = "";
+  kakaoCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isMobileViewport() && hasExcerpts(state.highlights));
 
   if (state.mode === "view") {
     const entry = findKakaoCommentEntry(state.msgIndex, state.role, state.entryId);
@@ -3912,6 +3954,11 @@ function renderKakaoCommentPanel() {
   kakaoCommentPanelDeleteBtn.hidden = true; // 수정/작성 중에는 삭제 버튼을 숨깁니다.
 }
 
+kakaoCommentPanelExcerptBtn.addEventListener("click", () => {
+  const state = kakaoCommentPanelState;
+  if (!state) return;
+  enterExcerptPeek(kakaoCommentPanel, kakaoDetailThread, ".kakao-bubble-row", state.highlights);
+});
 kakaoCommentPanelBackBtn.addEventListener("click", closeKakaoCommentPanel);
 kakaoCommentPanel.addEventListener("click", (e) => {
   if (e.target === kakaoCommentPanel) closeKakaoCommentPanel();
