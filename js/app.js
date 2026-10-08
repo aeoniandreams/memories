@@ -113,6 +113,16 @@ let currentDetailData = null;
 // 대화창이 열려 있을 때 휴대폰의 뒤로가기를 누르면 사이트를 나가는 대신 대화창만
 // 닫히도록, 열 때 히스토리 항목을 하나 쌓아둡니다 (아래 openDetail/leaveDetailModal 참고).
 let detailHistoryPushed = false;
+// 창을 닫기 버튼/바깥 클릭으로 닫을 때는, 열 때 쌓아둔 히스토리 항목을 정리하려고 코드가 직접
+// history.back()을 부릅니다. 그 결과로 뜨는 popstate는 사용자가 뒤로가기를 누른 게 아니라서
+// popstate 핸들러가 무시해야 하는데, 안 그러면 "이미지 뷰어를 X로 닫았더니 그 밑에 열려 있던
+// 대화창까지 꺼지는" 문제가 생깁니다(뷰어는 이미 닫혔으니 핸들러가 다음 레이어인 대화창을
+// 닫아버림). 직접 부른 history.back() 횟수를 세어뒀다가 그만큼의 popstate를 건너뜁니다.
+let pendingProgrammaticBacks = 0;
+function programmaticHistoryBack() {
+  pendingProgrammaticBacks += 1;
+  history.back();
+}
 let editingMessages = []; // 새 대화 추가 모달에서 편집 중인 메시지 배열
 // index -> { avatarInput, preview }. 프로필 사진을 바꾸면 같은 닉네임을 쓰는
 // 아래쪽 메시지들에도 바로 반영해야 하는데, renderEditableRows() 전체를 다시
@@ -1167,7 +1177,7 @@ function leaveDetailModal() {
   closeTweetCommentPanel();
   if (detailHistoryPushed) {
     detailHistoryPushed = false;
-    history.back();
+    programmaticHistoryBack();
   }
 }
 
@@ -1184,6 +1194,12 @@ function closeDetail() {
 // 뒤로가기를 누르면 여기서 할 일이 없어서 브라우저 기본 동작(사이트
 // 나가기)이 그대로 진행됩니다.
 window.addEventListener("popstate", () => {
+  // 코드가 직접 부른 history.back()(창을 버튼으로 닫으며 히스토리 정리)의 결과면 사용자가
+  // 뒤로가기를 누른 게 아니므로 아무것도 닫지 않고 넘어갑니다.
+  if (pendingProgrammaticBacks > 0) {
+    pendingProgrammaticBacks -= 1;
+    return;
+  }
   if (!imageViewerModal.hidden) {
     imageViewerHistoryPushed = false;
     imageViewerModal.hidden = true;
@@ -1389,7 +1405,7 @@ function closeImageViewer() {
   }
   if (imageViewerHistoryPushed) {
     imageViewerHistoryPushed = false;
-    history.back();
+    programmaticHistoryBack();
   }
 }
 
@@ -3153,7 +3169,7 @@ function closeAppInfo() {
   appInfoModal.hidden = true;
   if (appInfoHistoryPushed) {
     appInfoHistoryPushed = false;
-    history.back();
+    programmaticHistoryBack();
   }
 }
 // 수정 중(편집칸이 보이는 상태)에 저장하지 않은 내용이 있는 채로 뒤로가기
