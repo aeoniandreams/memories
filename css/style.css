@@ -2161,9 +2161,10 @@ h1 {
    그대로 따라가는 svg path의 stroke를 씁니다(4방향 drop-shadow를 겹쳐
    흉내내던 이전 방식은 겹치는 자리가 두꺼워지고 곡선 구간은 얇아져
    두께가 들쑥날쑥해 보이는 문제가 있었습니다). vector-effect로 확대/축소와
-   무관하게 항상 같은 화면 두께를 유지합니다. 코멘트를 보는 중(is-open)에는
+   무관하게 항상 같은 화면 두께를 유지합니다. 아직 확인하지 않은 코멘트의
+   버튼(is-unseen)에만 두고, 확인하면 사라집니다. 코멘트를 보는 중(is-open)에는
    바탕이 이미 포인트 컬러라 아웃라인이 필요 없어 뺍니다. */
-.kakao-comment-view-stack .tweet-comment-view-btn:not(.is-open) .bubble-shape svg path {
+.kakao-comment-view-stack .tweet-comment-view-btn.is-unseen:not(.is-open) .bubble-shape svg path {
   stroke: var(--kakao-view-btn-outline);
   stroke-width: 1.4px;
   vector-effect: non-scaling-stroke;
