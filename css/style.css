@@ -2132,6 +2132,22 @@ h1 {
 .kakao-message-group.me .kakao-comment-view-stack .tweet-comment-view-btn .bubble-shape {
   color: var(--kakao-view-btn-me-bg);
 }
+/* 코멘트 종류별 색은 확인 여부와 상관없이 늘 유지합니다(알림 강조색과 같은 색).
+   커피는 밝은 파스텔 바탕이라 아이콘 선 색(포인트 컬러)을 그대로 두고, 와인/말풍선은
+   바탕이 진해서 아이콘을 흰색으로 바꿉니다. */
+.kakao-message-group .kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="wine"] .bubble-shape {
+  color: #7E212A;
+}
+.kakao-message-group .kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="coffee"] .bubble-shape {
+  color: #B8E2DC;
+}
+.kakao-message-group .kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="message-circle"] .bubble-shape {
+  color: var(--accent);
+}
+.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="wine"] .bubble-icon,
+.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="message-circle"] .bubble-icon {
+  color: #fff;
+}
 /* 코멘트를 보고 있는 중(is-open)에는 위 색 대신 원래대로 포인트 컬러
    바탕색 + 흰색 아이콘 조합을 유지합니다(우선순위를 위해 위 두 규칙보다
    구체적으로 씁니다). */

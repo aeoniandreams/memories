@@ -3752,14 +3752,10 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       if (iconSvg) iconSvg.style.transform = "scaleX(-1)";
     }
     btn.append(bubbleShape, icon);
-    applyNotifViewBtnColor(
-      bubbleShape,
-      "kakao",
-      currentKakaoDetailId,
-      String(msgIndex),
-      commentEntry.type,
-      commentEntry.createdAt || 0
-    );
+    // 카카오톡 보기 버튼은 코멘트를 확인한 뒤에도 종류별 색(와인/커피/말풍선)을
+    // 그대로 유지합니다(색은 CSS의 data-comment-type 규칙). 새 코멘트 표시는 카드
+    // 외곽선(has-new-comment)만 맡고, 확인하면 그쪽만 원래대로 돌아옵니다.
+    btn.dataset.commentType = commentEntry.type;
     btn.addEventListener("click", () => {
       const state = kakaoCommentPanelState;
       const alreadyOpen =
