@@ -17,6 +17,7 @@ import {
   updateDoc,
   setDoc,
   getDocs,
+  onSnapshot,
   query,
   orderBy,
   serverTimestamp,
@@ -409,6 +410,7 @@ onAuthStateChanged(auth, (user) => {
       currentUid = null;
       cardSeenMap = new Map();
       targetSeenMap = new Map();
+      stopNotifListeners();
       notifEntriesCache = [];
       updateNotifBellDots();
       closeNotifPanel();
@@ -4594,52 +4596,110 @@ async function loadSeenMaps() {
   }
 }
 
-// 세 카테고리의 모든 코멘트를 한 번에 훑어옵니다. 카드마다 따로 불러오는
+// 세 카테고리의 모든 코멘트를 실시간으로 지켜봅니다. 카드마다 따로 불러오는
 // 대신 collectionGroup으로 "tweetComments"라는 이름의 서브컬렉션 전체를
-// 한 번에 조회합니다 — 어느 카드 밑에 있는지는 문서 참조의 부모의 부모
+// 한 번에 구독합니다 — 어느 카드 밑에 있는지는 문서 참조의 부모의 부모
 // (.ref.parent.parent.id)로 알 수 있습니다.
-async function loadNotifEntries() {
-  const entries = [];
+//
+// 예전엔 getDocs로 로그인할 때/알림창을 열 때만 한 번씩 읽어서, 새 코멘트가 달려도
+// 이미 켜져 있는 화면엔 다음 새로고침 전까지 안 보였습니다. onSnapshot으로 바꿔서
+// 코멘트가 생기거나 바뀌면 바로 알림 데이터(notifEntriesCache)를 다시 만들고 벨
+// 점/카드 테두리/알림창/사이드바를 갱신합니다. 처음 한 번은 전체를 읽지만(예전과
+// 같은 양) 그 뒤로는 바뀐 문서만 서버에서 내려와서, 알림창을 열 때마다 전체를
+// 다시 읽던 예전보다 읽기 횟수가 오히려 줄어듭니다.
+const NOTIF_LISTENER_DEFS = [
+  ["tweetComments", "x", null],
+  ["kakaoComments", "kakao", null],
+  ["sumoneComments", "sumone", "main"],
+];
+let notifUnsubscribers = [];
+let notifListenersPromise = null;
+const notifEntriesBySection = { x: [], kakao: [], sumone: [] };
 
-  async function collectFrom(subcollectionName, section, fixedTargetKey) {
-    try {
-      const snap = await getDocs(collectionGroup(db, subcollectionName));
-      snap.forEach((docSnap) => {
-        const cardId = docSnap.ref.parent.parent.id;
-        const targetKey = fixedTargetKey || docSnap.id;
-        const data = normalizeCommentDoc(docSnap.data());
-        ["admin", "user"].forEach((role) => {
-          (data[role] || []).forEach((entry) => {
-            entries.push({
-              section,
-              cardId,
-              targetKey,
-              role,
-              type: entry.type,
-              createdAt: entry.createdAt || 0,
-            });
-          });
+function buildNotifEntriesFromSnapshot(snap, section, fixedTargetKey) {
+  const entries = [];
+  snap.forEach((docSnap) => {
+    const cardId = docSnap.ref.parent.parent.id;
+    const targetKey = fixedTargetKey || docSnap.id;
+    const data = normalizeCommentDoc(docSnap.data());
+    ["admin", "user"].forEach((role) => {
+      (data[role] || []).forEach((entry) => {
+        entries.push({
+          section,
+          cardId,
+          targetKey,
+          role,
+          type: entry.type,
+          createdAt: entry.createdAt || 0,
+          // 부가 기록(message-circle-heart)이 이미지만 있는지, 글도 있는지 구분하려고
+          // 글 블록이 하나라도 있는지 같이 저장해둡니다(알림 대상 판단에 씀).
+          hasText: getCommentBlocks(entry).some((b) => b.type !== "image" && !!String(b.text || "").trim()),
         });
       });
-    } catch (e) {
-      console.error(subcollectionName + " 알림을 불러오지 못했습니다.", e);
-    }
-  }
+    });
+  });
+  return entries;
+}
 
-  await collectFrom("tweetComments", "x", null);
-  await collectFrom("kakaoComments", "kakao", null);
-  await collectFrom("sumoneComments", "sumone", "main");
-
-  notifEntriesCache = entries;
+function rebuildNotifEntriesCache() {
+  notifEntriesCache = [].concat(notifEntriesBySection.x, notifEntriesBySection.kakao, notifEntriesBySection.sumone);
   updateNotifBellDots();
   renderSidebarLatestComment();
+  refreshNewCommentMarks();
+  if (!notifPanel.hidden) renderNotifPanel();
+}
+
+// 로그인한 뒤 한 번만 시작하고(여러 번 불려도 같은 약속을 돌려줌), 세 구독이 각각
+// 첫 결과를 받은 뒤에 끝납니다.
+function loadNotifEntries() {
+  if (notifListenersPromise) return notifListenersPromise;
+  notifListenersPromise = Promise.all(
+    NOTIF_LISTENER_DEFS.map(
+      ([subcollectionName, section, fixedTargetKey]) =>
+        new Promise((resolve) => {
+          let first = true;
+          const unsubscribe = onSnapshot(
+            collectionGroup(db, subcollectionName),
+            (snap) => {
+              notifEntriesBySection[section] = buildNotifEntriesFromSnapshot(snap, section, fixedTargetKey);
+              rebuildNotifEntriesCache();
+              if (first) {
+                first = false;
+                resolve();
+              }
+            },
+            (e) => {
+              console.error(subcollectionName + " 알림을 불러오지 못했습니다.", e);
+              if (first) {
+                first = false;
+                resolve();
+              }
+            }
+          );
+          notifUnsubscribers.push(unsubscribe);
+        })
+    )
+  );
+  return notifListenersPromise;
+}
+
+// 로그아웃하면 구독을 끊고(안 끊으면 권한이 없어 오류가 계속 남) 모아둔 데이터를 비웁니다.
+function stopNotifListeners() {
+  notifUnsubscribers.forEach((unsubscribe) => unsubscribe());
+  notifUnsubscribers = [];
+  notifListenersPromise = null;
+  notifEntriesBySection.x = [];
+  notifEntriesBySection.kakao = [];
+  notifEntriesBySection.sumone = [];
 }
 
 // 알림은 "상대가 쓴 코멘트"만 보이게 합니다: 관리자(message-circle/coffee
 // 작성자)는 상대인 유저가 쓴 wine 알림만 보고, 유저는 관리자가 쓴
-// message-circle/coffee 알림만 봅니다.
+// message-circle/coffee 알림만 봅니다. SumOne의 부가 기록(message-circle-heart)은
+// 유저에게만 보이되, 이미지만 있고 글이 없으면 알림 대상이 아닙니다.
 function isNotifEntryVisible(entry) {
   if (isAdmin) return entry.type === "wine";
+  if (entry.type === NOTE_COMMENT_TYPE) return !!entry.hasText;
   return entry.type === "message-circle" || entry.type === "coffee";
 }
 
@@ -4712,9 +4772,18 @@ function getUnseenTypesForCard(section, cardId) {
 
 // 새 코멘트가 있는 카드는 테두리를 테마 컬러로 강조합니다. 카드를 열어
 // 확인하면(markCardSeen) 목록이 다시 그려지면서 이 클래스도 자연히 빠집니다.
+// 카드 엘리먼트에 어느 카드인지(data-notif-*)도 같이 적어둬서, 실시간으로 코멘트가
+// 바뀌었을 때 목록을 통째로 다시 그리지 않고(스크롤이 흔들림) 이미 그려진 카드들의
+// 테두리만 refreshNewCommentMarks로 제자리에서 갱신할 수 있게 합니다.
 function markCardHasNewComment(cardEl, section, cardId) {
-  if (getUnseenTypesForCard(section, cardId).length === 0) return;
-  cardEl.classList.add("has-new-comment");
+  cardEl.dataset.notifSection = section;
+  cardEl.dataset.notifCardId = cardId;
+  cardEl.classList.toggle("has-new-comment", getUnseenTypesForCard(section, cardId).length > 0);
+}
+function refreshNewCommentMarks() {
+  document.querySelectorAll("[data-notif-section]").forEach((el) => {
+    markCardHasNewComment(el, el.dataset.notifSection, el.dataset.notifCardId);
+  });
 }
 
 // 와인/커피/말풍선 코멘트가 새로 달렸을 때 보기 버튼의 말풍선 배경색을 그
@@ -4766,6 +4835,8 @@ const NOTIF_TEXT_BY_TYPE = {
   "message-circle": "새 코멘트가 달렸어요",
   coffee: "윤 양이 새 코멘트를 달았어요",
   wine: "츄야 군이 새 코멘트를 달았어요",
+  // SumOne 부가 기록(글이 있을 때만 알림 대상). 문구는 말풍선 코멘트와 같습니다.
+  [NOTE_COMMENT_TYPE]: "새 코멘트가 달렸어요",
 };
 
 // 말풍선(message-circle) 코멘트 전용: 같은 화면(X/카카오/SumOne) 안에서는
@@ -4821,9 +4892,10 @@ function buildNotifRows() {
   const rows = []; // { type, time, section, cardId }
   const now = Date.now();
 
-  // 커피/와인: 코멘트 하나하나가 각자 한 줄, 생긴 지 20일 안 됐으면 계속 뜸.
+  // 커피/와인(과 SumOne 부가 기록): 코멘트 하나하나가 각자 한 줄, 생긴 지 20일
+  // 안 됐으면 계속 뜸.
   visible
-    .filter((e) => e.type === "coffee" || e.type === "wine")
+    .filter((e) => e.type === "coffee" || e.type === "wine" || e.type === NOTE_COMMENT_TYPE)
     .forEach((e) => {
       if (now - e.createdAt >= NOTIF_EXPIRE_MS) return;
       rows.push({ type: e.type, time: e.createdAt, section: e.section, cardId: e.cardId });
@@ -4888,7 +4960,7 @@ function renderNotifPanel() {
 }
 
 async function openNotifPanel(anchorBtn) {
-  await loadNotifEntries(); // 열 때마다 최신 상태로 다시 불러옵니다.
+  await loadNotifEntries(); // 이미 실시간으로 구독 중이라 보통 바로 끝납니다(처음 한 번만 실제로 기다림).
   renderNotifPanel();
   notifPanel.hidden = false;
   const isDesktop = window.matchMedia("(min-width: 768px)").matches;

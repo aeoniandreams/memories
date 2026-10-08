@@ -2562,11 +2562,6 @@ h1 {
   font-weight: 600;
   color: var(--muted);
 }
-.app-sidebar-latest-record-hint {
-  margin-top: 3px;
-  font-size: 10px;
-  color: var(--muted);
-}
 
 /* ---------- Gallery 화면: 마소너리 레이아웃 + 호버(모바일은 탭) 오버레이 ----------
    aeoniandreams/lookbook의 홈 화면/레퍼런스 토글 레이아웃을 그대로 참고했습니다.
