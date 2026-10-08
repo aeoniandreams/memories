@@ -2211,6 +2211,22 @@ h1 {
 .sumone-detail-image[hidden] {
   display: none;
 }
+/* 데스크탑: 첨부 이미지는 거의 늘 9:16에 가까운 세로로 긴 비율이라, 팝업 폭에
+   꽉 채우면 높이가 화면보다 커져서 스크롤을 내려야만 끝까지 보였습니다. 팝업
+   크기는 그대로 두고 이미지만 "화면 높이 - 190px"(헤더 61 + 위아래 여백 20 +
+   코멘트 줄 58 + 아래 여유)까지로 제한해서, 헤더부터 코멘트 버튼 줄까지 스크롤
+   없이 한눈에 보이게 합니다. 줄어든 폭만큼은 좌우 여백으로 가운데 정렬됩니다.
+   모바일은 화면 폭이 좁아 이미지가 이미 폭 기준으로 자연스럽게 들어가서 건드리지
+   않습니다. */
+@media (min-width: 768px) {
+  .sumone-detail-image {
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100vh - 190px);
+    max-height: calc(100dvh - 190px);
+    align-self: center;
+  }
+}
 .sumone-detail-content {
   margin: 0;
   font-size: 15px;
