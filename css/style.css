@@ -1919,6 +1919,7 @@ h1 {
   /* 말풍선(message-circle) 버튼은 바탕이 이미 포인트 컬러라 파란 아웃라인이 티가 안
      나서, 확인 전 아웃라인만 검정으로 둡니다. */
   --kakao-view-btn-outline-mc: #000;
+  --kakao-view-btn-icon-mc-seen: #fff; /* 확인 후 말풍선 버튼 아이콘 색 */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -1943,6 +1944,7 @@ h1 {
        포인트 컬러라 파란 선이 안 보이고 검정 선도 어두운 배경에 묻혀서 흰색으로 둡니다. */
     --kakao-view-btn-outline: var(--accent);
     --kakao-view-btn-outline-mc: #fff;
+    --kakao-view-btn-icon-mc-seen: #000;
   }
 }
 :root[data-theme="dark"] {
@@ -1958,6 +1960,7 @@ h1 {
   --kakao-view-btn-me-bg: #e8e8e8;
   --kakao-view-btn-outline: var(--accent);
   --kakao-view-btn-outline-mc: #fff;
+  --kakao-view-btn-icon-mc-seen: #000;
 }
 
 .kakao-thread {
@@ -2149,9 +2152,22 @@ h1 {
 .kakao-message-group .kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="message-circle"] .bubble-shape {
   color: var(--accent);
 }
-.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="wine"] .bubble-icon,
-.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="message-circle"] .bubble-icon {
+/* 아이콘 선 색은 버튼 아웃라인과 함께 바뀝니다. 확인 전(is-unseen)에는 아웃라인과
+   같은 색, 확인하면 아웃라인이 사라지면서 아이콘은 흰색으로 돌아옵니다. 말풍선은
+   기본 모드에서 검정 -> 흰색, 야간 모드에서 흰색 -> 검정입니다. */
+.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="coffee"] .bubble-icon,
+.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="wine"] .bubble-icon {
   color: #fff;
+}
+.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="message-circle"] .bubble-icon {
+  color: var(--kakao-view-btn-icon-mc-seen);
+}
+.kakao-comment-view-stack .tweet-comment-view-btn.is-unseen[data-comment-type="coffee"] .bubble-icon,
+.kakao-comment-view-stack .tweet-comment-view-btn.is-unseen[data-comment-type="wine"] .bubble-icon {
+  color: var(--kakao-view-btn-outline);
+}
+.kakao-comment-view-stack .tweet-comment-view-btn.is-unseen[data-comment-type="message-circle"] .bubble-icon {
+  color: var(--kakao-view-btn-outline-mc);
 }
 /* 코멘트를 보고 있는 중(is-open)에는 위 색 대신 원래대로 포인트 컬러
    바탕색 + 흰색 아이콘 조합을 유지합니다(우선순위를 위해 위 두 규칙보다
