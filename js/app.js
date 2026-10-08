@@ -761,8 +761,13 @@ async function openDetail(id, data) {
   detailThread.innerHTML = "";
   // 이미지 크기 계산 시 실제 너비를 읽어야 해서, 먼저 화면에 보이게 한 뒤 내용을 채웁니다.
   detailModal.hidden = false;
-  history.pushState({ memoriesDetailOpen: true }, "");
-  detailHistoryPushed = true;
+  // 이미 열려 있는 상태에서 다시 불리면(이미지 설명 저장 후 새로 그리기 등) 히스토리를 또
+  // 쌓지 않습니다. 중복으로 쌓으면 닫을 때 하나만 정리돼서 남은 항목 때문에 뒤로가기가
+  // 한 번 "아무 일도 안 일어나는" 것처럼 먹힙니다.
+  if (!detailHistoryPushed) {
+    history.pushState({ memoriesDetailOpen: true }, "");
+    detailHistoryPushed = true;
+  }
 
   currentTweetComments = new Map();
   try {
@@ -1389,8 +1394,13 @@ function openImageViewer(url, sourceItem) {
   imageViewerImg.src = toOriginalQualityImageUrl(url);
   imageViewerModal.hidden = false;
   imageViewerSourceItem = sourceItem || null;
-  history.pushState({ memoriesImageViewerOpen: true }, "");
-  imageViewerHistoryPushed = true;
+  // 뷰어가 이미 열린 채로 또 불려도(같은 이미지를 빠르게 또 누르는 등) 히스토리는 한 번만
+  // 쌓습니다. 두 번 쌓으면 닫을 때 하나가 남아서 뒤로가기가 한 번 헛돌고, 한 번 더 누르면
+  // 사이트를 나가버립니다.
+  if (!imageViewerHistoryPushed) {
+    history.pushState({ memoriesImageViewerOpen: true }, "");
+    imageViewerHistoryPushed = true;
+  }
 }
 
 function closeImageViewer() {
@@ -3139,8 +3149,10 @@ function stripAppInfoBackgroundStyles(html) {
 
 async function openAppInfo() {
   appInfoModal.hidden = false;
-  history.pushState({ memoriesAppInfoOpen: true }, "");
-  appInfoHistoryPushed = true;
+  if (!appInfoHistoryPushed) {
+    history.pushState({ memoriesAppInfoOpen: true }, "");
+    appInfoHistoryPushed = true;
+  }
   appInfoEditBtn.hidden = !isAdmin;
   appInfoSaveBtn.hidden = true;
   appInfoToolbar.hidden = true;
