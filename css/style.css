@@ -1196,6 +1196,72 @@ h1 {
   margin-left: 0;
 }
 
+/* SumOne 부가 기록(message-circle-heart) "보기": 좌/우 두 사람의 채팅처럼 보여줍니다.
+   말풍선 모양은 없이 글만 좌/우 정렬하고, 글 위에 이름(글보다 한 단계 굵게: 400 -> 500),
+   프사 자리(좌: 왼쪽, 우: 오른쪽)에는 캐릭터 이미지가 옵니다(js/app.js의 renderNoteChatView).
+   같은 쪽 글이 연달아 나오면 첫 글에만 이름/프사가 있고, 나머지는 같은 자리에 맞춰
+   (프사 칸은 비워두고) 정렬만 합니다. */
+.note-chat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 16px;
+}
+.note-chat-row.note-chat-continued {
+  padding-top: 0;
+}
+.note-chat-right {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.note-chat-avatar-col {
+  flex: 0 0 44px;
+  width: 44px;
+}
+.note-chat-avatar {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+.note-chat-body {
+  flex: 1;
+  min-width: 0;
+}
+.note-chat-name {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 2px;
+  color: var(--text);
+}
+.note-chat-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 부가 기록 작성 중, 글 블록마다 어느 쪽 채팅(中=좌 / 珠=우)인지 보여주고 바꾸는 버튼 */
+.comment-block-side-btn {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.comment-block-side-btn.right {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .tweet-images img {
   border: 1px solid var(--border);
 }

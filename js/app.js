@@ -1768,8 +1768,67 @@ const COMMENT_TYPE_AVATARS = {
   wine: "images/comment/wine.webp",
   coffee: "images/comment/coffee.webp",
 };
+// SumOne 부가 기록(message-circle-heart)은 좌/우 두 사람의 채팅처럼 보여줍니다. 말풍선
+// 모양 없이 글만 좌/우 정렬하고, 글 위에 이름, 프사 자리(좌/우)에는 캐릭터 이미지를
+// 넣습니다. 좌측(中)은 모자 캐릭터(와인 이미지), 우측(珠)은 긴 머리 캐릭터(커피 이미지).
+// 이름: 좌측 中也, 우측 윤을 히라가나로 쓴 ゆん.
+const NOTE_CHAT_SIDES = {
+  left: { name: "中也", avatar: "images/comment/wine.webp" },
+  right: { name: "ゆん", avatar: "images/comment/coffee.webp" },
+};
+function renderNoteChatView(container, blocks) {
+  // 같은 쪽 글이 연달아 나오면 한 묶음으로 쳐서 이름/프사는 첫 글에만 보여줍니다(카카오톡
+  // 보기와 같은 방식). 이미지 블록이 끼면 묶음이 끊깁니다.
+  let prevSide = null;
+  blocks.forEach((block) => {
+    if (block.type === "image") {
+      renderCommentBlocksView(container, [block]);
+      prevSide = null;
+      return;
+    }
+    if (!block.text) return;
+    const side = block.side === "right" ? "right" : "left";
+    const info = NOTE_CHAT_SIDES[side];
+    const isFirstOfRun = prevSide !== side;
+    prevSide = side;
+
+    const row = document.createElement("div");
+    row.className = "note-chat-row note-chat-" + side + (isFirstOfRun ? "" : " note-chat-continued");
+
+    const avatarCol = document.createElement("div");
+    avatarCol.className = "note-chat-avatar-col";
+    if (isFirstOfRun) {
+      const avatar = document.createElement("img");
+      avatar.className = "note-chat-avatar";
+      avatar.src = info.avatar;
+      avatar.alt = "";
+      avatarCol.appendChild(avatar);
+    }
+
+    const body = document.createElement("div");
+    body.className = "note-chat-body";
+    if (isFirstOfRun) {
+      const name = document.createElement("div");
+      name.className = "note-chat-name";
+      name.textContent = info.name;
+      body.appendChild(name);
+    }
+    const text = document.createElement("p");
+    text.className = "note-chat-text";
+    text.textContent = block.text;
+    body.appendChild(text);
+
+    row.append(avatarCol, body);
+    container.appendChild(row);
+  });
+}
+
 function renderCommentViewBody(container, entry) {
   const blocks = getCommentBlocks(entry);
+  if (entry && entry.type === NOTE_COMMENT_TYPE) {
+    renderNoteChatView(container, blocks);
+    return;
+  }
   const avatarSrc = entry && COMMENT_TYPE_AVATARS[entry.type];
   if (!avatarSrc) {
     renderCommentBlocksView(container, blocks);
@@ -1829,17 +1888,24 @@ function renderCommentTypeSelector(container, state, rerender, options = {}) {
 // 코멘트 텍스트/이미지 블록 목록을 작성/수정 UI로 그려서 container에 붙입니다.
 // blocks 배열을 직접 바꾸고, 바뀔 때마다 rerender()를 호출해 다시 그리게 합니다
 // (트윗/카톡 코멘트 편집 화면 공용).
-function renderCommentBlockEditor(container, blocks, rerender) {
+// options.note: SumOne 부가 기록(message-circle-heart)을 쓰는 중일 때 true. 이땐 텍스트
+// 버튼이 "텍스트 (中)"(좌측 채팅)/"텍스트 (珠)"(우측 채팅) 둘로 나뉘고, 글 블록마다 어느
+// 쪽 채팅인지(side: "left"/"right") 표시/전환하는 버튼이 붙습니다.
+function renderCommentBlockEditor(container, blocks, rerender, options = {}) {
+  const isNote = !!options.note;
   const toolbar = document.createElement("div");
   toolbar.className = "comment-block-toolbar";
-  const addTextBtn = document.createElement("button");
-  addTextBtn.type = "button";
-  addTextBtn.className = "btn-secondary";
-  addTextBtn.innerHTML = PLUS_ICON_SVG + " 텍스트";
-  addTextBtn.addEventListener("click", () => {
-    blocks.push({ type: "text", text: "" });
-    rerender();
-  });
+  const makeAddTextBtn = (label, side) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-secondary";
+    btn.innerHTML = PLUS_ICON_SVG + " " + label;
+    btn.addEventListener("click", () => {
+      blocks.push(side ? { type: "text", text: "", side } : { type: "text", text: "" });
+      rerender();
+    });
+    return btn;
+  };
   const addImageBtn = document.createElement("button");
   addImageBtn.type = "button";
   addImageBtn.className = "btn-secondary";
@@ -1848,7 +1914,11 @@ function renderCommentBlockEditor(container, blocks, rerender) {
     blocks.push({ type: "image", urls: [] });
     rerender();
   });
-  toolbar.append(addTextBtn, addImageBtn);
+  if (isNote) {
+    toolbar.append(makeAddTextBtn("텍스트 (中)", "left"), makeAddTextBtn("텍스트 (珠)", "right"), addImageBtn);
+  } else {
+    toolbar.append(makeAddTextBtn("텍스트", null), addImageBtn);
+  }
   container.appendChild(toolbar);
 
   const blockList = document.createElement("div");
@@ -1959,6 +2029,19 @@ function renderCommentBlockEditor(container, blocks, rerender) {
       // 문서에 붙은 다음 한 번 맞춰줍니다(아래 container.appendChild 이후).
       pendingAutoResizeInputs.push(urlInput);
     } else {
+      if (isNote) {
+        // 이 글이 어느 쪽 채팅인지 보여주고, 눌러서 좌(中)/우(珠)를 바꿉니다.
+        // side가 없는 글(다른 종류로 쓰다가 부가 기록으로 바꾼 경우 등)은 좌측으로 칩니다.
+        const sideBtn = document.createElement("button");
+        sideBtn.type = "button";
+        sideBtn.className = "comment-block-side-btn" + (block.side === "right" ? " right" : "");
+        sideBtn.textContent = block.side === "right" ? "珠 · 우측 채팅 (눌러서 바꾸기)" : "中 · 좌측 채팅 (눌러서 바꾸기)";
+        sideBtn.addEventListener("click", () => {
+          block.side = block.side === "right" ? "left" : "right";
+          rerender();
+        });
+        content.appendChild(sideBtn);
+      }
       const textarea = document.createElement("textarea");
       textarea.className = "tweet-comment-editor-textarea";
       textarea.rows = 3;
@@ -4514,7 +4597,9 @@ function renderSumoneCommentPanel() {
     }
   }
 
-  renderCommentBlockEditor(sumoneCommentPanelBody, sumoneCommentComposeBlocks, renderSumoneCommentPanel);
+  renderCommentBlockEditor(sumoneCommentPanelBody, sumoneCommentComposeBlocks, renderSumoneCommentPanel, {
+    note: isAdmin && state.adminType === NOTE_COMMENT_TYPE,
+  });
 
   sumoneCommentPanelActionBtn.hidden = false;
   sumoneCommentPanelActionBtn.textContent = "저장";
@@ -4540,11 +4625,14 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
   const scrollPanel = sumoneDetailModal.querySelector(".modal-panel");
   const scrollTarget = scrollPanel ? scrollPanel.scrollTop : 0;
 
+  // 부가 기록이면 글 블록마다 어느 쪽 채팅인지(side)를 같이 저장합니다. 다른 종류로 쓰다가
+  // 저장하는 경우엔 side를 저장하지 않습니다(Firestore는 undefined 값을 거부하므로 조건부로 넣음).
+  const isNote = isAdmin && state.adminType === NOTE_COMMENT_TYPE;
   const content = sumoneCommentComposeBlocks
     .map((b) =>
       b.type === "image"
         ? { type: "image", urls: (b.urls || []).map((u) => u.trim()).filter(Boolean) }
-        : { type: "text", text: (b.text || "").trim() }
+        : { type: "text", text: (b.text || "").trim(), ...(isNote ? { side: b.side === "right" ? "right" : "left" } : {}) }
     )
     .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
 
