@@ -926,6 +926,14 @@ h1 {
    (코멘트 패널 포함) 위에 뜰 수 있도록 z-index를 더 높입니다. 이미지 자체는
    패널 안에 또 패널을 두는 대신, 배경색/여백 없이 이미지만 원래 비율 그대로
    화면에 맞춰 보여줍니다. */
+#sumone-form-modal {
+  /* SumOne 수정 창은 HTML에서 상세 창(#sumone-detail-modal)보다 앞에 있어서,
+     둘 다 z-index가 같으면(.modal-overlay 기본 100) 뒤에 온 상세 창이 위를
+     덮어서 수정 버튼을 눌러도 수정 창이 안 보이고 딤만 어두워졌습니다. 상세 창
+     위에 뜨도록 살짝 높입니다(이미지 원본 보기 110보다는 낮게). */
+  z-index: 105;
+}
+
 .image-viewer-modal {
   align-items: center;
   z-index: 110;
