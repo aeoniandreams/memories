@@ -123,6 +123,10 @@ function programmaticHistoryBack() {
   pendingProgrammaticBacks += 1;
   history.back();
 }
+// 카카오톡/SumOne 카드 상세도 X 대화창(detailHistoryPushed)과 같은 방식: 열 때 히스토리를
+// 하나 쌓아서, 폰의 뒤로가기 한 번에 사이트를 나가는 대신 카드 상세만 닫히게 합니다.
+let kakaoDetailHistoryPushed = false;
+let sumoneDetailHistoryPushed = false;
 let editingMessages = []; // 새 대화 추가 모달에서 편집 중인 메시지 배열
 // index -> { avatarInput, preview }. 프로필 사진을 바꾸면 같은 닉네임을 쓰는
 // 아래쪽 메시지들에도 바로 반영해야 하는데, renderEditableRows() 전체를 다시
@@ -1224,6 +1228,38 @@ window.addEventListener("popstate", () => {
     appInfoModal.hidden = true;
     return;
   }
+  // 카카오톡/SumOne 카드 상세: 뒤로가기 한 번에 카드만 닫습니다(트위터 대화창과 같은 방식).
+  // 수정 창이나 코멘트를 쓰는 중이면 확인을 먼저 묻고, 취소하면 방금 소비된 히스토리를 다시
+  // 쌓아서 뒤로가기가 없었던 것처럼 되돌립니다.
+  if (!kakaoDetailModal.hidden) {
+    const warning = !kakaoEditModal.hidden
+      ? "정말 뒤로 가시겠어요? 수정 중인 내용은 저장되지 않아요."
+      : isEditingCommentPanel(kakaoCommentPanel, kakaoCommentPanelState)
+        ? "정말 뒤로 가시겠어요? 작성 중인 코멘트는 되돌릴 수 없습니다."
+        : null;
+    if (warning && !confirm(warning)) {
+      history.pushState({ memoriesKakaoDetailOpen: true }, "");
+      return;
+    }
+    kakaoDetailHistoryPushed = false;
+    closeKakaoDetailView();
+    return;
+  }
+  if (!sumoneDetailModal.hidden) {
+    const warning = !sumoneFormModal.hidden
+      ? "정말 뒤로 가시겠어요? 작성 중인 내용은 저장되지 않아요."
+      : isEditingCommentPanel(sumoneCommentPanel, sumoneCommentPanelState)
+        ? "정말 뒤로 가시겠어요? 작성 중인 코멘트는 되돌릴 수 없습니다."
+        : null;
+    if (warning && !confirm(warning)) {
+      history.pushState({ memoriesSumoneDetailOpen: true }, "");
+      return;
+    }
+    sumoneDetailHistoryPushed = false;
+    closeSumoneForm();
+    closeSumoneDetailView();
+    return;
+  }
   if (detailModal.hidden) return;
   // 코멘트를 쓰거나 고치는 중에 폰 뒤로가기를 누르면, 확인 없이 바로
   // 나가는 대신 먼저 물어봅니다. 취소하면 방금 소비된 히스토리 항목을
@@ -1753,6 +1789,11 @@ function isEditingTweetComment() {
     !!tweetCommentPanelState &&
     (tweetCommentPanelState.mode === "edit" || tweetCommentPanelState.mode === "compose")
   );
+}
+
+// 카카오톡/SumOne 코멘트 창이 열려 있고, 새로 쓰거나 고치는 중인지(보기만 하는 중이면 false).
+function isEditingCommentPanel(panelEl, state) {
+  return !panelEl.hidden && !!state && (state.mode === "edit" || state.mode === "compose");
 }
 
 // 코멘트 작성/수정 창을 "나가려는" 시도(뒤로가기 버튼, 바깥 클릭, 폰 뒤로가기)를
@@ -3992,6 +4033,11 @@ async function openKakaoDetail(id, data) {
   markCardSeen("kakao", id);
   kakaoDetailThread.innerHTML = "";
   kakaoDetailModal.hidden = false;
+  // 이미 열려 있는 상태에서 다시 불려도(수정 저장 후 다시 그리기 등) 한 번만 쌓습니다.
+  if (!kakaoDetailHistoryPushed) {
+    history.pushState({ memoriesKakaoDetailOpen: true }, "");
+    kakaoDetailHistoryPushed = true;
+  }
 
   currentKakaoComments = new Map();
   try {
@@ -4007,13 +4053,23 @@ async function openKakaoDetail(id, data) {
   renderKakaoThread(kakaoDetailThread, data.messages || [], meSender, { cardId: id });
 }
 
-function closeKakaoDetail() {
+// 화면만 닫습니다(히스토리는 건드리지 않음). 폰 뒤로가기(popstate)가 이미 히스토리를
+// 소비한 경우엔 이것만 부르고, 버튼/바깥 클릭으로 닫을 땐 아래 closeKakaoDetail을 씁니다.
+function closeKakaoDetailView() {
   kakaoDetailModal.hidden = true;
   currentKakaoDetailId = null;
   currentKakaoDetailData = null;
   closeKakaoCommentPanel();
   closeKakaoEdit();
   renderKakaoCardGrid();
+}
+
+function closeKakaoDetail() {
+  closeKakaoDetailView();
+  if (kakaoDetailHistoryPushed) {
+    kakaoDetailHistoryPushed = false;
+    programmaticHistoryBack();
+  }
 }
 
 kakaoDetailCloseBtn.addEventListener("click", closeKakaoDetail);
@@ -4413,6 +4469,11 @@ async function openSumoneDetail(id, data) {
   currentSumoneDetailData = data;
   markCardSeen("sumone", id);
   sumoneDetailModal.hidden = false;
+  // 이미 열려 있는 상태에서 다시 불려도 히스토리는 한 번만 쌓습니다.
+  if (!sumoneDetailHistoryPushed) {
+    history.pushState({ memoriesSumoneDetailOpen: true }, "");
+    sumoneDetailHistoryPushed = true;
+  }
   // 이전에 열었던 카드를 스크롤을 내린 채로 닫았으면, 닫혀 있던 동안에도 창의
   // 스크롤 위치가 그대로 남아서 다시 열 때 그 위치에서 시작했습니다. 항상
   // 맨 위에서 시작하도록 되돌립니다(아래 renderSumoneDetail 뒤에서도 한 번 더).
@@ -4442,12 +4503,22 @@ function renderSumoneDetail() {
   renderSumoneCommentStack();
 }
 
-function closeSumoneDetail() {
+// 화면만 닫습니다(히스토리는 건드리지 않음). 폰 뒤로가기(popstate)가 이미 히스토리를
+// 소비한 경우엔 이것만 부르고, 버튼/바깥 클릭으로 닫을 땐 아래 closeSumoneDetail을 씁니다.
+function closeSumoneDetailView() {
   sumoneDetailModal.hidden = true;
   currentSumoneDetailId = null;
   currentSumoneDetailData = null;
   closeSumoneCommentPanel();
   renderSumoneCardGrid();
+}
+
+function closeSumoneDetail() {
+  closeSumoneDetailView();
+  if (sumoneDetailHistoryPushed) {
+    sumoneDetailHistoryPushed = false;
+    programmaticHistoryBack();
+  }
 }
 
 sumoneDetailCloseBtn.addEventListener("click", closeSumoneDetail);
