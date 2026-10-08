@@ -1209,6 +1209,10 @@ h1 {
 }
 .note-chat-row.note-chat-continued {
   padding-top: 0;
+  /* 같은 쪽 글이 연달아 나올 때 글 박스 사이 간격: 앞 줄의 아래 여백 8px만큼 떨어져 있던 것을
+     4px만큼 당겨서 4px로 줄입니다(글줄 위아래 여백까지 합친 눈에 보이는 간격은 약 16px -> 12px).
+     다른 쪽 글 사이나 이미지 블록 사이 간격은 그대로입니다. */
+  margin-top: -4px;
 }
 .note-chat-right {
   flex-direction: row-reverse;
