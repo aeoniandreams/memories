@@ -2155,9 +2155,12 @@ h1 {
 /* 아이콘 선 색은 버튼 아웃라인과 함께 바뀝니다. 확인 전(is-unseen)에는 아웃라인과
    같은 색, 확인하면 아웃라인이 사라지면서 아이콘은 흰색으로 돌아옵니다. 말풍선은
    기본 모드에서 검정 -> 흰색, 야간 모드에서 흰색 -> 검정입니다. */
-.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="coffee"] .bubble-icon,
 .kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="wine"] .bubble-icon {
   color: #fff;
+}
+/* 커피는 밝은 민트 바탕이라 확인 후 아이콘을 기본/야간 모드 모두 검정으로 둡니다. */
+.kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="coffee"] .bubble-icon {
+  color: #000;
 }
 .kakao-comment-view-stack .tweet-comment-view-btn[data-comment-type="message-circle"] .bubble-icon {
   color: var(--kakao-view-btn-icon-mc-seen);
