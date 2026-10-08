@@ -172,6 +172,12 @@ const MESSAGE_CIRCLE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox
 const WINE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22h8"/><path d="M7 10h10"/><path d="M12 15v7"/><path d="M12 15a5 5 0 0 0 5-5c0-2-.5-4-2-8H9c-1.5 4-2 6-2 8a5 5 0 0 0 5 5Z"/></svg>`;
 // 코멘트 종류 3가지 중 하나: coffee (관리자용 선택지)
 const COFFEE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/></svg>`;
+// SumOne 전용 네 번째 종류: message-circle-heart. 코멘트가 아니라 "해당 기록의 부가
+// 내용"을 담는 용도라서, 다른 종류처럼 말풍선 모양 버튼 + 아이콘이 아니라 코멘트 작성
+// 버튼과 같은 크기의 선(라인) 아이콘 버튼(빨간색)으로 가장 왼쪽에 놓입니다.
+// 관리자만 작성할 수 있고(코멘트 작성 창에서만 선택지에 나옴), 열람은 누구나 합니다.
+const NOTE_COMMENT_TYPE = "message-circle-heart";
+const MESSAGE_CIRCLE_HEART_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M12 15.2 8.7 12a2 2 0 0 1 2.9-2.8l.4.4.4-.4a2 2 0 0 1 2.9 2.8Z"/></svg>`;
 // 좌측 "코멘트 작성" 버튼 아이콘. 다른 message-circle류 아이콘과 달리 말풍선 꼬리가
 // 반대쪽(오른쪽)을 향하도록 전체를 좌우 반전했습니다 (십자가는 대칭이라 모양이 그대로 유지됨).
 const MESSAGE_CIRCLE_PLUS_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: scaleX(-1);"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>`;
@@ -248,6 +254,7 @@ const COMMENT_TYPE_ICONS = {
   "message-circle": MESSAGE_CIRCLE_ICON_SVG,
   wine: WINE_ICON_SVG,
   coffee: COFFEE_ICON_SVG,
+  [NOTE_COMMENT_TYPE]: MESSAGE_CIRCLE_HEART_ICON_SVG,
 };
 
 function getEffectiveTheme() {
@@ -500,7 +507,9 @@ function renderSidebarLatestComment() {
   }
   let bestCreatedAt = 0;
   notifEntriesCache.forEach((entry) => {
-    if (entry.type === "wine") return;
+    // 코멘트(message-circle/coffee)만 셉니다. wine(상대 코멘트)과 SumOne의
+    // 부가 기록(message-circle-heart, 코멘트가 아님)은 뺍니다.
+    if (entry.type !== "message-circle" && entry.type !== "coffee") return;
     if (entry.createdAt > bestCreatedAt) bestCreatedAt = entry.createdAt;
   });
   if (!bestCreatedAt) {
@@ -1741,16 +1750,23 @@ function renderCommentBlocksView(container, blocks) {
 
 // 관리자용 코멘트 종류(message-circle/coffee) 선택 UI. state.adminType을 직접
 // 바꾸고 rerender()를 호출해 다시 그리게 합니다(트윗/카톡 코멘트 편집 화면 공용).
-function renderCommentTypeSelector(container, state, rerender) {
+// options.includeNote: SumOne 코멘트 "작성" 창에서만 true. message-circle-heart
+// (부가 기록)를 세 번째 선택지로 더합니다.
+function renderCommentTypeSelector(container, state, rerender, options = {}) {
   const typeBox = document.createElement("div");
   typeBox.className = "tweet-comment-type-options";
-  [
+  const types = [
     ["message-circle", MESSAGE_CIRCLE_ICON_SVG],
     ["coffee", COFFEE_ICON_SVG],
-  ].forEach(([type, svg]) => {
+  ];
+  if (options.includeNote) types.push([NOTE_COMMENT_TYPE, MESSAGE_CIRCLE_HEART_ICON_SVG]);
+  types.forEach(([type, svg]) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "tweet-comment-type-btn" + (type === state.adminType ? " selected" : "");
+    btn.className =
+      "tweet-comment-type-btn" +
+      (type === NOTE_COMMENT_TYPE ? " note" : "") +
+      (type === state.adminType ? " selected" : "");
     btn.innerHTML = svg;
     btn.setAttribute("aria-label", type);
     btn.addEventListener("click", () => {
@@ -4310,11 +4326,21 @@ function findSumoneCommentEntry(role, entryId) {
   return arr.find((e) => e.id === entryId) || null;
 }
 
-// 코멘트 작성 버튼과(있으면) 보기 버튼들을 한 줄에 나란히 그립니다
-// (이미지 아래, 내용 위). sumoneCommentArea 자체가 flex row라 별도
-// 묶음 없이 바로 자식으로 넣습니다.
+// 부가 기록(message-circle-heart) 보기 버튼, 코멘트 작성 버튼, 그리고(있으면)
+// 코멘트 보기 버튼들을 이 순서로 한 줄에 나란히 그립니다(이미지 아래, 내용 위).
+// 부가 기록은 개인 코멘트가 아니라 이 기록 자체의 추가 내용이라 가장 왼쪽에
+// 둡니다. sumoneCommentArea 자체가 flex row라 별도 묶음 없이 바로 자식으로 넣습니다.
 function renderSumoneCommentStack() {
   sumoneCommentArea.innerHTML = "";
+
+  const allEntries = [];
+  (currentSumoneComments.user || []).forEach((entry) => allEntries.push({ role: "user", entry }));
+  (currentSumoneComments.admin || []).forEach((entry) => allEntries.push({ role: "admin", entry }));
+  allEntries.sort((a, b) => (a.entry.createdAt || 0) - (b.entry.createdAt || 0));
+  const noteEntries = allEntries.filter(({ entry }) => entry.type === NOTE_COMMENT_TYPE);
+  const viewEntries = allEntries.filter(({ entry }) => entry.type !== NOTE_COMMENT_TYPE);
+
+  noteEntries.forEach(({ role, entry }) => sumoneCommentArea.appendChild(makeSumoneNoteViewBtn(role, entry)));
 
   const addBtn = document.createElement("button");
   addBtn.type = "button";
@@ -4329,11 +4355,28 @@ function renderSumoneCommentStack() {
   addBtn.addEventListener("click", () => openSumoneCommentCompose());
   sumoneCommentArea.appendChild(addBtn);
 
-  const viewEntries = [];
-  (currentSumoneComments.user || []).forEach((entry) => viewEntries.push({ role: "user", entry }));
-  (currentSumoneComments.admin || []).forEach((entry) => viewEntries.push({ role: "admin", entry }));
-  viewEntries.sort((a, b) => (a.entry.createdAt || 0) - (b.entry.createdAt || 0));
   viewEntries.forEach(({ role, entry }) => sumoneCommentArea.appendChild(makeSumoneCommentViewBtn(role, entry)));
+}
+
+// 부가 기록 보기 버튼: 코멘트 작성 버튼(.sumone-comment-add-btn)과 같은 크기의 선
+// 아이콘 버튼이고 선 색만 빨간색입니다. 열려 있는 버튼을 다시 누르면 닫힙니다.
+function makeSumoneNoteViewBtn(role, entry) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "sumone-note-view-btn";
+  btn.innerHTML = MESSAGE_CIRCLE_HEART_ICON_SVG;
+  btn.setAttribute("aria-label", "부가 기록 보기");
+  btn.addEventListener("click", () => {
+    const state = sumoneCommentPanelState;
+    const alreadyOpen = !sumoneCommentPanel.hidden && state && state.role === role && state.entryId === entry.id;
+    if (alreadyOpen) {
+      closeSumoneCommentPanel();
+    } else {
+      openSumoneCommentView(role, entry.id);
+      setActiveSumoneCommentViewBtn(btn);
+    }
+  });
+  return btn;
 }
 
 function makeSumoneCommentViewBtn(role, commentEntry) {
@@ -4413,7 +4456,14 @@ function renderSumoneCommentPanel() {
 
   if (isAdmin) {
     if (!state.adminType) state.adminType = (entry && entry.type) || "message-circle";
-    renderCommentTypeSelector(sumoneCommentPanelBody, state, renderSumoneCommentPanel);
+    // 부가 기록(message-circle-heart)은 "작성" 창에서만 고를 수 있고, 이미 부가
+    // 기록인 항목을 수정할 땐 종류를 바꿀 수 없어서 선택지 자체를 숨깁니다.
+    const editingNote = state.mode === "edit" && state.adminType === NOTE_COMMENT_TYPE;
+    if (!editingNote) {
+      renderCommentTypeSelector(sumoneCommentPanelBody, state, renderSumoneCommentPanel, {
+        includeNote: state.mode === "compose",
+      });
+    }
   }
 
   renderCommentBlockEditor(sumoneCommentPanelBody, sumoneCommentComposeBlocks, renderSumoneCommentPanel);

@@ -1316,6 +1316,12 @@ h1 {
   border-color: var(--accent);
   color: var(--accent);
 }
+/* SumOne 부가 기록(message-circle-heart) 선택지는 선택됐을 때 빨간색으로 보여서,
+   저장 후 나오는 빨간 선 버튼과 같은 것임을 알 수 있게 합니다. */
+.tweet-comment-type-btn.note.selected {
+  border-color: var(--danger);
+  color: var(--danger);
+}
 
 /* 코멘트 작성/수정 중 왼쪽 스레드에서 드래그로 고른 문구 목록. */
 .comment-highlight-picker {
@@ -2256,6 +2262,26 @@ h1 {
 .sumone-comment-add-btn svg {
   width: 20px;
   height: 20px;
+}
+/* 부가 기록(message-circle-heart) 보기 버튼. 코멘트 작성 버튼과 같은 크기(아이콘
+   20px)의 선 아이콘 버튼이고, 선 색만 빨간색입니다. 코멘트 보기 버튼들 같은
+   "말풍선 모양 바탕 + 아이콘" 구성이 아닙니다. 열려 있는 동안엔 안쪽을 옅은
+   빨강으로 채워서 지금 보고 있는 걸 표시합니다. */
+.sumone-note-view-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--danger);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.sumone-note-view-btn svg {
+  width: 20px;
+  height: 20px;
+}
+.sumone-note-view-btn.is-open svg {
+  fill: rgba(224, 36, 94, 0.18);
 }
 
 /* ---------- 앱 설명 ---------- */
