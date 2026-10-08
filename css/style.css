@@ -1166,31 +1166,32 @@ h1 {
   word-break: break-word;
 }
 
-/* 커피/와인 코멘트 "보기" 화면: 맨 위 왼쪽에 캐릭터 이미지를 아이콘처럼 붙이고,
-   코멘트 내용(텍스트/이미지 블록)은 그 이미지 오른쪽부터 시작합니다. 내용 쪽
-   블록들은 원래 좌우에 20px씩 여백(.comment-modal-text, .comment-block-image-wrap)을
-   갖고 있는데, 이미지와 나란히 놓을 땐 왼쪽 여백을 줄여서 이미지에 가깝게 붙입니다. */
+/* 커피/와인 코멘트 "보기" 화면: 맨 위 왼쪽에 캐릭터 이미지를 아이콘처럼 띄우고
+   (float), 코멘트 내용(텍스트/이미지 블록)은 그 이미지 오른쪽부터 시작합니다.
+   이미지 높이는 글씨 두 줄(14px x 1.6 x 2 = 약 45px)에 맞춘 44px라서, 글이 두
+   줄을 넘으면 셋째 줄부터는 이미지 아래로 돌아 들어가 왼쪽 끝부터 이어집니다.
+   - flow-root: 글이 짧아도 float된 이미지까지 감싸는 높이를 갖게 합니다.
+   - 글 왼쪽 여백 0: 이미지 아래로 돌아 들어간 줄이 이미지 왼쪽 끝과 같은 선에
+     맞도록(이미지 옆 줄은 float 가장자리 + 이미지 오른쪽 여백 8px에서 시작).
+   - 이미지 블록(.comment-block-image-wrap)은 flow-root로 float 옆 남는 폭에 들어가게
+     해서(float 아래로 겹쳐 깔리지 않게) 합니다. */
 .comment-view-with-avatar {
-  display: flex;
-  align-items: flex-start;
+  display: flow-root;
   padding-left: 16px;
 }
 .comment-view-avatar {
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  margin-top: 8px; /* 첫 글줄(.comment-modal-text의 위 여백 8px)과 위쪽을 맞춥니다 */
+  float: left;
+  width: 44px;
+  height: 44px;
+  margin: 8px 8px 0 0; /* 위 8px: 첫 글줄(.comment-modal-text의 위 여백 8px)과 위쪽을 맞춤 */
   object-fit: contain;
 }
-.comment-view-with-avatar-content {
-  flex: 1;
-  min-width: 0;
+.comment-view-with-avatar .comment-modal-text {
+  padding-left: 0;
 }
-.comment-view-with-avatar-content .comment-modal-text {
-  padding-left: 8px;
-}
-.comment-view-with-avatar-content .comment-block-image-wrap {
-  margin-left: 8px;
+.comment-view-with-avatar .comment-block-image-wrap {
+  display: flow-root;
+  margin-left: 0;
 }
 
 .tweet-images img {

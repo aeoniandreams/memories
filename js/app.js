@@ -1773,16 +1773,17 @@ function renderCommentViewBody(container, entry) {
     renderCommentBlocksView(container, blocks);
     return;
   }
+  // 이미지를 왼쪽에 띄우고(float) 코멘트 블록들을 그 뒤에 그대로 이어 붙입니다. 그래서
+  // 글은 이미지 오른쪽에서 시작하고, 이미지 높이(글씨 두 줄)를 넘어가는 셋째 줄부터는
+  // 이미지 아래로 돌아 들어가 왼쪽 끝부터 이어집니다.
   const row = document.createElement("div");
   row.className = "comment-view-with-avatar";
   const avatar = document.createElement("img");
   avatar.className = "comment-view-avatar";
   avatar.src = avatarSrc;
   avatar.alt = "";
-  const content = document.createElement("div");
-  content.className = "comment-view-with-avatar-content";
-  renderCommentBlocksView(content, blocks);
-  row.append(avatar, content);
+  row.appendChild(avatar);
+  renderCommentBlocksView(row, blocks);
   container.appendChild(row);
 }
 
