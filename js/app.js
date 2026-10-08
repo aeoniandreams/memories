@@ -1791,9 +1791,14 @@ function renderNoteChatView(container, blocks) {
     const info = NOTE_CHAT_SIDES[side];
     const isFirstOfRun = prevSide !== side;
     prevSide = side;
+    // 화면에 놓이는 쪽(displaySide)은 보는 사람에 따라 달라집니다. 관리자 모드에선 저장된 쪽
+    // 그대로(中=좌, 珠=우)이고, 일반 모드에선 좌우를 맞바꿔서 中(모자 캐릭터)과 그 글이
+    // 오른쪽, 珠(긴 머리 캐릭터)와 그 글이 왼쪽에 옵니다. 이름/프사는 저장된 쪽(info)을
+    // 따라가므로 캐릭터와 그 캐릭터의 글은 항상 같이 움직입니다.
+    const displaySide = isAdmin ? side : side === "left" ? "right" : "left";
 
     const row = document.createElement("div");
-    row.className = "note-chat-row note-chat-" + side + (isFirstOfRun ? "" : " note-chat-continued");
+    row.className = "note-chat-row note-chat-" + displaySide + (isFirstOfRun ? "" : " note-chat-continued");
 
     const avatarCol = document.createElement("div");
     avatarCol.className = "note-chat-avatar-col";
