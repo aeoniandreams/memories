@@ -1759,9 +1759,11 @@ function renderCommentBlocksView(container, blocks) {
 }
 
 // 저장된 코멘트를 "보기" 화면에 그립니다(트윗/카톡/SumOne 코멘트 창 공용).
-// 커피/와인 코멘트는 맨 위 왼쪽에 캐릭터 이미지를 아이콘처럼 붙이고, 코멘트
-// 내용은 그 이미지 오른쪽부터 시작합니다. 작성/수정 창에는 붙이지 않습니다.
+// 커피/와인 코멘트는 캐릭터 이미지를 아이콘처럼 붙이고, 글은 그 이미지 오른쪽부터
+// 시작합니다. 작성/수정 창에는 붙이지 않습니다.
 // 와인=모자 쓴 캐릭터, 커피=긴 머리 캐릭터. 다른 종류(말풍선 등)는 그대로입니다.
+// 이미지는 "가장 위의 글 박스" 하나에만 붙습니다(글 박스가 여러 개여도, 이미지 박스가
+// 먼저 나와도 마찬가지). 글 박스가 하나도 없는 코멘트(이미지뿐)는 이미지 박스 맨 위에 붙입니다.
 const COMMENT_TYPE_AVATARS = {
   wine: "images/comment/wine.webp",
   coffee: "images/comment/coffee.webp",
@@ -1773,18 +1775,25 @@ function renderCommentViewBody(container, entry) {
     renderCommentBlocksView(container, blocks);
     return;
   }
-  // 이미지를 왼쪽에 띄우고(float) 코멘트 블록들을 그 뒤에 그대로 이어 붙입니다. 그래서
-  // 글은 이미지 오른쪽에서 시작하고, 이미지 높이(글씨 두 줄)를 넘어가는 셋째 줄부터는
-  // 이미지 아래로 돌아 들어가 왼쪽 끝부터 이어집니다.
-  const row = document.createElement("div");
-  row.className = "comment-view-with-avatar";
-  const avatar = document.createElement("img");
-  avatar.className = "comment-view-avatar";
-  avatar.src = avatarSrc;
-  avatar.alt = "";
-  row.appendChild(avatar);
-  renderCommentBlocksView(row, blocks);
-  container.appendChild(row);
+  // 먼저 평소처럼 블록들을 그린 뒤, 맨 위 글 박스를 찾아 이미지와 한 묶음(group)으로
+  // 감쌉니다. 이미지를 왼쪽에 띄우고(float) 그 글 박스가 뒤따르게 해서, 글은 이미지
+  // 오른쪽에서 시작하고 이미지 높이(글씨 두 줄)를 넘는 셋째 줄부터는 이미지 아래로
+  // 돌아 들어가 왼쪽 끝부터 이어집니다. 묶음 안에서만 float을 가두기 때문에(flow-root)
+  // 뒤에 오는 다른 글 박스/이미지 박스는 이미지 옆으로 끌려 들어오지 않습니다.
+  const fragment = document.createDocumentFragment();
+  renderCommentBlocksView(fragment, blocks);
+  const target = fragment.querySelector(".comment-modal-text") || fragment.firstElementChild;
+  if (target) {
+    const group = document.createElement("div");
+    group.className = "comment-view-avatar-group";
+    const avatar = document.createElement("img");
+    avatar.className = "comment-view-avatar";
+    avatar.src = avatarSrc;
+    avatar.alt = "";
+    target.replaceWith(group);
+    group.append(avatar, target);
+  }
+  container.appendChild(fragment);
 }
 
 // 관리자용 코멘트 종류(message-circle/coffee) 선택 UI. state.adminType을 직접

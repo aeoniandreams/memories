@@ -1166,16 +1166,18 @@ h1 {
   word-break: break-word;
 }
 
-/* 커피/와인 코멘트 "보기" 화면: 맨 위 왼쪽에 캐릭터 이미지를 아이콘처럼 띄우고
-   (float), 코멘트 내용(텍스트/이미지 블록)은 그 이미지 오른쪽부터 시작합니다.
+/* 커피/와인 코멘트 "보기" 화면: 가장 위의 글 박스 하나(js/app.js의 renderCommentViewBody가
+   그 글 박스와 이미지를 .comment-view-avatar-group으로 묶어줍니다)에만 캐릭터 이미지를
+   아이콘처럼 왼쪽에 띄우고(float), 글은 그 이미지 오른쪽부터 시작합니다.
    이미지 높이는 글씨 두 줄(14px x 1.6 x 2 = 약 45px)에 맞춘 44px라서, 글이 두
    줄을 넘으면 셋째 줄부터는 이미지 아래로 돌아 들어가 왼쪽 끝부터 이어집니다.
-   - flow-root: 글이 짧아도 float된 이미지까지 감싸는 높이를 갖게 합니다.
-   - 글 왼쪽 여백 0: 이미지 아래로 돌아 들어간 줄이 이미지 왼쪽 끝과 같은 선에
-     맞도록(이미지 옆 줄은 float 가장자리 + 이미지 오른쪽 여백 8px에서 시작).
-   - 이미지 블록(.comment-block-image-wrap)은 flow-root로 float 옆 남는 폭에 들어가게
-     해서(float 아래로 겹쳐 깔리지 않게) 합니다. */
-.comment-view-with-avatar {
+   - flow-root: float을 이 묶음 안에 가둡니다. 글이 짧아도 이미지 높이만큼 영역이
+     확보되고, 묶음 뒤에 오는 다른 글/이미지 박스는 이미지 옆으로 끌려 들어오지 않습니다.
+   - 글 왼쪽 여백 0 + 묶음 왼쪽 여백 16px: 이미지 아래로 돌아 들어간 줄이 이미지 왼쪽
+     끝과 같은 선에 맞도록(이미지 옆 줄은 float 가장자리 + 이미지 오른쪽 여백 8px에서 시작).
+   - 이미지 블록(.comment-block-image-wrap)이 묶음에 들어오는 경우(글 박스가 없는 코멘트)엔
+     flow-root로 float 옆 남는 폭에 들어가게 해서 이미지 밑으로 겹쳐 깔리지 않게 합니다. */
+.comment-view-avatar-group {
   display: flow-root;
   padding-left: 16px;
 }
@@ -1186,10 +1188,10 @@ h1 {
   margin: 8px 8px 0 0; /* 위 8px: 첫 글줄(.comment-modal-text의 위 여백 8px)과 위쪽을 맞춤 */
   object-fit: contain;
 }
-.comment-view-with-avatar .comment-modal-text {
+.comment-view-avatar-group .comment-modal-text {
   padding-left: 0;
 }
-.comment-view-with-avatar .comment-block-image-wrap {
+.comment-view-avatar-group .comment-block-image-wrap {
   display: flow-root;
   margin-left: 0;
 }
