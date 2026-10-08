@@ -4233,6 +4233,11 @@ async function openSumoneDetail(id, data) {
   currentSumoneDetailData = data;
   markCardSeen("sumone", id);
   sumoneDetailModal.hidden = false;
+  // 이전에 열었던 카드를 스크롤을 내린 채로 닫았으면, 닫혀 있던 동안에도 창의
+  // 스크롤 위치가 그대로 남아서 다시 열 때 그 위치에서 시작했습니다. 항상
+  // 맨 위에서 시작하도록 되돌립니다(아래 renderSumoneDetail 뒤에서도 한 번 더).
+  const sumoneDetailPanel = sumoneDetailModal.querySelector(".modal-panel");
+  sumoneDetailPanel.scrollTop = 0;
 
   currentSumoneComments = { user: [], admin: [] };
   try {
@@ -4243,6 +4248,7 @@ async function openSumoneDetail(id, data) {
   }
 
   renderSumoneDetail();
+  sumoneDetailPanel.scrollTop = 0;
 }
 
 function renderSumoneDetail() {
