@@ -1939,10 +1939,10 @@ h1 {
        색(#e8e8e8)으로 통일합니다(순백색보다 살짝 회색빛이 도는 톤). */
     --kakao-view-btn-other-bg: #e8e8e8;
     --kakao-view-btn-me-bg: #e8e8e8;
-    /* 야간 모드에서는 버튼 배경이 이미 밝은 색이라 아웃라인이 필요
-       없습니다(투명). */
-    --kakao-view-btn-outline: transparent;
-    --kakao-view-btn-outline-mc: transparent;
+    /* 야간 모드에서도 확인 전 버튼에만 아웃라인을 둡니다. 말풍선 버튼은 바탕이
+       포인트 컬러라 파란 선이 안 보이고 검정 선도 어두운 배경에 묻혀서 흰색으로 둡니다. */
+    --kakao-view-btn-outline: var(--accent);
+    --kakao-view-btn-outline-mc: #fff;
   }
 }
 :root[data-theme="dark"] {
@@ -1956,8 +1956,8 @@ h1 {
   --kakao-bubble-me-border: rgba(255, 255, 255, 0.22);
   --kakao-view-btn-other-bg: #e8e8e8;
   --kakao-view-btn-me-bg: #e8e8e8;
-  --kakao-view-btn-outline: transparent;
-  --kakao-view-btn-outline-mc: transparent;
+  --kakao-view-btn-outline: var(--accent);
+  --kakao-view-btn-outline-mc: #fff;
 }
 
 .kakao-thread {
