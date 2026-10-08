@@ -1515,7 +1515,15 @@ function isMobileViewport() {
   return window.matchMedia("(max-width: 480px) and (hover: none) and (pointer: coarse)").matches;
 }
 
-// 모바일 전용 "발췌 본문 보기": 모바일에선 코멘트 창(바텀시트)이 화면을 많이
+// 코멘트 창이 대화창 옆 패널이 아니라 화면을 덮는 바텀시트로 뜨는 화면인지.
+// CSS의 @media (min-width: 1520px)(그 이상이면 옆 패널) 기준과 똑같이 맞춥니다.
+// 폰뿐 아니라 태블릿, 가로로 돌린 폰, 좁은 데스크탑 창도 바텀시트로 뜨기 때문에,
+// "발췌 본문 보기" 버튼도 이 기준으로 보여줍니다(터치 여부/관리자 여부와 무관).
+function isCommentSheetLayout() {
+  return !window.matchMedia("(min-width: 1520px)").matches;
+}
+
+// "발췌 본문 보기": 코멘트 창이 바텀시트로 뜨는 화면에선 시트가 화면을 많이
 // 덮고 뒤에 딤까지 깔려서, 대화창에서 발췌된 문구를 보기 어렵습니다. 이
 // 버튼을 누르면 코멘트 창을 잠깐 내리고(.excerpt-peek로 숨김) 첫 발췌가 있는
 // 메시지로 스크롤해서, 발췌된 문구만 진하게 보이는 대화창을 그대로 보여줍니다.
@@ -1951,7 +1959,7 @@ function renderTweetCommentPanel() {
   exitExcerptPeek(); // 다른 코멘트를 열었을 때 이전 "발췌 본문 보기" 상태가 남지 않게 합니다.
   applyTweetThreadHighlights(state.highlights || []);
   tweetCommentPanelBody.innerHTML = "";
-  tweetCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isMobileViewport() && hasExcerpts(state.highlights));
+  tweetCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isCommentSheetLayout() && hasExcerpts(state.highlights));
 
   if (state.mode === "view") {
     const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
@@ -3936,7 +3944,7 @@ function renderKakaoCommentPanel() {
   exitExcerptPeek();
   applyKakaoThreadHighlights(state.highlights || []);
   kakaoCommentPanelBody.innerHTML = "";
-  kakaoCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isMobileViewport() && hasExcerpts(state.highlights));
+  kakaoCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isCommentSheetLayout() && hasExcerpts(state.highlights));
 
   if (state.mode === "view") {
     const entry = findKakaoCommentEntry(state.msgIndex, state.role, state.entryId);
