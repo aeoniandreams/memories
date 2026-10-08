@@ -1758,6 +1758,34 @@ function renderCommentBlocksView(container, blocks) {
   });
 }
 
+// 저장된 코멘트를 "보기" 화면에 그립니다(트윗/카톡/SumOne 코멘트 창 공용).
+// 커피/와인 코멘트는 맨 위 왼쪽에 캐릭터 이미지를 아이콘처럼 붙이고, 코멘트
+// 내용은 그 이미지 오른쪽부터 시작합니다. 작성/수정 창에는 붙이지 않습니다.
+// 와인=모자 쓴 캐릭터, 커피=긴 머리 캐릭터. 다른 종류(말풍선 등)는 그대로입니다.
+const COMMENT_TYPE_AVATARS = {
+  wine: "images/comment/wine.webp",
+  coffee: "images/comment/coffee.webp",
+};
+function renderCommentViewBody(container, entry) {
+  const blocks = getCommentBlocks(entry);
+  const avatarSrc = entry && COMMENT_TYPE_AVATARS[entry.type];
+  if (!avatarSrc) {
+    renderCommentBlocksView(container, blocks);
+    return;
+  }
+  const row = document.createElement("div");
+  row.className = "comment-view-with-avatar";
+  const avatar = document.createElement("img");
+  avatar.className = "comment-view-avatar";
+  avatar.src = avatarSrc;
+  avatar.alt = "";
+  const content = document.createElement("div");
+  content.className = "comment-view-with-avatar-content";
+  renderCommentBlocksView(content, blocks);
+  row.append(avatar, content);
+  container.appendChild(row);
+}
+
 // 관리자용 코멘트 종류(message-circle/coffee) 선택 UI. state.adminType을 직접
 // 바꾸고 rerender()를 호출해 다시 그리게 합니다(트윗/카톡 코멘트 편집 화면 공용).
 // options.includeNote: SumOne 코멘트 "작성" 창에서만 true. message-circle-heart
@@ -1963,7 +1991,7 @@ function renderTweetCommentPanel() {
 
   if (state.mode === "view") {
     const entry = findCommentEntry(state.commentKey, state.role, state.entryId);
-    renderCommentBlocksView(tweetCommentPanelBody, getCommentBlocks(entry));
+    renderCommentViewBody(tweetCommentPanelBody, entry);
 
     const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
     tweetCommentPanelActionBtn.hidden = !canEdit;
@@ -3948,7 +3976,7 @@ function renderKakaoCommentPanel() {
 
   if (state.mode === "view") {
     const entry = findKakaoCommentEntry(state.msgIndex, state.role, state.entryId);
-    renderCommentBlocksView(kakaoCommentPanelBody, getCommentBlocks(entry));
+    renderCommentViewBody(kakaoCommentPanelBody, entry);
 
     const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
     kakaoCommentPanelActionBtn.hidden = !canEdit;
@@ -4448,7 +4476,7 @@ function renderSumoneCommentPanel() {
 
   if (state.mode === "view") {
     const entry = findSumoneCommentEntry(state.role, state.entryId);
-    renderCommentBlocksView(sumoneCommentPanelBody, getCommentBlocks(entry));
+    renderCommentViewBody(sumoneCommentPanelBody, entry);
     const canEdit = !!entry && ((isAdmin && state.role === "admin") || (!isAdmin && state.role === "user"));
     sumoneCommentPanelActionBtn.hidden = !canEdit;
     sumoneCommentPanelActionBtn.textContent = "수정";

@@ -1166,6 +1166,33 @@ h1 {
   word-break: break-word;
 }
 
+/* 커피/와인 코멘트 "보기" 화면: 맨 위 왼쪽에 캐릭터 이미지를 아이콘처럼 붙이고,
+   코멘트 내용(텍스트/이미지 블록)은 그 이미지 오른쪽부터 시작합니다. 내용 쪽
+   블록들은 원래 좌우에 20px씩 여백(.comment-modal-text, .comment-block-image-wrap)을
+   갖고 있는데, 이미지와 나란히 놓을 땐 왼쪽 여백을 줄여서 이미지에 가깝게 붙입니다. */
+.comment-view-with-avatar {
+  display: flex;
+  align-items: flex-start;
+  padding-left: 16px;
+}
+.comment-view-avatar {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  margin-top: 8px; /* 첫 글줄(.comment-modal-text의 위 여백 8px)과 위쪽을 맞춥니다 */
+  object-fit: contain;
+}
+.comment-view-with-avatar-content {
+  flex: 1;
+  min-width: 0;
+}
+.comment-view-with-avatar-content .comment-modal-text {
+  padding-left: 8px;
+}
+.comment-view-with-avatar-content .comment-block-image-wrap {
+  margin-left: 8px;
+}
+
 .tweet-images img {
   border: 1px solid var(--border);
 }
