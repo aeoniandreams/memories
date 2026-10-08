@@ -906,6 +906,13 @@ h1 {
   width: 100%;
   max-width: 620px;
   max-height: calc(100vh - 48px);
+  /* 모바일 브라우저는 주소창/하단 툴바가 보이는 동안 실제로 보이는 높이가
+     100vh(툴바가 다 숨겨졌을 때 기준의 가장 큰 높이)보다 작습니다. 그래서 vh
+     기준으로 높이를 잡으면 이 창이 화면 아래로 삐져나가서, 스크롤해도 맨 아래가
+     하단 바 뒤에 가려져 안 보였습니다(특히 이미지+글이 길어 최대 높이까지 차는
+     SumOne 상세). 지금 실제로 보이는 높이를 따라가는 dvh로 덮어씁니다(dvh를
+     모르는 구형 브라우저는 위의 vh 값을 그대로 씁니다). */
+  max-height: calc(100dvh - 48px);
   border-radius: 16px;
   overflow-y: auto;
   /* 뒤로가기/홈 버튼(제스처 바) 등 폰 하단 시스템 UI가 화면을 덮는
@@ -931,6 +938,7 @@ h1 {
   display: block;
   max-width: 90vw;
   max-height: 90vh;
+  max-height: 90dvh;
   width: auto;
   height: auto;
   border-radius: 8px;
@@ -1552,6 +1560,7 @@ h1 {
   width: 100%;
   max-width: 600px;
   max-height: 70vh;
+  max-height: 70dvh; /* 위 .modal-panel과 같은 이유로 dvh를 우선 씁니다. */
   border-radius: 16px 16px 0 0;
   overflow-y: auto;
   /* 바텀시트가 화면 맨 아래에 붙어 있어서, 뒤로가기/홈 버튼(제스처 바) 같은
@@ -1586,6 +1595,7 @@ h1 {
     width: 400px;
     max-width: 400px;
     max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     border-radius: 16px;
   }
 }
@@ -2858,6 +2868,7 @@ h1 {
      번에 적용됩니다. */
   .tweet-comment-panel-card {
     max-height: calc(70vh + 5px);
+    max-height: calc(70dvh + 5px);
   }
   .tweet-comment-panel-body {
     margin-top: 5px;
