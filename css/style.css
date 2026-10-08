@@ -1916,6 +1916,9 @@ h1 {
   --kakao-view-btn-me-bg: var(--kakao-bubble-me);
   /* 기본 모드에서는 버튼에 포인트 컬러로 얇은 아웃라인을 둡니다. */
   --kakao-view-btn-outline: var(--accent);
+  /* 말풍선(message-circle) 버튼은 바탕이 이미 포인트 컬러라 파란 아웃라인이 티가 안
+     나서, 확인 전 아웃라인만 검정으로 둡니다. */
+  --kakao-view-btn-outline-mc: #000;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -1939,6 +1942,7 @@ h1 {
     /* 야간 모드에서는 버튼 배경이 이미 밝은 색이라 아웃라인이 필요
        없습니다(투명). */
     --kakao-view-btn-outline: transparent;
+    --kakao-view-btn-outline-mc: transparent;
   }
 }
 :root[data-theme="dark"] {
@@ -1953,6 +1957,7 @@ h1 {
   --kakao-view-btn-other-bg: #e8e8e8;
   --kakao-view-btn-me-bg: #e8e8e8;
   --kakao-view-btn-outline: transparent;
+  --kakao-view-btn-outline-mc: transparent;
 }
 
 .kakao-thread {
@@ -2168,6 +2173,9 @@ h1 {
   stroke: var(--kakao-view-btn-outline);
   stroke-width: 1.4px;
   vector-effect: non-scaling-stroke;
+}
+.kakao-comment-view-stack .tweet-comment-view-btn.is-unseen[data-comment-type="message-circle"]:not(.is-open) .bubble-shape svg path {
+  stroke: var(--kakao-view-btn-outline-mc);
 }
 
 .kakao-preview-section {

@@ -3756,8 +3756,12 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
     // 그대로 유지합니다(색은 CSS의 data-comment-type 규칙). 새 코멘트 표시는 카드
     // 외곽선(has-new-comment)만 맡고, 확인하면 그쪽만 원래대로 돌아옵니다.
     btn.dataset.commentType = commentEntry.type;
-    // 파란 아웃라인은 아직 확인하지 않은 코멘트의 버튼에만 둡니다(확인하면 사라짐).
-    if (isTargetTypeUnseen("kakao", currentKakaoDetailId, String(msgIndex), commentEntry.type, commentEntry.createdAt || 0)) {
+    // 아웃라인은 "이 사람에게 새 코멘트로 알려지는 종류"(관리자는 와인, 일반 모드는
+    // 커피/말풍선) 중 아직 확인하지 않은 버튼에만 둡니다(확인하면 사라짐).
+    if (
+      isNotifEntryVisible({ type: commentEntry.type, hasText: true }) &&
+      isTargetTypeUnseen("kakao", currentKakaoDetailId, String(msgIndex), commentEntry.type, commentEntry.createdAt || 0)
+    ) {
       btn.classList.add("is-unseen");
     }
     btn.addEventListener("click", () => {
