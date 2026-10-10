@@ -751,25 +751,35 @@ function renderCardGrid() {
   layoutCardFillers();
 }
 
-// 같은 줄의 가장 긴 카드보다 짧은 카드 아래에 생기는 빈 자리에 파비콘을 넣습니다.
-// 한 줄에서 빈 자리가 가장 큰 카드 한 곳에만 넣고(같으면 왼쪽), 나머지 빈 자리는
-// 비워둡니다. 빈 자리의 세로가 20px 이하이거나 아예 없으면 넣지 않습니다. 파비콘
-// 크기는 빈 자리 높이와 같되, 글 3줄 차이쯤의 빈 자리(약 49px)를 최대로 해서 그보다
-// 큰 자리에도 같은 크기로 넣습니다. 한 줄에 카드가 하나뿐인 모바일 같은 곳은 빈
-// 자리가 없어 아무것도 안 들어갑니다. 화면 폭이 바뀌면 줄 구성이 달라지므로 다시
-// 계산합니다.
-const CARD_FILLER_MIN_HEIGHT = 20;
+// 같은 줄의 가장 긴 카드보다 짧은 카드 아래에 생기는 빈 자리를 처리합니다.
+//  - 빈 자리의 세로가 30px 이하면 카드를 그만큼 늘려서(글 쪽 공간이 늘어남, 이미지가
+//    있으면 이미지는 카드 맨 아래에 붙은 채) 빈 자리를 없앱니다.
+//  - 30px보다 크면 한 줄에서 빈 자리가 가장 큰 카드 한 곳에만 파비콘을 넣고(같으면
+//    왼쪽), 나머지 빈 자리는 비워둡니다. 파비콘 크기는 빈 자리 높이와 같되, 글 3줄
+//    차이쯤의 빈 자리(약 49px)를 최대로 해서 그보다 큰 자리에도 같은 크기로 넣습니다.
+// 한 줄에 카드가 하나뿐인 모바일 같은 곳은 빈 자리가 없어 아무것도 안 합니다. 화면
+// 폭이 바뀌면 줄 구성이 달라지므로 다시 계산합니다.
+const CARD_FILLER_STRETCH_MAX_HEIGHT = 30;
 const CARD_FILLER_MAX_ICON_SIZE = 49;
 function layoutCardFillers() {
   const bestByRow = new Map(); // 줄(셀의 위쪽 위치) -> { filler, h }
-  cardGrid.querySelectorAll(".card-filler").forEach((filler) => {
-    filler.classList.remove("is-icon");
-    filler.style.backgroundSize = "";
+  const cells = Array.from(cardGrid.querySelectorAll(".card-cell"));
+  // 이전 계산 결과를 먼저 지워야 늘리지 않은 원래 높이 기준으로 빈 자리를 잴 수 있습니다.
+  cells.forEach((cell) => {
+    cell.classList.remove("is-stretched");
+    cell.querySelector(".card-filler").classList.remove("is-icon");
+  });
+  const measured = cells.map((cell) => {
     // 채우기 전(display:none)에는 크기가 0이라, 슬롯 크기에서 위쪽 간격(16px)을 뺀 값을 씁니다.
-    const slot = filler.parentElement;
-    const h = slot.offsetHeight - 16;
-    if (h <= CARD_FILLER_MIN_HEIGHT) return;
-    const row = slot.parentElement.offsetTop;
+    const slot = cell.querySelector(".card-filler-slot");
+    return { cell, filler: slot.firstElementChild, slotHeight: slot.offsetHeight, h: slot.offsetHeight - 16, row: cell.offsetTop };
+  });
+  measured.forEach(({ cell, filler, slotHeight, h, row }) => {
+    if (slotHeight <= 0) return; // 같은 줄에서 가장 긴 카드
+    if (h <= CARD_FILLER_STRETCH_MAX_HEIGHT) {
+      cell.classList.add("is-stretched");
+      return;
+    }
     const best = bestByRow.get(row);
     if (!best || h > best.h) bestByRow.set(row, { filler, h });
   });
