@@ -754,7 +754,7 @@ function renderCardGrid() {
 // 같은 줄의 가장 긴 카드보다 짧은 카드 아래에 생기는 빈 자리를 처리합니다.
 //  0) 한 줄에서 빈 자리가 있는 카드가 연달아 있으면(예: 맨 앞이 가장 긴 카드일 때
 //     뒤의 두 카드) 그 카드들끼리 높이를 맞춥니다. 더 짧은 카드의 글 쪽 공간이 늘어나요.
-//     단, 늘려야 하는 높이가 50px 이하면 맞추지 않습니다.
+//     단, 늘려야 하는 높이가 50px 이하이거나 썸네일 하나 높이(158px) 이상이면 맞추지 않습니다.
 //  1) 그러고도 남는 빈 자리의 세로가 30px 이하면 카드를 그만큼 늘려서(글 쪽 공간이
 //     늘어남, 이미지가 있으면 이미지는 카드 맨 아래에 붙은 채) 빈 자리를 없앱니다.
 //  2) 30px보다 크면 한 줄에서 빈 자리가 가장 큰 카드 한 곳에만 파비콘을 넣고(같으면
@@ -764,6 +764,8 @@ function renderCardGrid() {
 // 폭이 바뀌면 줄 구성이 달라지므로 다시 계산합니다.
 const CARD_FILLER_STRETCH_MAX_HEIGHT = 30;
 const CARD_EQUALIZE_MIN_HEIGHT = 50; // 높이를 맞추면서 늘려야 하는 높이가 이 값 이하면 맞추지 않습니다.
+// 이미지 썸네일(150px) 하나가 카드에 더하는 높이(썸네일 + 위쪽 간격 8px) 이상 차이 나면 맞추지 않습니다.
+const CARD_EQUALIZE_MAX_HEIGHT = 150 + 8;
 const CARD_FILLER_MAX_ICON_SIZE = 49;
 function layoutCardFillers() {
   const bestByRow = new Map(); // 줄(셀의 위쪽 위치) -> { filler, h }
@@ -789,7 +791,8 @@ function layoutCardFillers() {
         const target = Math.max(...run.map((cell) => cell.firstElementChild.offsetHeight));
         run.forEach((cell) => {
           const card = cell.firstElementChild;
-          if (target - card.offsetHeight > CARD_EQUALIZE_MIN_HEIGHT) {
+          const diff = target - card.offsetHeight;
+          if (diff > CARD_EQUALIZE_MIN_HEIGHT && diff < CARD_EQUALIZE_MAX_HEIGHT) {
             card.style.minHeight = `${target}px`;
             cell.classList.add("is-equalized");
           }
@@ -816,7 +819,8 @@ function layoutCardFillers() {
       return;
     }
     const best = bestByRow.get(row);
-    if (!best || h > best.h) bestByRow.set(row, { filler, h });
+    // 소수점 높이 오차로 같은 크기의 빈 자리가 다르게 잡히지 않도록 1px 차이는 같은 것으로 봅니다.
+    if (!best || h > best.h + 1) bestByRow.set(row, { filler, h });
   });
   bestByRow.forEach(({ filler, h }) => {
     const size = Math.min(h, CARD_FILLER_MAX_ICON_SIZE);
