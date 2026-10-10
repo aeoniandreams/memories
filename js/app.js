@@ -745,35 +745,32 @@ function renderCardGrid() {
   layoutCardFillers();
 }
 
-// 같은 줄의 가장 긴 카드보다 짧은 카드 아래에 생기는 빈 자리를 채웁니다. 자리의 세로가
-// 충분하면(80px 이상) 두 캐릭터 그림을, 좁으면(20px 이상) 파비콘만, 그보다 작으면
-// 그냥 비워둡니다. 한 줄에 카드가 하나뿐인 모바일 같은 곳은 빈 자리가 없어 아무것도
-// 안 들어갑니다. 화면 폭이 바뀌면 줄 구성이 달라지므로 다시 계산합니다.
-const CARD_FILLER_IMAGE = { src: "images/loading/2.webp", width: 600, height: 369, faceWidth: 375, focusX: 305, focusY: 200 };
-const CARD_FILLER_MIN_IMAGE_HEIGHT = 80;
-const CARD_FILLER_MIN_ICON_HEIGHT = 20;
+// 같은 줄의 가장 긴 카드보다 짧은 카드 아래에 생기는 빈 자리에 파비콘을 넣습니다.
+// 한 줄에서 빈 자리가 가장 큰 카드 한 곳에만 넣고(같으면 왼쪽), 나머지 빈 자리는
+// 비워둡니다. 빈 자리의 세로가 20px 이하이거나 아예 없으면 넣지 않습니다. 파비콘
+// 크기는 빈 자리 높이와 같되, 글 3줄 차이쯤의 빈 자리(약 49px)를 최대로 해서 그보다
+// 큰 자리에도 같은 크기로 넣습니다. 한 줄에 카드가 하나뿐인 모바일 같은 곳은 빈
+// 자리가 없어 아무것도 안 들어갑니다. 화면 폭이 바뀌면 줄 구성이 달라지므로 다시
+// 계산합니다.
+const CARD_FILLER_MIN_HEIGHT = 20;
+const CARD_FILLER_MAX_ICON_SIZE = 49;
 function layoutCardFillers() {
+  const bestByRow = new Map(); // 줄(셀의 위쪽 위치) -> { filler, h }
   cardGrid.querySelectorAll(".card-filler").forEach((filler) => {
-    filler.classList.remove("is-image", "is-icon");
-    filler.style.backgroundImage = "";
+    filler.classList.remove("is-icon");
     filler.style.backgroundSize = "";
-    filler.style.backgroundPosition = "";
     // 채우기 전(display:none)에는 크기가 0이라, 슬롯 크기에서 위쪽 간격(16px)을 뺀 값을 씁니다.
-    const w = filler.parentElement.offsetWidth;
-    const h = filler.parentElement.offsetHeight - 16;
-    if (h >= CARD_FILLER_MIN_IMAGE_HEIGHT) {
-      // 두 얼굴이 가로로 꽉 차도록 확대하고, 얼굴 쪽을 기준으로 잘라 보여줍니다.
-      const img = CARD_FILLER_IMAGE;
-      const scale = Math.max(w / img.faceWidth, h / img.height);
-      const x = Math.min(0, Math.max(w - img.width * scale, w / 2 - img.focusX * scale));
-      const y = Math.min(0, Math.max(h - img.height * scale, h / 2 - img.focusY * scale));
-      filler.style.backgroundImage = `url("${img.src}")`;
-      filler.style.backgroundSize = `${img.width * scale}px ${img.height * scale}px`;
-      filler.style.backgroundPosition = `${x}px ${y}px`;
-      filler.classList.add("is-image");
-    } else if (h >= CARD_FILLER_MIN_ICON_HEIGHT) {
-      filler.classList.add("is-icon");
-    }
+    const slot = filler.parentElement;
+    const h = slot.offsetHeight - 16;
+    if (h <= CARD_FILLER_MIN_HEIGHT) return;
+    const row = slot.parentElement.offsetTop;
+    const best = bestByRow.get(row);
+    if (!best || h > best.h) bestByRow.set(row, { filler, h });
+  });
+  bestByRow.forEach(({ filler, h }) => {
+    const size = Math.min(h, CARD_FILLER_MAX_ICON_SIZE);
+    filler.style.backgroundSize = `${size}px ${size}px`;
+    filler.classList.add("is-icon");
   });
 }
 let cardFillerResizeFrame = 0;

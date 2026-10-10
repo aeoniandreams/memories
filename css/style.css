@@ -788,7 +788,7 @@ h1 {
 .card:hover { border-color: var(--accent); }
 
 /* X 카드 한 칸(.card-cell): 카드는 자기 분량대로만 높이를 갖고, 같은 줄의 가장 긴
-   카드보다 짧으면 그 아래 남는 자리(.card-filler-slot)에 이미지/파비콘이 들어갑니다.
+   카드보다 짧으면 그 아래 남는 자리(.card-filler-slot)에 파비콘이 들어갑니다.
    슬롯 자체는 카드 간격(16px)만큼 아래에서 시작해 카드와 붙지 않게 하고, 높이가 0이면
    (가장 긴 카드) 아무것도 안 보입니다. 채우는 내용은 js/app.js의 layoutCardFillers가 정합니다. */
 .card-cell {
@@ -812,12 +812,6 @@ h1 {
   top: 16px;
   bottom: 0;
   display: none;
-}
-.card-filler.is-image {
-  display: block;
-  border-radius: 16px;
-  background-color: var(--border);
-  background-repeat: no-repeat;
 }
 .card-filler.is-icon {
   display: block;
