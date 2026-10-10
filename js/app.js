@@ -620,7 +620,13 @@ function renderCardGrid() {
   const sorted = [...filtered].sort((a, b) => {
     const aSort = (a.data.firstDateSort || "");
     const bSort = (b.data.firstDateSort || "");
-    return sortDirection === "asc" ? aSort.localeCompare(bSort) : bSort.localeCompare(aSort);
+    const byDate = sortDirection === "asc" ? aSort.localeCompare(bSort) : bSort.localeCompare(aSort);
+    if (byDate !== 0) return byDate;
+    // 날짜가 같으면 카드를 추가한 시각(createdAt)으로: 최신순에선 나중에 추가한 카드가
+    // 앞에, 오래된순에선 먼저 추가한 카드가 앞에 옵니다(createdAt이 없는 예전 카드는 가장 오래된 것으로 칩니다).
+    const aAdded = a.data.createdAt && a.data.createdAt.toMillis ? a.data.createdAt.toMillis() : 0;
+    const bAdded = b.data.createdAt && b.data.createdAt.toMillis ? b.data.createdAt.toMillis() : 0;
+    return sortDirection === "asc" ? aAdded - bAdded : bAdded - aAdded;
   });
 
   sorted.forEach(({ id, data }) => {
