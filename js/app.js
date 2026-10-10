@@ -754,7 +754,8 @@ function renderCardGrid() {
 // 같은 줄의 가장 긴 카드보다 짧은 카드 아래에 생기는 빈 자리를 처리합니다.
 //  0) 한 줄에서 빈 자리가 있는 카드가 연달아 있으면(예: 맨 앞이 가장 긴 카드일 때
 //     뒤의 두 카드) 그 카드들끼리 높이를 맞춥니다. 더 짧은 카드의 글 쪽 공간이 늘어나요.
-//     단, 늘려야 하는 높이가 140px 이상(이미지 썸네일 하나가 들어갈 정도의 차이)이면 맞추지 않습니다.
+//     단, 줄 높이까지 늘어나야 하는 총 높이가 140px 이상(이미지 썸네일 하나가 들어갈
+//     정도)인 카드는 맞추지 않습니다.
 //  1) 그러고도 남는 빈 자리의 세로가 30px 이하면 카드를 그만큼 늘려서(글 쪽 공간이
 //     늘어남, 이미지가 있으면 이미지는 카드 맨 아래에 붙은 채) 빈 자리를 없앱니다.
 //  2) 30px보다 크면 한 줄에서 빈 자리가 가장 큰 카드 한 곳에만 파비콘을 넣고(같으면
@@ -763,9 +764,10 @@ function renderCardGrid() {
 // 한 줄에 카드가 하나뿐인 모바일 같은 곳은 빈 자리가 없어 아무것도 안 합니다. 화면
 // 폭이 바뀌면 줄 구성이 달라지므로 다시 계산합니다.
 const CARD_FILLER_STRETCH_MAX_HEIGHT = 30;
-// 높이를 맞추면서 늘려야 하는 높이가 이 값 이상이면(이미지 썸네일 하나가 들어갈 정도의
-// 차이) 맞추지 않습니다.
-const CARD_EQUALIZE_MAX_HEIGHT = 140;
+// 카드가 줄 높이까지 늘어나야 하는 총 높이가 이 값 이상이면(이미지 썸네일 하나가 들어갈
+// 정도) 그 카드는 맞추지도, 늘리지도 않습니다. 옆 카드와 맞추고 나서 또 줄 높이까지
+// 늘어나는 높이까지 합쳐서 잽니다.
+const CARD_EXTEND_MAX_HEIGHT = 140;
 const CARD_FILLER_MAX_ICON_SIZE = 49;
 function layoutCardFillers() {
   const bestByRow = new Map(); // 줄(셀의 위쪽 위치) -> { filler, h }
@@ -793,7 +795,7 @@ function layoutCardFillers() {
           const card = cell.firstElementChild;
           const diff = target - card.offsetHeight;
           // 소수점 높이 오차(1px 미만)만 있는 경우는 이미 같은 높이로 봅니다.
-          if (diff > 1 && diff < CARD_EQUALIZE_MAX_HEIGHT) {
+          if (diff > 1) {
             card.style.minHeight = `${target}px`;
             cell.classList.add("is-equalized");
           }
@@ -802,7 +804,9 @@ function layoutCardFillers() {
       run = [];
     };
     list.forEach((cell) => {
-      if (cell.querySelector(".card-filler-slot").offsetHeight > 0) run.push(cell);
+      // 빈 자리가 있고, 줄 높이까지 늘어나도 140px 미만인 카드만 맞추는 대상입니다.
+      const gap = cell.querySelector(".card-filler-slot").offsetHeight;
+      if (gap > 0 && gap < CARD_EXTEND_MAX_HEIGHT) run.push(cell);
       else equalizeRun();
     });
     equalizeRun();
@@ -815,7 +819,7 @@ function layoutCardFillers() {
   });
   measured.forEach(({ cell, filler, slotHeight, h, row }) => {
     if (slotHeight <= 0) return; // 같은 줄에서 가장 긴 카드(또는 높이를 맞춰 빈 자리가 없어진 카드)
-    if (h <= CARD_FILLER_STRETCH_MAX_HEIGHT) {
+    if (h <= CARD_FILLER_STRETCH_MAX_HEIGHT && slotHeight < CARD_EXTEND_MAX_HEIGHT) {
       cell.classList.add("is-stretched");
       return;
     }
