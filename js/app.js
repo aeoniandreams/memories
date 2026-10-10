@@ -735,49 +735,40 @@ function renderCardGrid() {
 
     card.addEventListener("click", () => openDetail(id, data));
 
-    // 카드는 자기 분량대로만 높이를 갖고(같은 줄의 긴 카드에 맞춰 늘어나지 않음), 짧은
-    // 카드 아래에 남는 자리는 아래 layoutCardFillers가 이미지/파비콘으로 채웁니다.
+    // 카드는 자기 분량대로만 높이를 갖고(같은 줄의 긴 카드에 맞춰 자동으로 늘어나지 않음),
+    // 같은 줄 카드끼리의 높이 맞추기는 아래 layoutCardHeights가 정합니다.
     const cell = document.createElement("div");
     cell.className = "card-cell";
-    const fillerSlot = document.createElement("div");
-    fillerSlot.className = "card-filler-slot";
-    fillerSlot.setAttribute("aria-hidden", "true");
-    const filler = document.createElement("div");
-    filler.className = "card-filler";
-    fillerSlot.appendChild(filler);
-    cell.append(card, fillerSlot);
+    cell.appendChild(card);
     cardGrid.appendChild(cell);
   });
-  layoutCardFillers();
+  layoutCardHeights();
 }
 
-// X 카드 목록에서 같은 줄 카드끼리의 높이를 맞추고, 그래도 남는 빈 자리에 파비콘을 넣습니다.
+// X 카드 목록에서 같은 줄 카드끼리의 높이를 맞춥니다.
 //
-// [높이 맞추기] 카드는 원래 자기 분량대로만 높이를 갖습니다. 같은 줄에서 옆으로 이어진(연속된)
-// 카드끼리 높이를 맞춥니다 — 이어진 카드들 중 가장 긴 카드 높이에 맞춰 더 짧은 카드의 글 쪽
-// 공간을 늘립니다(이미지가 있으면 이미지는 카드 맨 아래에 붙은 채). 단, 아래 경우는 맞추지 않습니다.
+// 카드는 원래 자기 분량대로만 높이를 갖습니다. 같은 줄에서 옆으로 이어진(연속된) 카드끼리
+// 높이를 맞춥니다 — 이어진 카드들 중 가장 긴 카드 높이에 맞춰 더 짧은 카드의 글 쪽 공간을
+// 늘립니다(이미지가 있으면 이미지는 카드 맨 아래에 붙은 채). 단, 아래 경우는 맞추지 않습니다.
 //  - 이미지가 있는 카드와 없는 카드 사이: 이미지 유무가 다르면 이어진 카드로 치지 않습니다.
 //  - 늘려야 하는 높이가 글 4줄 분량 이상인 카드.
 // 가장 긴 카드가 가운데라서 빈 자리가 있는 카드가 양옆으로 떨어져 있으면, 서로 이어져 있지
 // 않아서 맞추지 않습니다.
 //
-// [파비콘] 맞춘 뒤에도 남는 빈 자리 중, 한 줄에서 가장 큰 곳 한 군데(같으면 왼쪽)에만
-// 파비콘을 넣고 나머지는 비워둡니다. 빈 자리의 세로(카드 간격 16px 제외)가 20px 이하면
-// 파비콘 대신 카드를 줄 높이까지 늘려서 빈 자리를 없앱니다(이미지 유무와 상관없이).
-// 파비콘 크기는 빈 자리 높이와 같되 최대 49px입니다(글 3줄 차이쯤).
+// 그렇게 맞춘 뒤에도 카드 아래 빈 공간이 아주 작게(36px 이하) 남는 카드는, 높이가 살짝
+// 어긋나 보이지 않도록 줄 높이까지 늘려서 없앱니다(이미지 유무와 상관없이). 그보다 큰 빈
+// 공간은 그냥 비워둡니다.
 //
-// 한 줄에 카드가 하나뿐인 모바일 같은 곳은 맞출 카드도 빈 자리도 없어 아무것도 안 합니다.
-// 화면 폭이 바뀌면 줄 구성과 글 줄바꿈이 달라지므로 다시 계산합니다.
+// 한 줄에 카드가 하나뿐인 모바일 같은 곳은 맞출 카드가 없어 아무것도 안 합니다. 화면 폭이
+// 바뀌면 줄 구성과 글 줄바꿈이 달라지므로 다시 계산합니다.
 const CARD_MATCH_MAX_LINES = 4; // 이 줄 수 분량 이상 늘려야 하는 카드는 맞추지 않습니다.
-const CARD_ICON_MIN_HEIGHT = 20;
-const CARD_ICON_MAX_SIZE = 49;
-function layoutCardFillers() {
+const CARD_SMALL_GAP_MAX_HEIGHT = 36; // 이 높이 이하의 남는 빈 공간은 카드를 늘려서 없앱니다.
+function layoutCardHeights() {
   const cells = Array.from(cardGrid.querySelectorAll(".card-cell"));
   // 이전 계산 결과를 먼저 지워야 늘리지 않은 원래 높이 기준으로 잴 수 있습니다.
   cells.forEach((cell) => {
     cell.classList.remove("is-matched");
     cell.firstElementChild.style.minHeight = "";
-    cell.querySelector(".card-filler").classList.remove("is-icon");
   });
   if (cells.length === 0) return;
 
@@ -815,41 +806,25 @@ function layoutCardFillers() {
         }
       });
     });
-  });
 
-  // 맞춘 뒤에도 남는 빈 자리에 파비콘: 한 줄에서 가장 큰 곳 한 군데에만.
-  cellsByRow.forEach((list) => {
-    let best = null;
+    // 맞춘 뒤에도 아주 작게 남은 빈 공간(줄 높이 - 카드 높이)은 카드를 늘려서 없앱니다.
     list.forEach((cell) => {
-      // 채우기 전(display:none)에는 크기가 0이라, 슬롯 크기에서 위쪽 간격(16px)을 뺀 값을 씁니다.
-      const slot = cell.querySelector(".card-filler-slot");
-      const h = slot.offsetHeight - 16;
-      if (h <= CARD_ICON_MIN_HEIGHT) {
-        // 파비콘이 들어가기엔 작은 빈 자리(20px 이하)는 카드를 줄 높이까지 늘려서 없앱니다.
-        if (slot.offsetHeight > 1) {
-          const card = cardOf(cell);
-          card.style.minHeight = `${card.offsetHeight + slot.offsetHeight}px`;
-          cell.classList.add("is-matched");
-        }
-        return;
+      const card = cardOf(cell);
+      const gap = cell.offsetHeight - card.offsetHeight;
+      if (gap > 1 && gap <= CARD_SMALL_GAP_MAX_HEIGHT) {
+        card.style.minHeight = `${card.offsetHeight + gap}px`;
+        cell.classList.add("is-matched");
       }
-      // 소수점 높이 오차로 같은 크기의 빈 자리가 다르게 잡히지 않도록 1px 차이는 같은 것으로 봅니다.
-      if (!best || h > best.h + 1) best = { filler: slot.firstElementChild, h };
     });
-    if (best) {
-      const size = Math.min(best.h, CARD_ICON_MAX_SIZE);
-      best.filler.style.backgroundSize = `${size}px ${size}px`;
-      best.filler.classList.add("is-icon");
-    }
   });
 }
-let cardFillerResizeFrame = 0;
+let cardHeightResizeFrame = 0;
 new ResizeObserver(() => {
-  cancelAnimationFrame(cardFillerResizeFrame);
-  cardFillerResizeFrame = requestAnimationFrame(layoutCardFillers);
+  cancelAnimationFrame(cardHeightResizeFrame);
+  cardHeightResizeFrame = requestAnimationFrame(layoutCardHeights);
 }).observe(cardGrid);
 // 웹폰트가 늦게 적용되면 글 줄 바꿈이 달라져 카드 높이가 바뀔 수 있어 한 번 더 맞춥니다.
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutCardFillers);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutCardHeights);
 
 sortToggleBtn.addEventListener("click", () => {
   sortDirection = sortDirection === "desc" ? "asc" : "desc";
