@@ -747,13 +747,13 @@ function renderCardGrid() {
 
 // X 카드 목록에서 같은 줄 카드끼리의 높이를 맞춥니다.
 //
-// 카드는 원래 자기 분량대로만 높이를 갖습니다. 같은 줄에서 옆으로 이어진(연속된) 카드끼리
-// 높이를 맞춥니다 — 이어진 카드들 중 가장 긴 카드 높이에 맞춰 더 짧은 카드의 글 쪽 공간을
-// 늘립니다(이미지가 있으면 이미지는 카드 맨 아래에 붙은 채). 단, 아래 경우는 맞추지 않습니다.
-//  - 이미지가 있는 카드와 없는 카드 사이: 이미지 유무가 다르면 이어진 카드로 치지 않습니다.
-//  - 늘려야 하는 높이가 글 4줄 분량 이상인 카드.
-// 가장 긴 카드가 가운데라서 빈 자리가 있는 카드가 양옆으로 떨어져 있으면, 서로 이어져 있지
-// 않아서 맞추지 않습니다.
+// 카드는 원래 자기 분량대로만 높이를 갖습니다. 같은 줄에서 옆으로 이어진(연속된) 카드를
+// 둘씩 짝지어서 서로 높이를 맞춥니다 — 짝이 된 두 카드 중 더 짧은 카드의 글 쪽 공간을
+// 긴 카드 높이만큼 늘립니다(이미지가 있으면 이미지는 카드 맨 아래에 붙은 채).
+//  - 짝은 이웃한 카드끼리만 되고, 높이 차이가 작은 짝부터 정합니다(차이가 같으면 왼쪽 우선).
+//    한 카드는 한 짝에만 속하고, 짝이 안 된 카드는 그대로 둡니다.
+//  - 이미지가 있는 카드와 없는 카드는 이어진 카드로 치지 않아서 짝이 되지 않습니다.
+//  - 늘려야 하는 높이가 글 4줄 분량 이상이면 짝이 되지 않습니다.
 //
 // 그렇게 맞춘 뒤에도 카드 아래 빈 공간이 아주 작게(36px 이하) 남는 카드는, 높이가 살짝
 // 어긋나 보이지 않도록 줄 높이까지 늘려서 없앱니다(이미지 유무와 상관없이). 그보다 큰 빈
@@ -787,24 +787,27 @@ function layoutCardHeights() {
   const cardOf = (cell) => cell.firstElementChild;
 
   cellsByRow.forEach((list) => {
-    // 같은 줄에서 이미지 유무가 같은 카드끼리 이어진 묶음(run)을 만듭니다.
-    const runs = [];
-    list.forEach((cell) => {
-      const run = runs[runs.length - 1];
-      if (run && hasImage(run[0]) === hasImage(cell)) run.push(cell);
-      else runs.push([cell]);
-    });
-    runs.forEach((run) => {
-      if (run.length < 2) return;
-      const target = Math.max(...run.map((cell) => cardOf(cell).offsetHeight));
-      run.forEach((cell) => {
-        const growth = target - cardOf(cell).offsetHeight;
-        // 1px 미만 차이는 이미 같은 높이로 보고, 4줄 분량 이상 늘어나야 하면 맞추지 않습니다.
-        if (growth > 1 && growth < maxGrowth - 0.5) {
-          cardOf(cell).style.minHeight = `${target}px`;
-          cell.classList.add("is-matched");
-        }
-      });
+    // 이웃한 카드끼리 짝 후보를 만듭니다(이미지 유무가 같고, 늘려야 하는 높이가 4줄 분량 미만).
+    const heights = list.map((cell) => cardOf(cell).offsetHeight);
+    const pairs = [];
+    for (let i = 0; i < list.length - 1; i++) {
+      if (hasImage(list[i]) !== hasImage(list[i + 1])) continue;
+      const diff = Math.abs(heights[i] - heights[i + 1]);
+      if (diff < maxGrowth - 0.5) pairs.push({ i, diff });
+    }
+    // 높이 차이가 작은 짝부터(같으면 왼쪽부터), 한 카드는 한 짝에만 속하게 정합니다.
+    pairs.sort((a, b) => a.diff - b.diff || a.i - b.i);
+    const used = new Set();
+    pairs.forEach(({ i, diff }) => {
+      if (used.has(i) || used.has(i + 1)) return;
+      used.add(i);
+      used.add(i + 1);
+      // 1px 미만 차이는 이미 같은 높이로 봅니다.
+      if (diff <= 1) return;
+      const shorter = heights[i] < heights[i + 1] ? i : i + 1;
+      const target = Math.max(heights[i], heights[i + 1]);
+      cardOf(list[shorter]).style.minHeight = `${target}px`;
+      list[shorter].classList.add("is-matched");
     });
 
     // 맞춘 뒤에도 아주 작게 남은 빈 공간(줄 높이 - 카드 높이)은 카드를 늘려서 없앱니다.
