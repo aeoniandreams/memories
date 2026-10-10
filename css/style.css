@@ -1054,6 +1054,12 @@ h1 {
   gap: 6px;
 }
 
+/* display:flex가 hidden 속성의 기본 숨김(display:none)을 덮어써서, 새 대화를 추가할
+   때도 "기존 대화 아래로 이어서 추가하는 중이에요." 문구가 그대로 보이던 문제 수정. */
+.append-mode-label[hidden] {
+  display: none;
+}
+
 .append-mode-label svg {
   width: 15px;
   height: 15px;
