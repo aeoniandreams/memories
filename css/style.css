@@ -807,7 +807,8 @@ h1 {
 .card-cell.is-stretched > .card-filler-slot {
   flex: 0 0 0;
 }
-.card-cell.is-stretched > .card .card-thumbs {
+.card-cell.is-stretched > .card .card-thumbs,
+.card-cell.is-equalized > .card .card-thumbs {
   margin-top: auto;
 }
 .card-filler-slot {
