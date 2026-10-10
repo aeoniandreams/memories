@@ -763,7 +763,8 @@ function renderCardGrid() {
 //
 // [파비콘] 맞춘 뒤에도 남는 빈 자리 중, 한 줄에서 가장 큰 곳 한 군데(같으면 왼쪽)에만
 // 파비콘을 넣고 나머지는 비워둡니다. 빈 자리의 세로(카드 간격 16px 제외)가 20px 이하면
-// 넣지 않고, 크기는 빈 자리 높이와 같되 최대 49px입니다(글 3줄 차이쯤).
+// 파비콘 대신 카드를 줄 높이까지 늘려서 빈 자리를 없앱니다(이미지 유무와 상관없이).
+// 파비콘 크기는 빈 자리 높이와 같되 최대 49px입니다(글 3줄 차이쯤).
 //
 // 한 줄에 카드가 하나뿐인 모바일 같은 곳은 맞출 카드도 빈 자리도 없어 아무것도 안 합니다.
 // 화면 폭이 바뀌면 줄 구성과 글 줄바꿈이 달라지므로 다시 계산합니다.
@@ -823,7 +824,15 @@ function layoutCardFillers() {
       // 채우기 전(display:none)에는 크기가 0이라, 슬롯 크기에서 위쪽 간격(16px)을 뺀 값을 씁니다.
       const slot = cell.querySelector(".card-filler-slot");
       const h = slot.offsetHeight - 16;
-      if (h <= CARD_ICON_MIN_HEIGHT) return;
+      if (h <= CARD_ICON_MIN_HEIGHT) {
+        // 파비콘이 들어가기엔 작은 빈 자리(20px 이하)는 카드를 줄 높이까지 늘려서 없앱니다.
+        if (slot.offsetHeight > 1) {
+          const card = cardOf(cell);
+          card.style.minHeight = `${card.offsetHeight + slot.offsetHeight}px`;
+          cell.classList.add("is-matched");
+        }
+        return;
+      }
       // 소수점 높이 오차로 같은 크기의 빈 자리가 다르게 잡히지 않도록 1px 차이는 같은 것으로 봅니다.
       if (!best || h > best.h + 1) best = { filler: slot.firstElementChild, h };
     });
