@@ -750,8 +750,9 @@ function renderCardGrid() {
 // 카드는 원래 자기 분량대로만 높이를 갖습니다. 같은 줄에서 옆으로 이어진(연속된) 카드를
 // 둘씩 짝지어서 서로 높이를 맞춥니다 — 짝이 된 두 카드 중 더 짧은 카드의 글 쪽 공간을
 // 긴 카드 높이만큼 늘립니다(이미지가 있으면 이미지는 카드 맨 아래에 붙은 채).
-//  - 짝은 이웃한 카드끼리만 되고, 높이 차이가 작은 짝부터 정합니다(차이가 같으면 왼쪽 우선).
-//    한 카드는 한 짝에만 속하고, 짝이 안 된 카드는 그대로 둡니다.
+//  - 짝은 이웃한 카드끼리만 되고, 높이 차이가 작은 짝부터 정합니다(차이가 같으면 더 큰
+//    카드가 들어 있는 짝 우선, 그것도 같으면 왼쪽 우선). 한 카드는 한 짝에만 속하고,
+//    짝이 안 된 카드는 그대로 둡니다.
 //  - 이미지가 있는 카드와 없는 카드는 이어진 카드로 치지 않아서 짝이 되지 않습니다.
 //  - 늘려야 하는 높이가 글 4줄 분량 이상이면 짝이 되지 않습니다.
 //
@@ -788,15 +789,16 @@ function layoutCardHeights() {
 
   cellsByRow.forEach((list) => {
     // 이웃한 카드끼리 짝 후보를 만듭니다(이미지 유무가 같고, 늘려야 하는 높이가 4줄 분량 미만).
-    const heights = list.map((cell) => cardOf(cell).offsetHeight);
+    const heights = list.map((cell) => cardOf(cell).getBoundingClientRect().height);
     const pairs = [];
     for (let i = 0; i < list.length - 1; i++) {
       if (hasImage(list[i]) !== hasImage(list[i + 1])) continue;
       const diff = Math.abs(heights[i] - heights[i + 1]);
-      if (diff < maxGrowth - 0.5) pairs.push({ i, diff });
+      if (diff < maxGrowth - 0.5) pairs.push({ i, diff, tallest: Math.max(heights[i], heights[i + 1]) });
     }
-    // 높이 차이가 작은 짝부터(같으면 왼쪽부터), 한 카드는 한 짝에만 속하게 정합니다.
-    pairs.sort((a, b) => a.diff - b.diff || a.i - b.i);
+    // 높이 차이가 작은 짝부터 정합니다. 차이가 같으면(0.5px 이내) 더 큰 카드가 들어 있는 짝을
+    // 먼저, 그것도 같으면 왼쪽 짝을 먼저 정합니다. 한 카드는 한 짝에만 속합니다.
+    pairs.sort((a, b) => (Math.abs(a.diff - b.diff) > 0.5 ? a.diff - b.diff : b.tallest - a.tallest || a.i - b.i));
     const used = new Set();
     pairs.forEach(({ i, diff }) => {
       if (used.has(i) || used.has(i + 1)) return;
