@@ -3208,8 +3208,12 @@ function renderGalleryManageList() {
 }
 
 galleryManageAddBtn.addEventListener("click", () => {
-  workingGalleryImages.push({ id: "new_" + genCommentId(), url: "", title: "" });
+  // 새 이미지 카드 박스는 목록 맨 위에 만듭니다(저장하면 갤러리에서도 맨 앞에 옵니다).
+  workingGalleryImages.unshift({ id: "new_" + genCommentId(), url: "", title: "" });
   renderGalleryManageList();
+  // 목록 아래쪽을 보고 있었어도 새 박스가 보이도록, 새 박스의 주소 입력칸으로 바로 이동합니다.
+  const firstUrlInput = galleryManageList.querySelector(".gallery-url-input");
+  if (firstUrlInput) firstUrlInput.focus();
 });
 
 galleryManageSaveBtn.addEventListener("click", async () => {
