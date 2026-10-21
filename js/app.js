@@ -1761,6 +1761,232 @@ function findCommentEntry(commentKey, role, entryId) {
   return arr.find((e) => e.id === entryId) || null;
 }
 
+// ---------- 코멘트 글 서식(취소선 / 회색 글씨 / 포인트색 글씨) ----------
+// 코멘트 글 블록은 { type: "text", text: "글자만(서식 없는 원문)", html?: "서식 있는 본문" }으로
+// 저장합니다. html에는 <s>(취소선)와 <span class="cm-gray|cm-accent|cm-plain">(글씨 색)만
+// 들어가고, 줄바꿈은 글자 그대로의 "\n"입니다(보기 화면의 white-space: pre-wrap이 처리).
+// 서식이 없는 코멘트(예전 코멘트 포함)는 html 없이 text만 있고, text는 서식이 있어도 항상
+// 같이 저장돼서 알림 같은 "글이 있는지" 판단은 그대로 text로 합니다. 색은 클래스(cm-*)로만
+// 저장해서 밝은/야간 모드에 따라 자동으로 맞는 색으로 보입니다.
+const COMMENT_FORMAT_CLASSES = ["cm-gray", "cm-accent", "cm-plain"];
+// 작성칸에서 색을 입힐 땐 브라우저(execCommand)가 만들어 주는 <font color="..."> 태그를
+// 쓰는데, 색 값 자리에 아래 표식 색을 넣고 저장할 때 클래스로 바꿔 저장합니다
+// (화면에 보이는 색은 CSS의 font[color="..."] 규칙이 테마 색으로 바꿔 보여줌).
+const COMMENT_COLOR_SENTINELS = { "cm-accent": "#010203", "cm-gray": "#010204", "cm-plain": "#010205" };
+const COMMENT_COLOR_VARS = { "cm-accent": "--accent", "cm-gray": "--muted-pale" };
+
+function commentColorClassOf(el) {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "span") {
+    const cls = Array.from(el.classList).find((c) => COMMENT_FORMAT_CLASSES.includes(c));
+    if (cls) return cls;
+  }
+  const raw = tag === "font" ? el.getAttribute("color") : el.style && el.style.color;
+  if (!raw) return null;
+  const rgb = toRgbColorString(raw);
+  return Object.keys(COMMENT_COLOR_SENTINELS).find((cls) => toRgbColorString(COMMENT_COLOR_SENTINELS[cls]) === rgb) || null;
+}
+
+// 작성칸(contenteditable)의 내용을 { text, html }로 바꿉니다. 허용하는 서식 외의 태그는
+// 벗겨내고 글자만 남기며, <div>/<p>/<br>로 만들어진 줄바꿈은 "\n"으로 통일합니다.
+function serializeCommentEditor(root) {
+  let text = "";
+  let html = "";
+  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const endsWithNewline = () => text === "" || text.endsWith("\n");
+  const push = (t) => {
+    text += t;
+    html += esc(t);
+  };
+  const walk = (node) => {
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        push(child.textContent);
+        return;
+      }
+      if (child.nodeType !== Node.ELEMENT_NODE) return;
+      const tag = child.tagName.toLowerCase();
+      if (tag === "br") {
+        // 줄 안에 다른 내용이 있는 블록의 맨 끝 <br>은 줄 끝 표시일 뿐이라 건너뜁니다.
+        const parent = child.parentElement;
+        const isBlockTail =
+          parent && parent !== root && /^(div|p)$/.test(parent.tagName.toLowerCase()) && !child.nextSibling && parent.childNodes.length > 1;
+        if (!isBlockTail) push("\n");
+        return;
+      }
+      if (tag === "div" || tag === "p") {
+        if (!endsWithNewline()) push("\n");
+        walk(child);
+        return;
+      }
+      if (tag === "s" || tag === "strike" || tag === "del") {
+        html += "<s>";
+        walk(child);
+        html += "</s>";
+        return;
+      }
+      const cls = commentColorClassOf(child);
+      if (cls) {
+        html += `<span class="${cls}">`;
+        walk(child);
+        html += "</span>";
+        return;
+      }
+      walk(child);
+    });
+  };
+  walk(root);
+  return { text, html };
+}
+
+// 저장된 html을 화면에 그릴 안전한 노드로 바꿉니다. 다른 사람이 쓴 코멘트도 보게 되므로
+// (일반 사용자가 Firestore에 직접 쓴 값일 수도 있어서) 허용 목록(<s>, 지정한 색 클래스의
+// <span>, 줄바꿈)만 살리고 나머지는 전부 글자로만 풀어서 만듭니다.
+function buildSafeCommentFragment(html) {
+  const parsed = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html");
+  const out = document.createDocumentFragment();
+  const walk = (node, parent) => {
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        parent.appendChild(document.createTextNode(child.textContent));
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName.toLowerCase();
+        if (tag === "script" || tag === "style" || tag === "template") return;
+        if (tag === "br") {
+          parent.appendChild(document.createTextNode("\n"));
+        } else if (tag === "s" || tag === "strike" || tag === "del") {
+          const el = document.createElement("s");
+          walk(child, el);
+          parent.appendChild(el);
+        } else if (tag === "span") {
+          const cls = Array.from(child.classList).find((c) => COMMENT_FORMAT_CLASSES.includes(c));
+          if (cls) {
+            const el = document.createElement("span");
+            el.className = cls;
+            walk(child, el);
+            parent.appendChild(el);
+          } else {
+            walk(child, parent);
+          }
+        } else {
+          walk(child, parent);
+        }
+      }
+    });
+  };
+  walk(parsed.body, out);
+  return out;
+}
+
+// 보기 화면의 글 요소(el)에 코멘트 글 블록 내용을 채웁니다(서식이 있으면 서식대로).
+function setCommentText(el, block) {
+  if (block.html) el.replaceChildren(buildSafeCommentFragment(block.html));
+  else el.textContent = block.text || "";
+}
+
+// 저장할 글 블록을 만듭니다. 서식(<s>, <span>)이 실제로 하나도 없으면 html은 저장하지 않습니다.
+function finalizeCommentTextBlock(b, extra = {}) {
+  const text = (b.text || "").trim();
+  const out = { type: "text", text, ...extra };
+  const html = (b.html || "").trim();
+  if (text && html && /<(s|span)[ >]/.test(html)) out.html = html;
+  return out;
+}
+
+// 작성/수정 중 글 블록 하나의 서식 입력칸(contenteditable)과 서식 버튼 줄을 만듭니다.
+// 입력할 때마다 block.text / block.html을 갱신합니다.
+let commentEditorRange = null; // 마지막으로 글 입력칸 안에 있던 선택 범위(버튼을 눌러도 잃지 않게)
+let commentEditorEl = null;
+document.addEventListener("selectionchange", () => {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return;
+  const node = sel.anchorNode.nodeType === Node.ELEMENT_NODE ? sel.anchorNode : sel.anchorNode.parentElement;
+  const editor = node && node.closest(".comment-rich-editor");
+  if (editor) {
+    commentEditorEl = editor;
+    commentEditorRange = sel.getRangeAt(0).cloneRange();
+  }
+});
+function createCommentRichEditor(block) {
+  const wrap = document.createElement("div");
+  wrap.className = "comment-rich-wrap";
+
+  const editor = document.createElement("div");
+  editor.className = "comment-rich-editor";
+  editor.contentEditable = "true";
+  editor.setAttribute("role", "textbox");
+  editor.setAttribute("aria-multiline", "true");
+  editor.dataset.placeholder = "이 내용에 대한 코멘트를 입력하세요";
+  if (block.html) editor.appendChild(buildSafeCommentFragment(block.html));
+  else editor.textContent = block.text || "";
+
+  const sync = () => {
+    // 다 지우고 나면 브라우저가 <br> 같은 찌꺼기를 남겨서 안내 문구(:empty)가 안 뜨니 비워줍니다.
+    if (editor.textContent === "") editor.replaceChildren();
+    const { text, html } = serializeCommentEditor(editor);
+    block.text = text;
+    block.html = html;
+  };
+  editor.addEventListener("input", sync);
+  // 다른 곳의 서식(배경색 등)이 같이 들어오지 않도록 붙여넣기는 글자만 받습니다.
+  editor.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, pasted);
+  });
+
+  const bar = document.createElement("div");
+  bar.className = "comment-format-bar";
+  const restoreSelection = () => {
+    editor.focus();
+    if (commentEditorEl === editor && commentEditorRange) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(commentEditorRange);
+    }
+  };
+  const bindButton = (btn, run) => {
+    // 버튼을 눌러도 입력칸의 선택 범위가 풀리지 않게 마우스 누름 동작을 막습니다.
+    btn.addEventListener("mousedown", (e) => e.preventDefault());
+    btn.addEventListener("click", () => {
+      restoreSelection();
+      run();
+      sync();
+    });
+  };
+
+  const strikeBtn = document.createElement("button");
+  strikeBtn.type = "button";
+  strikeBtn.className = "app-info-format-btn";
+  strikeBtn.setAttribute("aria-label", "취소선");
+  strikeBtn.innerHTML = "<s>S</s>";
+  bindButton(strikeBtn, () => document.execCommand("strikeThrough", false, null));
+  bar.appendChild(strikeBtn);
+
+  // 색 버튼: 이미 그 색이 적용된 부분에서 같은 버튼을 한 번 더 누르면 기본 글씨색으로 되돌립니다.
+  [
+    ["cm-gray", "app-info-color-gray", "회색 글씨"],
+    ["cm-accent", "app-info-color-accent", "포인트색 글씨"],
+  ].forEach(([cls, btnClass, label]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "app-info-color-btn " + btnClass;
+    btn.setAttribute("aria-label", label);
+    bindButton(btn, () => {
+      const sel = window.getSelection();
+      if (sel.rangeCount === 0 || sel.getRangeAt(0).collapsed) return;
+      const target = getComputedStyle(document.documentElement).getPropertyValue(COMMENT_COLOR_VARS[cls]).trim();
+      const current = document.queryCommandValue("foreColor");
+      const already = current && toRgbColorString(current) === toRgbColorString(target);
+      document.execCommand("foreColor", false, already ? COMMENT_COLOR_SENTINELS["cm-plain"] : COMMENT_COLOR_SENTINELS[cls]);
+    });
+    bar.appendChild(btn);
+  });
+
+  wrap.append(bar, editor);
+  return wrap;
+}
+
 // 코멘트 하나를 텍스트/이미지 블록 배열로 정규화합니다. 예전 형식(문자열 text만
 // 있고 content가 없는 코멘트)도 텍스트 블록 하나짜리로 자연스럽게 변환됩니다.
 function getCommentBlocks(entry) {
@@ -1918,7 +2144,7 @@ function renderCommentBlocksView(container, blocks) {
       if (!block.text) return;
       const p = document.createElement("p");
       p.className = "comment-modal-text";
-      p.textContent = block.text;
+      setCommentText(p, block);
       container.appendChild(p);
     }
   });
@@ -1986,7 +2212,7 @@ function renderNoteChatView(container, blocks) {
     }
     const text = document.createElement("p");
     text.className = "note-chat-text";
-    text.textContent = block.text;
+    setCommentText(text, block);
     body.appendChild(text);
 
     row.append(avatarCol, body);
@@ -2213,18 +2439,9 @@ function renderCommentBlockEditor(container, blocks, rerender, options = {}) {
         });
         content.appendChild(sideBtn);
       }
-      const textarea = document.createElement("textarea");
-      textarea.className = "tweet-comment-editor-textarea";
-      textarea.rows = 3;
-      textarea.placeholder = "이 내용에 대한 코멘트를 입력하세요";
-      textarea.value = block.text || "";
-      textarea.addEventListener("input", () => {
-        block.text = textarea.value;
-        autoResizeTextarea(textarea);
-      });
-      content.appendChild(textarea);
-      // 이미지 URL 칸과 마찬가지로, 문서에 실제로 붙은 다음 높이를 맞춥니다.
-      pendingAutoResizeInputs.push(textarea);
+      // 취소선/회색/포인트색 서식을 쓸 수 있는 입력칸(contenteditable). 입력할 때마다
+      // block.text(글자만)와 block.html(서식 포함)을 갱신합니다.
+      content.appendChild(createCommentRichEditor(block));
     }
 
     const removeBtn = document.createElement("button");
@@ -2320,7 +2537,7 @@ tweetCommentPanelActionBtn.addEventListener("click", async () => {
     .map((b) =>
       b.type === "image"
         ? { type: "image", urls: (b.urls || []).map((u) => u.trim()).filter(Boolean) }
-        : { type: "text", text: (b.text || "").trim() }
+        : finalizeCommentTextBlock(b)
     )
     .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
 
@@ -4413,7 +4630,7 @@ kakaoCommentPanelActionBtn.addEventListener("click", async () => {
     .map((b) =>
       b.type === "image"
         ? { type: "image", urls: (b.urls || []).map((u) => u.trim()).filter(Boolean) }
-        : { type: "text", text: (b.text || "").trim() }
+        : finalizeCommentTextBlock(b)
     )
     .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
 
@@ -4930,7 +5147,7 @@ sumoneCommentPanelActionBtn.addEventListener("click", async () => {
     .map((b) =>
       b.type === "image"
         ? { type: "image", urls: (b.urls || []).map((u) => u.trim()).filter(Boolean) }
-        : { type: "text", text: (b.text || "").trim(), ...(isNote ? { side: b.side === "right" ? "right" : "left" } : {}) }
+        : finalizeCommentTextBlock(b, isNote ? { side: b.side === "right" ? "right" : "left" } : {})
     )
     .filter((b) => (b.type === "image" ? b.urls.length > 0 : !!b.text));
 

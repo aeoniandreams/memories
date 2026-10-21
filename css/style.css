@@ -1609,6 +1609,73 @@ h1 {
   overflow: hidden;
 }
 
+/* 코멘트 글 블록 입력칸: 취소선/회색/포인트색 서식을 쓰려고 textarea 대신
+   contenteditable 칸을 씁니다(js/app.js의 createCommentRichEditor). 글자 모양과 테두리는
+   예전 textarea 입력칸과 같게 맞추고, 내용 분량만큼 저절로 늘어납니다. */
+.comment-rich-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.comment-format-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.comment-format-bar .app-info-format-btn {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+.comment-format-bar .app-info-color-btn {
+  width: 18px;
+  height: 18px;
+}
+.comment-rich-editor {
+  width: 100%;
+  min-height: calc(14px * 1.6 * 3 + 18px);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.comment-rich-editor:focus {
+  outline: none;
+}
+.comment-rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* 코멘트 글 서식. 저장되는 건 클래스(cm-*)뿐이라 밝은/야간 모드에 따라 색이 자동으로 바뀝니다.
+   작성칸 안에서는 브라우저가 만드는 <font color="표식색"> 태그를 같은 색으로 보여줍니다
+   (표식색 값은 js/app.js의 COMMENT_COLOR_SENTINELS와 같아야 합니다). */
+.cm-accent,
+.comment-rich-editor font[color="#010203"] {
+  color: var(--accent);
+}
+.cm-gray,
+.comment-rich-editor font[color="#010204"] {
+  color: var(--muted-pale);
+}
+.cm-plain,
+.comment-rich-editor font[color="#010205"] {
+  color: var(--text);
+}
+.comment-rich-editor s,
+.comment-rich-editor strike,
+.comment-modal-text s,
+.note-chat-text s {
+  text-decoration: line-through;
+}
+
 /* 이미지 URL 입력칸: 내용물(URL 개수/길이)에 따라 세로로 늘어나야 해서
    input이 아니라 textarea를 쓰고, JS(autoResizeTextarea)가 매번 높이를
    scrollHeight에 맞춥니다. resize 손잡이나 스크롤바가 따로 안 보이게
