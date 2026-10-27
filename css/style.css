@@ -790,12 +790,6 @@ h1 {
   border-color: var(--accent);
 }
 .card:hover { border-color: var(--accent); }
-/* 새 코멘트에 이미지가 들어 있으면 테두리를 빨간색(설명창의 강조색 --danger)으로. 마우스를
-   올려도 파란색으로 바뀌지 않게 :hover도 같이 지정합니다. */
-.card.has-new-image-comment,
-.card.has-new-image-comment:hover {
-  border-color: var(--danger);
-}
 
 /* X 카드 한 칸(.card-cell): 카드는 자기 분량대로만 높이를 갖습니다(같은 줄의 긴 카드에 맞춰
    자동으로 늘어나지 않음). 같은 줄 카드끼리의 높이 맞추기는 js/app.js의 layoutCardHeights가
