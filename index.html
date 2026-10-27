@@ -142,6 +142,13 @@
     </div>
   </div>
 
+  <!-- 디데이: 2024년 4월 24일을 1일로 센 "D+000" 형식. 관리자/일반 모드 모두 보이고,
+       관리자 모드에서는 아래 두 날짜 항목(가장 최근 기록, 최근 코멘트 작성)보다 위에 놓입니다.
+       값은 js/app.js의 updateSidebarDday가 사이드바를 열 때마다 오늘 날짜로 계산합니다. -->
+  <div id="sidebar-dday" class="app-sidebar-latest-record app-sidebar-dday">
+    <div id="sidebar-dday-text" class="app-sidebar-latest-record-date"></div>
+  </div>
+
   <!-- 가장 최근 기록: 관리자 전용. 백업해둔 모든 X 대화의 메시지를 통틀어
        가장 최근 날짜가 언제인지 보여줍니다. 값을 직접 입력해두는 게 아니라
        카드 목록을 불러올 때마다(새 대화 추가/이어서 추가 등으로 더 최근
