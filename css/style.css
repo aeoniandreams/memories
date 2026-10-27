@@ -3315,3 +3315,21 @@ span.kakao-like-btn {
     display: none;
   }
 }
+
+/* 폰/태블릿 같은 터치 기기에서 트위터 대화창(#detail-modal)이 열려 있는 동안엔, 그 뒤의 카드 목록
+   (페이지 자체)이 스크롤되지 않게 막습니다. 페이지 스크롤은 html/body가 맡고 있어서, 대화창이
+   떠 있는 동안에만 둘 다 overflow:hidden으로 잠그면 됩니다(닫으면 풀리고, 보던 위치는 그대로).
+   대화창 자신(.modal-panel)의 스크롤은 그대로 되고, 끝까지 내렸을 때 그 스크롤이 뒤의 페이지로
+   번지는 것(scroll chaining)도 overscroll-behavior로 막습니다. 마우스를 쓰는 데스크탑에서는
+   스크롤바가 사라지면서 화면이 옆으로 튀기 때문에 적용하지 않습니다. */
+@media (hover: none) and (pointer: coarse) {
+  html:has(#detail-modal:not([hidden])),
+  html:has(#detail-modal:not([hidden])) body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  #detail-modal,
+  #detail-modal .modal-panel {
+    overscroll-behavior: contain;
+  }
+}
