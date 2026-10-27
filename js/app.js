@@ -4271,7 +4271,58 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
 
     if (editable) container.appendChild(makeInsertImageBtn(index + 1));
   });
+  if (cardId) layoutKakaoCommentStacks();
 }
+
+// 코멘트 보기 버튼 묶음(.kakao-comment-view-stack)의 방향을 말풍선 높이에 맞춥니다.
+//  - 한 줄짜리(세로가 짧은) 말풍선: 버튼을 가로로 나란히(먼저 달린 게 왼쪽).
+//  - 여러 줄(세로가 긴) 말풍선이나 이미지: 버튼을 세로로 쌓고, 말풍선 높이(시간 표시 자리를 뺀)
+//    를 넘어가게 되면 다음 줄(오른쪽 열)로 넘깁니다. 열이 늘어나도 먼저 달린 게 왼쪽/위입니다.
+// 말풍선 높이는 화면 폭에 따라 줄바꿈이 달라지면 바뀌므로, 폭이 바뀔 때마다 다시 맞춥니다.
+const KAKAO_SINGLE_LINE_MAX_HEIGHT = 50; // 한 줄 말풍선은 약 38~40px, 두 줄은 약 59px
+function layoutKakaoCommentStacks() {
+  const items = Array.from(kakaoDetailThread.querySelectorAll(".kakao-comment-view-stack")).map((stack) => {
+    const row = stack.closest(".kakao-bubble-row");
+    const bubble = row && row.querySelector(".kakao-bubble, .kakao-bubble-image");
+    const time = row && row.querySelector(".kakao-time");
+    return { stack, bubble, reserved: time ? time.offsetHeight + 4 : 0, vertical: false };
+  }).filter((item) => item.bubble);
+
+  // 가로로 놓으면 버튼들이 옆자리를 더 차지해서 말풍선이 좁아져 줄 수가 늘어나고, 그러면 높이 기준이
+  // 흔들립니다. 그래서 먼저 모두 폭을 가장 적게 쓰는 세로(제한 없음) 상태로 두고 말풍선 높이를 재서
+  // 한 줄인지 판단합니다.
+  items.forEach((item) => {
+    item.stack.classList.add("is-vertical");
+    item.stack.style.maxHeight = "";
+  });
+  items.forEach((item) => {
+    item.vertical = item.bubble.offsetHeight >= KAKAO_SINGLE_LINE_MAX_HEIGHT;
+  });
+  items.forEach((item) => {
+    if (!item.vertical) item.stack.classList.remove("is-vertical");
+  });
+
+  // 세로인 묶음은 말풍선 높이(시간 표시 자리를 뺀)를 넘으면 다음 열로 넘깁니다. 열이 늘면 폭을
+  // 더 차지해 말풍선이 좁아지고(= 더 높아지고) 허용 높이도 달라지니, 값이 안 바뀔 때까지 몇 번 맞춥니다.
+  for (let pass = 0; pass < 3; pass++) {
+    let changed = false;
+    items.forEach((item) => {
+      if (!item.vertical) return;
+      const maxHeight = Math.max(30, item.bubble.offsetHeight - item.reserved) + "px";
+      if (item.stack.style.maxHeight !== maxHeight) {
+        item.stack.style.maxHeight = maxHeight;
+        changed = true;
+      }
+    });
+    if (!changed) break;
+  }
+}
+let kakaoStackLayoutFrame = 0;
+new ResizeObserver(() => {
+  cancelAnimationFrame(kakaoStackLayoutFrame);
+  kakaoStackLayoutFrame = requestAnimationFrame(layoutKakaoCommentStacks);
+}).observe(kakaoDetailThread);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutKakaoCommentStacks);
 
 function applyKakaoThreadHighlights(highlights, editing = false) {
   applyThreadHighlights(kakaoDetailThread, ".kakao-bubble-row", ".kakao-bubble", kakaoOriginalTextByKey, highlights, editing);

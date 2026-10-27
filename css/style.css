@@ -2235,14 +2235,16 @@ mark.comment-highlight-mark {
 }
 .kakao-like-btn {
   position: absolute;
-  top: -6px;
+  top: -7px;
   z-index: 1;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  border: 1px solid var(--border);
+  /* 배경 원은 붙어 있는 말풍선과 같은 색(상대=흰 말풍선, 나=검은 말풍선)이라 말풍선에서
+     볼록 튀어나온 것처럼 보입니다. 테두리도 말풍선과 같은 방식(야간 모드의 검은 말풍선만 흰
+     테두리)입니다. */
+  border: none;
   border-radius: 50%;
-  background: var(--kakao-bg);
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -2253,16 +2255,21 @@ span.kakao-like-btn {
   cursor: default;
 }
 .kakao-message-group.other .kakao-like-btn {
-  right: -6px;
+  right: -7px;
+  background: var(--kakao-bubble-other);
 }
 .kakao-message-group.me .kakao-like-btn {
-  left: -6px;
+  left: -7px;
+  background: var(--kakao-bubble-me);
+  border: 1px solid var(--kakao-bubble-me-border);
+  /* 검은 말풍선 위에서는 기본 회색 선이 어두워서 조금 더 밝게 */
+  color: var(--muted-pale);
 }
 .kakao-like-btn svg {
-  width: 10px;
-  height: 10px;
+  width: 13px;
+  height: 13px;
 }
-.kakao-like-btn.liked {
+.kakao-message-group .kakao-like-btn.liked {
   color: var(--danger);
 }
 .kakao-like-btn.liked svg {
@@ -2283,12 +2290,20 @@ span.kakao-like-btn {
 }
 .kakao-comment-view-stack {
   display: flex;
-  /* 한 말풍선에 코멘트가 여러 개면 세로로 쌓지 않고 가로로 나란히 놓습니다. 먼저 달린
-     코멘트가 왼쪽에 오는데, 말풍선 줄(row)의 방향(내 말풍선은 row-reverse)과 상관없이 이
-     묶음 안의 순서는 항상 왼쪽에서 오른쪽입니다. */
+  /* 한 줄짜리(세로가 짧은) 말풍선에 코멘트가 여러 개면 세로로 쌓지 않고 가로로 나란히 놓습니다.
+     먼저 달린 코멘트가 왼쪽에 오는데, 말풍선 줄(row)의 방향(내 말풍선은 row-reverse)과
+     상관없이 이 묶음 안의 순서는 항상 왼쪽에서 오른쪽입니다. */
   flex-direction: row;
   gap: 4px;
   flex-shrink: 0;
+}
+/* 여러 줄(세로가 긴) 말풍선이나 이미지는 버튼을 세로로 쌓고, 말풍선 높이를 넘어가면 오른쪽
+   열로 줄바꿈합니다. 높이 제한(max-height)은 js/app.js의 layoutKakaoCommentStacks가
+   말풍선 높이에 맞춰 넣습니다. */
+.kakao-comment-view-stack.is-vertical {
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
 }
 
 /* 아이콘 선(획) 색을 포인트 컬러로 고정합니다(트윗 쪽 기본값인 --text 대신). */
