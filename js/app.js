@@ -5805,3 +5805,25 @@ document.addEventListener("click", (e) => {
   closeNotifPanel();
 });
 
+// ---------- 대화창이 열려 있는 동안 뒤의 목록 페이지 스크롤 잠금(터치 기기) ----------
+// 트위터/카카오톡/SumOne 대화창, 갤러리 관리창, 이미지 원본 보기 중 하나라도 열려 있으면 html에
+// scroll-locked를 붙입니다(실제로 막는 건 CSS, 터치 기기에서만). 다만 대화창의 코멘트 창
+// (바텀시트)이 떠 있는 동안엔 잠금을 풀어서 그 뒤쪽은 예전처럼 움직이게 둡니다. 이미지 원본
+// 보기는 코멘트 창이 떠 있어도 그 위에 뜨는 맨 위 레이어라 항상 잠급니다.
+const SCROLL_LOCK_TARGETS = [
+  { modal: detailModal, sheet: tweetCommentPanel },
+  { modal: kakaoDetailModal, sheet: kakaoCommentPanel },
+  { modal: sumoneDetailModal, sheet: sumoneCommentPanel },
+  { modal: galleryManageModal, sheet: null },
+  { modal: imageViewerModal, sheet: null },
+];
+function updateScrollLock() {
+  const locked = SCROLL_LOCK_TARGETS.some(({ modal, sheet }) => !modal.hidden && !(sheet && !sheet.hidden));
+  document.documentElement.classList.toggle("scroll-locked", locked);
+}
+const scrollLockObserver = new MutationObserver(updateScrollLock);
+SCROLL_LOCK_TARGETS.forEach(({ modal, sheet }) => {
+  scrollLockObserver.observe(modal, { attributes: true, attributeFilter: ["hidden"] });
+  if (sheet) scrollLockObserver.observe(sheet, { attributes: true, attributeFilter: ["hidden"] });
+});
+updateScrollLock();

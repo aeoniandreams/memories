@@ -3316,20 +3316,23 @@ span.kakao-like-btn {
   }
 }
 
-/* 폰/태블릿 같은 터치 기기에서 트위터 대화창(#detail-modal)이 열려 있는 동안엔, 그 뒤의 카드 목록
-   (페이지 자체)이 스크롤되지 않게 막습니다. 페이지 스크롤은 html/body가 맡고 있어서, 대화창이
-   떠 있는 동안에만 둘 다 overflow:hidden으로 잠그면 됩니다(닫으면 풀리고, 보던 위치는 그대로).
-   대화창 자신(.modal-panel)의 스크롤은 그대로 되고, 끝까지 내렸을 때 그 스크롤이 뒤의 페이지로
-   번지는 것(scroll chaining)도 overscroll-behavior로 막습니다. 마우스를 쓰는 데스크탑에서는
-   스크롤바가 사라지면서 화면이 옆으로 튀기 때문에 적용하지 않습니다. */
+/* 폰/태블릿 같은 터치 기기에서 대화창이 열려 있는 동안엔 그 뒤의 목록 페이지(페이지 자체)가
+   스크롤되지 않게 막습니다. 대상은 트위터/카카오톡/SumOne 대화창, 갤러리 관리창, 이미지 원본
+   보기입니다. 페이지 스크롤은 html/body가 맡고 있어서 이 둘을 overflow:hidden으로 잠그면 되고
+   (닫으면 풀리고, 보던 위치는 그대로), 켜고 끄는 건 js/app.js의 updateScrollLock이
+   html에 scroll-locked 클래스를 붙였다 떼는 것으로 합니다. 코멘트 창(바텀시트)이 떠 있는
+   동안엔 잠금을 풀어서 그 뒤쪽은 예전처럼 움직입니다. 대화창 자신(.modal-panel)의 스크롤은
+   그대로 되고, 끝까지 내렸을 때 그 스크롤이 뒤의 페이지로 번지는 것(scroll chaining)도
+   overscroll-behavior로 막습니다. 마우스를 쓰는 데스크탑에서는 스크롤바가 사라지면서 화면이
+   옆으로 튀기 때문에 적용하지 않습니다. */
 @media (hover: none) and (pointer: coarse) {
-  html:has(#detail-modal:not([hidden])),
-  html:has(#detail-modal:not([hidden])) body {
+  html.scroll-locked,
+  html.scroll-locked body {
     overflow: hidden;
     overscroll-behavior: none;
   }
-  #detail-modal,
-  #detail-modal .modal-panel {
+  .modal-overlay,
+  .modal-overlay .modal-panel {
     overscroll-behavior: contain;
   }
 }
