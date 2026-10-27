@@ -1521,6 +1521,19 @@ h1 {
 .comment-highlight-dim {
   opacity: 0.07;
 }
+/* 코멘트를 쓰거나 고치는 중에는 추가로 고를 곳을 찾기 쉽게, 나머지를 살짝만(40%) 흐리게 하고
+   고른 부분은 포인트색 배경 + 흰 글씨(형광펜)로 표시합니다. */
+.comment-highlight-dim.comment-highlight-dim-soft {
+  opacity: 0.4;
+}
+mark.comment-highlight-mark {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 3px;
+  padding: 1px 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
 
 /* 복사 붙여넣기를 해도 배경 서식이 남지 않도록 배경은 항상 투명하고,
    글자색만 테마를 따라갑니다. */

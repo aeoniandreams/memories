@@ -888,8 +888,8 @@ async function openDetail(id, data) {
   });
 }
 
-function applyTweetThreadHighlights(highlights) {
-  applyThreadHighlights(detailThread, ".message-row", ".tweet-text", tweetOriginalTextByKey, highlights);
+function applyTweetThreadHighlights(highlights, editing = false) {
+  applyThreadHighlights(detailThread, ".message-row", ".tweet-text", tweetOriginalTextByKey, highlights, editing);
 }
 
 // 이미지 코멘트는 카드 본문(messages[].images[].comment)에 저장되어 있어서, 관리자만
@@ -1593,7 +1593,10 @@ function computeHighlightSegments(text, phrases) {
   return segments;
 }
 
-function renderTextWithHighlight(textEl, originalText, phrases) {
+// editing이 true(코멘트를 쓰거나 고치는 중)면 고른 부분을 포인트색 배경 + 흰 글씨(형광펜)로
+// 표시하고 나머지는 살짝만(40%) 흐리게 해서, 추가로 고를 곳을 찾기 쉽게 합니다. 코멘트를
+// 읽을 때(editing이 false)는 고른 부분은 그대로, 나머지는 거의 안 보일 만큼 흐리게 합니다.
+function renderTextWithHighlight(textEl, originalText, phrases, editing = false) {
   const segments = phrases.length ? computeHighlightSegments(originalText, phrases) : null;
   if (!segments) {
     textEl.textContent = originalText;
@@ -1603,9 +1606,14 @@ function renderTextWithHighlight(textEl, originalText, phrases) {
   segments.forEach((seg) => {
     if (seg.dim) {
       const span = document.createElement("span");
-      span.className = "comment-highlight-dim";
+      span.className = "comment-highlight-dim" + (editing ? " comment-highlight-dim-soft" : "");
       span.textContent = seg.text;
       textEl.appendChild(span);
+    } else if (editing) {
+      const mark = document.createElement("mark");
+      mark.className = "comment-highlight-mark";
+      mark.textContent = seg.text;
+      textEl.appendChild(mark);
     } else {
       textEl.appendChild(document.createTextNode(seg.text));
     }
@@ -1616,7 +1624,7 @@ function renderTextWithHighlight(textEl, originalText, phrases) {
 // targetKey와 일치하는 메시지엔 부분 강조(고른 부분만 원래 색, 나머지는 흐리게)를
 // 적용합니다. 그 코멘트와 무관한(=드래그로 안 고른) 메시지는 대화창에 보이는
 // 전체를 흐리게 처리해서, 고른 부분이 한눈에 도드라져 보이게 합니다.
-function applyThreadHighlights(threadEl, rowSelector, textSelector, originalTextByKey, highlights) {
+function applyThreadHighlights(threadEl, rowSelector, textSelector, originalTextByKey, highlights, editing = false) {
   const byTarget = new Map();
   (highlights || []).forEach((h) => {
     if (!h || !h.targetKey || !h.text) return;
@@ -1636,11 +1644,11 @@ function applyThreadHighlights(threadEl, rowSelector, textSelector, originalText
     if (byTarget.size === 0) {
       textEl.textContent = original;
     } else if (byTarget.has(key)) {
-      renderTextWithHighlight(textEl, original, byTarget.get(key));
+      renderTextWithHighlight(textEl, original, byTarget.get(key), editing);
     } else {
       textEl.innerHTML = "";
       const span = document.createElement("span");
-      span.className = "comment-highlight-dim";
+      span.className = "comment-highlight-dim" + (editing ? " comment-highlight-dim-soft" : "");
       span.textContent = original;
       textEl.appendChild(span);
     }
@@ -2466,7 +2474,7 @@ function renderCommentBlockEditor(container, blocks, rerender, options = {}) {
 function renderTweetCommentPanel() {
   const state = tweetCommentPanelState;
   exitExcerptPeek(); // 다른 코멘트를 열었을 때 이전 "발췌 본문 보기" 상태가 남지 않게 합니다.
-  applyTweetThreadHighlights(state.highlights || []);
+  applyTweetThreadHighlights(state.highlights || [], state.mode !== "view");
   tweetCommentPanelBody.innerHTML = "";
   tweetCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isCommentSheetLayout() && hasExcerpts(state.highlights));
 
@@ -4208,8 +4216,8 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
   });
 }
 
-function applyKakaoThreadHighlights(highlights) {
-  applyThreadHighlights(kakaoDetailThread, ".kakao-bubble-row", ".kakao-bubble", kakaoOriginalTextByKey, highlights);
+function applyKakaoThreadHighlights(highlights, editing = false) {
+  applyThreadHighlights(kakaoDetailThread, ".kakao-bubble-row", ".kakao-bubble", kakaoOriginalTextByKey, highlights, editing);
 }
 
 // ---------- 새 카카오톡 대화 추가 ----------
@@ -4563,7 +4571,7 @@ function renderKakaoCommentPanel() {
   const state = kakaoCommentPanelState;
   if (!state) return;
   exitExcerptPeek();
-  applyKakaoThreadHighlights(state.highlights || []);
+  applyKakaoThreadHighlights(state.highlights || [], state.mode !== "view");
   kakaoCommentPanelBody.innerHTML = "";
   kakaoCommentPanelExcerptBtn.hidden = !(state.mode === "view" && isCommentSheetLayout() && hasExcerpts(state.highlights));
 
