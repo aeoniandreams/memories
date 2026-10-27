@@ -1593,7 +1593,7 @@ function computeHighlightSegments(text, phrases) {
   return segments;
 }
 
-// editing이 true(코멘트를 쓰거나 고치는 중)면 고른 부분을 포인트색 배경 + 흰 글씨(형광펜)로
+// editing이 true(코멘트를 쓰거나 고치는 중)면 고른 부분을 포인트색 연한 형광펜으로
 // 표시하고 나머지는 살짝만(40%) 흐리게 해서, 추가로 고를 곳을 찾기 쉽게 합니다. 코멘트를
 // 읽을 때(editing이 false)는 고른 부분은 그대로, 나머지는 거의 안 보일 만큼 흐리게 합니다.
 function renderTextWithHighlight(textEl, originalText, phrases, editing = false) {
@@ -1633,6 +1633,8 @@ function applyThreadHighlights(threadEl, rowSelector, textSelector, originalText
   });
 
   const rows = Array.from(threadEl.querySelectorAll(rowSelector));
+  // 코멘트를 쓰거나 고치는 중에는 드래그 선택 색도 연한 형광펜 색으로 보이게 표시를 붙입니다.
+  threadEl.classList.toggle("excerpt-editing", editing);
 
   rows.forEach((row) => {
     const key = row.dataset.commentKey;
