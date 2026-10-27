@@ -1016,26 +1016,26 @@ h1 {
   gap: 8px;
 }
 
-/* 카카오톡 카드 상단바: 이전/다음 코멘트로 이동하는 위/아래 화살표 */
-.kakao-comment-nav {
+/* 트위터/카카오톡 대화창 상단바: 이전/다음 코멘트로 이동하는 위/아래 화살표 */
+.comment-nav {
   display: flex;
   align-items: center;
 }
-.kakao-comment-nav-btn {
+.comment-nav-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 6px;
 }
-.kakao-comment-nav-btn svg {
+.comment-nav-btn svg {
   width: 20px;
   height: 20px;
 }
-.kakao-comment-nav-btn:disabled {
+.comment-nav-btn:disabled {
   opacity: 0.3;
   cursor: default;
 }
-.kakao-comment-nav-btn:disabled:hover {
+.comment-nav-btn:disabled:hover {
   background: transparent;
 }
 
@@ -3268,5 +3268,29 @@ span.kakao-like-btn {
   }
   .tweet-comment-panel-body {
     margin-top: 5px;
+  }
+}
+
+/* 트위터 대화창(#detail-modal) 상단바: 관리자 모드에선 뒤로가기 + 이전/다음 코멘트 화살표 + "이어서
+   추가" + 수정 + 삭제가 한 줄에 다 들어가야 하는데, 폭이 좁은 폰에서는 그대로 두면 버튼 글자가 세로로
+   줄바꿈될 만큼 비좁습니다. 좁은 화면에서만 이 상단바의 좌우 여백/버튼 안쪽 여백/간격을 줄이고 글자가
+   줄바꿈되지 않게 합니다(다른 대화창의 상단바는 그대로). */
+@media (max-width: 480px) {
+  #detail-modal .modal-header {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  #detail-modal .modal-header-right {
+    gap: 4px;
+  }
+  #detail-modal .modal-header .btn-secondary,
+  #detail-modal .modal-header .btn-ghost {
+    padding-left: 10px;
+    padding-right: 10px;
+    white-space: nowrap;
+  }
+  #detail-modal .modal-header .comment-nav-btn {
+    padding-left: 3px;
+    padding-right: 3px;
   }
 }

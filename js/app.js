@@ -974,6 +974,101 @@ function pinScrollPosition(el, target) {
   }
 }
 
+// ---------- 이전/다음 코멘트로 이동 (대화창 상단바의 위/아래 화살표) ----------
+// 코멘트 보기 버튼 묶음(stackSelector)이 달린 메시지들을 위에서부터 모아, 지금 스크롤 위치 기준으로
+// 바로 앞/뒤 메시지가 화면 위쪽 1/3 지점에 오도록 부드럽게 스크롤합니다. 트위터와 카카오톡의
+// 대화창이 같이 씁니다(둘 다 .modal-panel이 스크롤하고, 헤더는 맨 위에 붙어 있습니다).
+function createCommentNavigator({ modal, thread, stackSelector, prevBtn, nextBtn }) {
+  const scroller = modal.querySelector(".modal-panel");
+  let last = null; // { index, at } 마지막으로 이동시킨 곳 (연타/끝쪽 보정용)
+
+  function getTargets() {
+    const header = scroller.querySelector(".modal-header");
+    const headerH = header ? header.offsetHeight : 0;
+    const visibleH = scroller.clientHeight - headerH;
+    const maxTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const scrollerTop = scroller.getBoundingClientRect().top;
+    const tops = [];
+    thread.querySelectorAll(stackSelector).forEach((stack) => {
+      const y = stack.getBoundingClientRect().top - scrollerTop + scroller.scrollTop;
+      const t = Math.round(y - headerH - visibleH * 0.33);
+      tops.push(Math.min(maxTop, Math.max(0, t)));
+    });
+    return tops;
+  }
+
+  function getIndexes() {
+    const tops = getTargets();
+    // 방금 이동시킨 곳에서 크게 벗어나지 않았으면(끝쪽에서 여러 줄이 같은 위치로 눌리는 경우까지) 그 번호 기준
+    let cur = -1;
+    if (last && last.index < tops.length && (Date.now() - last.at < 800 || Math.abs(scroller.scrollTop - tops[last.index]) < 4)) {
+      cur = last.index;
+    }
+    let prev = -1;
+    let next = -1;
+    if (cur >= 0) {
+      prev = cur > 0 ? cur - 1 : -1;
+      next = cur < tops.length - 1 ? cur + 1 : -1;
+    } else {
+      const st = scroller.scrollTop;
+      for (let i = 0; i < tops.length; i++) {
+        if (tops[i] < st - 4) prev = i;
+        if (next === -1 && tops[i] > st + 4) next = i;
+      }
+    }
+    // 맨 끝쪽처럼 스크롤 한계 때문에 여러 줄이 같은 위치로 눌린 경우, 눌러도 안 움직이는 줄은
+    // 건너뛰고 실제로 움직이는 줄까지 갑니다(없으면 비활성).
+    const st = scroller.scrollTop;
+    while (prev >= 0 && Math.abs(tops[prev] - st) < 4) prev--;
+    while (next >= 0 && Math.abs(tops[next] - st) < 4) next = next + 1 < tops.length ? next + 1 : -1;
+    return { tops, prev, next };
+  }
+
+  function update() {
+    if (modal.hidden) return;
+    const { prev, next } = getIndexes();
+    prevBtn.disabled = prev < 0;
+    nextBtn.disabled = next < 0;
+  }
+
+  function go(direction) {
+    const { tops, prev, next } = getIndexes();
+    const index = direction < 0 ? prev : next;
+    if (index < 0) return;
+    last = { index, at: Date.now() };
+    scroller.scrollTo({ top: tops[index], behavior: "smooth" });
+    update();
+  }
+
+  prevBtn.addEventListener("click", () => go(-1));
+  nextBtn.addEventListener("click", () => go(1));
+
+  let queued = false;
+  function queueUpdate() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      update();
+    });
+  }
+  scroller.addEventListener("scroll", queueUpdate, { passive: true });
+  // 코멘트가 새로 달리거나 지워져 줄이 다시 그려질 때, 또는 카드가 열릴 때도 맞춰 갱신
+  new MutationObserver(() => {
+    last = null;
+    queueUpdate();
+  }).observe(thread, { childList: true, subtree: true });
+}
+
+// 트위터 대화창 상단바의 위/아래 화살표
+createCommentNavigator({
+  modal: detailModal,
+  thread: detailThread,
+  stackSelector: ".tweet-comment-view-stack",
+  prevBtn: document.getElementById("detail-comment-nav-prev-btn"),
+  nextBtn: document.getElementById("detail-comment-nav-next-btn"),
+});
+
 // 코멘트를 쓰거나 지운 뒤 "보기" 버튼에 반영할 때 씁니다. openDetail을 다시 불러
 // 스레드 전체를 새로 그리면(위 toggleMessageLike와 같은 이유로) 스크롤이 맨 위로
 // 돌아가버리므로, 코멘트가 바뀐 트윗 한 줄만 새로 그려서 갈아 끼웁니다.
@@ -4513,91 +4608,15 @@ function closeKakaoDetail() {
   }
 }
 
-// ---------- 이전/다음 코멘트로 이동 (상단바 chevron) ----------
-// 코멘트 보기 버튼이 달린 메시지 줄들을 위에서부터 모아, 지금 스크롤 위치 기준으로
-// 바로 앞/뒤 줄이 화면 위쪽 1/3 지점에 오도록 부드럽게 스크롤합니다.
-const kakaoCommentNavPrevBtn = document.getElementById("kakao-comment-nav-prev-btn");
-const kakaoCommentNavNextBtn = document.getElementById("kakao-comment-nav-next-btn");
-const kakaoDetailScroller = kakaoDetailModal.querySelector(".modal-panel");
-let kakaoNavLast = null; // { index, top, at } 마지막으로 이동시킨 곳 (연타/끝쪽 보정용)
-
-function getKakaoCommentNavTargets() {
-  const header = kakaoDetailScroller.querySelector(".modal-header");
-  const headerH = header ? header.offsetHeight : 0;
-  const visibleH = kakaoDetailScroller.clientHeight - headerH;
-  const maxTop = Math.max(0, kakaoDetailScroller.scrollHeight - kakaoDetailScroller.clientHeight);
-  const scrollerTop = kakaoDetailScroller.getBoundingClientRect().top;
-  const tops = [];
-  kakaoDetailThread.querySelectorAll(".kakao-comment-view-stack").forEach((stack) => {
-    const y = stack.getBoundingClientRect().top - scrollerTop + kakaoDetailScroller.scrollTop;
-    const t = Math.round(y - headerH - visibleH * 0.33);
-    tops.push(Math.min(maxTop, Math.max(0, t)));
-  });
-  return tops;
-}
-
-function getKakaoCommentNavIndexes() {
-  const tops = getKakaoCommentNavTargets();
-  // 방금 이동시킨 곳에서 크게 벗어나지 않았으면(끝쪽에서 여러 줄이 같은 위치로 눌리는 경우까지) 그 번호 기준
-  const last = kakaoNavLast;
-  let cur = -1;
-  if (last && last.index < tops.length && (Date.now() - last.at < 800 || Math.abs(kakaoDetailScroller.scrollTop - tops[last.index]) < 4)) {
-    cur = last.index;
-  }
-  let prev = -1;
-  let next = -1;
-  if (cur >= 0) {
-    prev = cur > 0 ? cur - 1 : -1;
-    next = cur < tops.length - 1 ? cur + 1 : -1;
-  } else {
-    const st = kakaoDetailScroller.scrollTop;
-    for (let i = 0; i < tops.length; i++) {
-      if (tops[i] < st - 4) prev = i;
-      if (next === -1 && tops[i] > st + 4) next = i;
-    }
-  }
-  // 맨 끝쪽처럼 스크롤 한계 때문에 여러 줄이 같은 위치로 눌린 경우, 눌러도 안 움직이는
-  // 건너뛰고 실제로 움직이는 줄까지 갑니다(없으면 비활성).
-  const st = kakaoDetailScroller.scrollTop;
-  while (prev >= 0 && Math.abs(tops[prev] - st) < 4) prev--;
-  while (next >= 0 && Math.abs(tops[next] - st) < 4) next = next + 1 < tops.length ? next + 1 : -1;
-  return { tops, prev, next };
-}
-
-function updateKakaoCommentNavButtons() {
-  if (kakaoDetailModal.hidden) return;
-  const { prev, next } = getKakaoCommentNavIndexes();
-  kakaoCommentNavPrevBtn.disabled = prev < 0;
-  kakaoCommentNavNextBtn.disabled = next < 0;
-}
-
-function goToKakaoComment(direction) {
-  const { tops, prev, next } = getKakaoCommentNavIndexes();
-  const index = direction < 0 ? prev : next;
-  if (index < 0) return;
-  kakaoNavLast = { index, top: tops[index], at: Date.now() };
-  kakaoDetailScroller.scrollTo({ top: tops[index], behavior: "smooth" });
-  updateKakaoCommentNavButtons();
-}
-
-kakaoCommentNavPrevBtn.addEventListener("click", () => goToKakaoComment(-1));
-kakaoCommentNavNextBtn.addEventListener("click", () => goToKakaoComment(1));
-
-let kakaoNavUpdateQueued = false;
-function queueKakaoCommentNavUpdate() {
-  if (kakaoNavUpdateQueued) return;
-  kakaoNavUpdateQueued = true;
-  requestAnimationFrame(() => {
-    kakaoNavUpdateQueued = false;
-    updateKakaoCommentNavButtons();
-  });
-}
-kakaoDetailScroller.addEventListener("scroll", queueKakaoCommentNavUpdate, { passive: true });
-// 코멘트가 새로 달리거나 지워져 줄이 다시 그려질 때, 또는 카드가 열릴 때도 맞춰 갱신
-new MutationObserver(() => {
-  kakaoNavLast = null;
-  queueKakaoCommentNavUpdate();
-}).observe(kakaoDetailThread, { childList: true, subtree: true });
+// 상단바의 위/아래 화살표로 이전/다음 코멘트 보기 버튼이 있는 메시지로 이동합니다(공용 함수는 위쪽의
+// createCommentNavigator 참고).
+createCommentNavigator({
+  modal: kakaoDetailModal,
+  thread: kakaoDetailThread,
+  stackSelector: ".kakao-comment-view-stack",
+  prevBtn: document.getElementById("kakao-comment-nav-prev-btn"),
+  nextBtn: document.getElementById("kakao-comment-nav-next-btn"),
+});
 
 kakaoDetailCloseBtn.addEventListener("click", closeKakaoDetail);
 kakaoDetailModal.addEventListener("click", (e) => {
