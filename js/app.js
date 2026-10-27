@@ -3205,14 +3205,14 @@ sidebarCloseBtn.addEventListener("click", closeSidebar);
 // ---------- 사이드바 열기/닫기 ----------
 // 평소엔 숨겨져 있다가 헤더의 메뉴(☰) 버튼을 누르면 열립니다. 다시 그
 // 버튼을 누르거나, 사이드바 바깥 아무 곳이나 클릭하면 닫힙니다.
-// 사이드바의 디데이: 2024년 4월 24일을 1일로 센 "D+000" 형식입니다(0으로 채운 세 자리, 1000일이
-// 넘으면 그대로 네 자리). 오늘 날짜 기준이라 사이드바를 열 때마다 다시 계산합니다.
+// 사이드바의 디데이: 2024년 4월 24일을 1일로 센 "D+숫자" 형식입니다(1일은 D+1, 1000일은
+// D+1000처럼 자릿수 제한 없이 그대로). 오늘 날짜 기준이라 사이드바를 열 때마다 다시 계산합니다.
 const DDAY_START_DATE = new Date(2024, 3, 24); // 월은 0부터 세므로 3 = 4월
 function updateSidebarDday() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const day = Math.round((today - DDAY_START_DATE) / (24 * 60 * 60 * 1000)) + 1;
-  sidebarDdayText.textContent = "D+" + String(Math.max(day, 0)).padStart(3, "0");
+  sidebarDdayText.textContent = "D+" + Math.max(day, 0);
 }
 updateSidebarDday();
 

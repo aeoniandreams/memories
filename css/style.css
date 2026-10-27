@@ -459,6 +459,20 @@ h1 {
   width: 24px;
   height: 24px;
 }
+/* 디데이: 맨 아래 줄(도움말 아이콘 + 계정 표시) 바로 위, 계정 표시와 같은 오른쪽 끝에 맞춥니다.
+   남는 세로 공간을 이쪽이 밀어 올리도록 margin-top:auto를 이 요소가 가져가고, 아래 줄은 붙여
+   둡니다. 색은 포인트색이고 글씨는 날짜 항목(14px)보다 살짝 크게(17px) 합니다. */
+.app-sidebar-dday {
+  margin-top: auto;
+  padding: 0 8px 2px 0;
+  text-align: right;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.app-sidebar-dday + .app-sidebar-footer {
+  margin-top: 0;
+}
 .app-sidebar-credit {
   color: var(--muted);
   font-size: 12px;
@@ -3286,5 +3300,14 @@ span.kakao-like-btn {
   #detail-modal .modal-header .comment-nav-btn {
     padding-left: 3px;
     padding-right: 3px;
+  }
+}
+
+/* 폰(폭 480px 이하 터치 기기)에서는 새 내용을 추가할 수 없고 코멘트만 쓸 수 있게, 트위터 대화창의
+   "이어서 추가" 버튼을 숨깁니다(새 대화/카드 추가 버튼은 위 폰 규칙에서 이미 숨겨져 있습니다).
+   데스크탑이나 마우스를 쓰는 좁은 창에서는 그대로 보입니다. */
+@media (max-width: 480px) and (hover: none) and (pointer: coarse) {
+  #detail-append-btn {
+    display: none;
   }
 }
