@@ -3051,6 +3051,10 @@ function switchSection(section, gallerySub) {
   sidebarXBtn.classList.toggle("selected", section === "x");
   sidebarKakaoBtn.classList.toggle("selected", section === "kakao");
   sidebarSumoneBtn.classList.toggle("selected", section === "sumone");
+  // 갤러리 밑 항목(中ゆん/明)의 선택 표시는 갤러리를 보는 동안에만 남깁니다. 다른 섹션으로
+  // 옮겨 갈 때 지우지 않으면 갤러리 항목과 새로 고른 항목이 둘 다 선택된 것처럼 보였습니다.
+  // (갤러리로 들어올 땐 아래 setActiveGallerySubcategory가 현재 항목만 표시합니다.)
+  if (section !== "gallery") gallerySubBtns.forEach((btn) => btn.classList.remove("selected"));
   if (section === "kakao" && !kakaoCardsLoaded) {
     kakaoCardsLoaded = true;
     loadKakaoCards();
