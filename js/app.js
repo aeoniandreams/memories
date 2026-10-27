@@ -5283,6 +5283,8 @@ function buildNotifEntriesFromSnapshot(snap, section, fixedTargetKey) {
           // 부가 기록(message-circle-heart)이 이미지만 있는지, 글도 있는지 구분하려고
           // 글 블록이 하나라도 있는지 같이 저장해둡니다(알림 대상 판단에 씀).
           hasText: getCommentBlocks(entry).some((b) => b.type !== "image" && !!String(b.text || "").trim()),
+          // 이미지가 들어 있는 코멘트인지(새 코멘트일 때 카드 테두리를 빨간색으로 바꾸는 데 씀).
+          hasImage: getCommentBlocks(entry).some((b) => b.type === "image" && getBlockImageUrls(b).length > 0),
         });
       });
     });
@@ -5419,6 +5421,14 @@ function getUnseenTypesForCard(section, cardId) {
   return Array.from(types);
 }
 
+// 이 카드에 아직 안 본 "이미지가 들어 있는" 새 코멘트가 있는지 돌려줍니다.
+function hasUnseenImageCommentForCard(section, cardId) {
+  const seenAt = cardSeenMap.get(notifCardKey(section, cardId)) || 0;
+  return notifEntriesCache.some(
+    (e) => e.section === section && e.cardId === cardId && isNotifEntryVisible(e) && e.hasImage && e.createdAt > seenAt
+  );
+}
+
 // 새 코멘트가 있는 카드는 테두리를 테마 컬러로 강조합니다. 카드를 열어
 // 확인하면(markCardSeen) 목록이 다시 그려지면서 이 클래스도 자연히 빠집니다.
 // 카드 엘리먼트에 어느 카드인지(data-notif-*)도 같이 적어둬서, 실시간으로 코멘트가
@@ -5428,6 +5438,8 @@ function markCardHasNewComment(cardEl, section, cardId) {
   cardEl.dataset.notifSection = section;
   cardEl.dataset.notifCardId = cardId;
   cardEl.classList.toggle("has-new-comment", getUnseenTypesForCard(section, cardId).length > 0);
+  // 새 코멘트 중 이미지가 들어 있는 게 있으면 파란색 대신 빨간색 테두리로 보여줍니다.
+  cardEl.classList.toggle("has-new-image-comment", hasUnseenImageCommentForCard(section, cardId));
 }
 function refreshNewCommentMarks() {
   document.querySelectorAll("[data-notif-section]").forEach((el) => {
