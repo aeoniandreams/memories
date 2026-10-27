@@ -1302,7 +1302,7 @@ function styleGridCellImg(img) {
   img.style.objectFit = "cover";
 }
 
-// X 트윗의 사진 배치를 재현합니다: 1장은 데스크탑에선 긴 변이 글 영역 폭의 90%, 폰에선 가로 변이 100%,
+// X 트윗의 사진 배치를 재현합니다: 1장은 긴 변이 글 영역 폭의 80%(폰에선 100%),
 // 2장은 각자 비율을 지킨 채 같은 높이로 나란히 폭을 꽉 채움,
 // 3장은 왼쪽 큰 사진 + 오른쪽 위아래 2장, 4장은 2x2. (크롭이 필요하면 object-fit: cover로 처리)
 async function renderImageGridInto(container, images, msgIndex) {
@@ -1316,20 +1316,15 @@ async function renderImageGridInto(container, images, msgIndex) {
   if (normalized.length === 1) {
     const ratio = dims[0].w / dims[0].h;
     const { link, img } = makeImageLink(normalized[0], msgIndex);
-    if (isMobileViewport()) {
-      // 폰: 가로 변이 글 영역 폭의 100%(세로가 긴 사진이면 그만큼 세로도 길어집니다). 비율은 그대로.
-      img.style.width = containerWidth + "px";
+    // 긴 변의 길이: 데스크탑은 글 영역 폭의 80%, 폰(폭 480px 이하 터치 기기)은 100%. 원본 비율은
+    // 그대로라서 가로가 긴 사진은 폭이, 세로가 긴 사진은 높이가 이 길이가 됩니다.
+    const longSide = containerWidth * (isMobileViewport() ? 1 : 0.8);
+    if (ratio >= 1) {
+      img.style.width = longSide + "px";
       img.style.height = "auto";
     } else {
-      // 데스크탑: 긴 변이 글 영역 폭의 90%. 비율은 그대로.
-      const longSide = containerWidth * 0.9;
-      if (ratio >= 1) {
-        img.style.width = longSide + "px";
-        img.style.height = "auto";
-      } else {
-        img.style.height = longSide + "px";
-        img.style.width = "auto";
-      }
+      img.style.height = longSide + "px";
+      img.style.width = "auto";
     }
     container.style.display = "block";
     container.appendChild(link);
