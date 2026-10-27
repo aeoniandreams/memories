@@ -931,6 +931,27 @@ async function toggleMessageLike(msgIndex) {
   if (likeBtn) likeBtn.classList.toggle("liked", !!updatedMessages[msgIndex].liked);
 }
 
+// 카카오톡 말풍선의 하트(좋아요)를 켜고 끕니다. 트위터 하트(toggleMessageLike)와 같은 방식으로
+// 카드 본문(messages)의 liked 값을 바꿔 저장하고, 카드 본문은 관리자만 쓸 수 있어서
+// (firestore.rules) 관리자만 누를 수 있습니다. 유저는 관리자가 찜해둔 하트만 봅니다.
+async function toggleKakaoMessageLike(msgIndex, likeBtn) {
+  if (!isAdmin || !currentKakaoDetailId || !currentKakaoDetailData) return;
+  const updatedMessages = currentKakaoDetailData.messages.map((m, i) =>
+    i === msgIndex ? { ...m, liked: !m.liked } : m
+  );
+  try {
+    await updateDoc(doc(db, "kakaoCards", currentKakaoDetailId), { messages: updatedMessages });
+  } catch (e) {
+    console.error("카카오톡 좋아요 저장에 실패했습니다.", e);
+    alert("좋아요 저장에 실패했습니다: " + (e && e.message ? e.message : e));
+    return;
+  }
+  // 카드 목록이 들고 있는 것과 같은 객체를 고쳐서(참조 유지) 상세보기를 닫았다가 다시 열어도
+  // 방금 누른 하트가 그대로 남게 하고, 스레드를 새로 그리지 않고(스크롤 유지) 이 하트만 토글합니다.
+  currentKakaoDetailData.messages = updatedMessages;
+  likeBtn.classList.toggle("liked", !!updatedMessages[msgIndex].liked);
+}
+
 // 코멘트 저장/삭제 버튼을 누르면 그때까지 코멘트를 쓰던 입력창의 포커스가
 // 빠지면서(특히 모바일에서) 화면 키보드가 접히는데, 그 접히는 애니메이션이
 // 끝날 때까지 뷰포트 크기가 여러 번 바뀌면서 대화창 스크롤이 다시 흐트러지는
@@ -4215,6 +4236,26 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
       }
 
       row.appendChild(makeKakaoCommentAddBtn(index, isMe));
+
+      // 말풍선 바깥쪽 아래 모서리의 하트: 관리자만 누를 수 있고(눌러서 켜고 끔), 유저는
+      // 관리자가 찜해둔 꽉 찬 하트만 봅니다(안 찜했으면 유저에게는 아무것도 안 보임).
+      if (isAdmin) {
+        const likeBtn = document.createElement("button");
+        likeBtn.type = "button";
+        likeBtn.className = "kakao-like-btn" + (msg.liked ? " liked" : "");
+        likeBtn.innerHTML = HEART_ICON_SVG;
+        likeBtn.setAttribute("aria-label", "좋아요");
+        likeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          toggleKakaoMessageLike(index, likeBtn);
+        });
+        row.appendChild(likeBtn);
+      } else if (msg.liked) {
+        const likeIndicator = document.createElement("span");
+        likeIndicator.className = "kakao-like-btn liked";
+        likeIndicator.innerHTML = HEART_ICON_SVG;
+        row.appendChild(likeIndicator);
+      }
     }
     currentGroupCol.appendChild(row);
 

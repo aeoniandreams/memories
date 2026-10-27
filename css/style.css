@@ -2222,6 +2222,46 @@ mark.comment-highlight-mark {
   height: 16px;
 }
 
+/* 말풍선 하트(좋아요). 트위터 프사 옆 하트와 같은 기능이라 같은 하트 아이콘을 쓰고, 말풍선의
+   바깥쪽 아래 모서리(상대는 왼쪽, 나는 오른쪽)에 작은 동그라미 배지처럼 걸칩니다. 기본은
+   회색 선 하트, 찜하면(.liked) 설명란의 붉은색(--danger)으로 꽉 채웁니다. 유저에게 보이는
+   건(관리자가 찜한 것만) 버튼이 아니라 <span>이라 클릭할 수 없습니다. */
+.kakao-like-btn {
+  position: absolute;
+  bottom: -6px;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--kakao-bg);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+span.kakao-like-btn {
+  cursor: default;
+}
+.kakao-message-group.other .kakao-like-btn {
+  left: -6px;
+}
+.kakao-message-group.me .kakao-like-btn {
+  right: -6px;
+}
+.kakao-like-btn svg {
+  width: 10px;
+  height: 10px;
+}
+.kakao-like-btn.liked {
+  color: var(--danger);
+}
+.kakao-like-btn.liked svg {
+  fill: currentColor;
+}
+
 /* 코멘트 보기 버튼(트윗 코멘트 보기 버튼과 같은 컴포넌트, .tweet-comment-view-btn)을
    시간 표시 바로 위에 쌓아 붙입니다. kakao-time-col이 시간 자리를 대신 차지하는
    [보기 버튼들, 시간] 세로 묶음이라 kakao-bubble-row 자체가 other는 그대로, me는
