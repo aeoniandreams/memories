@@ -4237,24 +4237,34 @@ function renderKakaoThread(container, messages, meSender, options = {}) {
 
       row.appendChild(makeKakaoCommentAddBtn(index, isMe));
 
-      // 말풍선 바깥쪽 아래 모서리의 하트: 관리자만 누를 수 있고(눌러서 켜고 끔), 유저는
-      // 관리자가 찜해둔 꽉 찬 하트만 봅니다(안 찜했으면 유저에게는 아무것도 안 보임).
+      // 말풍선 안쪽(화면 가운데 쪽) 위 모서리의 하트: 흰 말풍선(상대)은 오른쪽 위, 검은 말풍선(나)은
+      // 왼쪽 위에 걸칩니다. 관리자만 누를 수 있고(눌러서 켜고 끔), 유저는 관리자가 찜해둔 꽉 찬
+      // 하트만 봅니다(안 찜했으면 유저에게는 아무것도 안 보임). 하트가 줄(row) 전체가 아니라
+      // 말풍선 모서리에 붙도록 말풍선(또는 이미지)을 위치 기준 상자(.kakao-bubble-wrap)로 감쌉니다.
+      let likeEl = null;
       if (isAdmin) {
-        const likeBtn = document.createElement("button");
-        likeBtn.type = "button";
-        likeBtn.className = "kakao-like-btn" + (msg.liked ? " liked" : "");
-        likeBtn.innerHTML = HEART_ICON_SVG;
-        likeBtn.setAttribute("aria-label", "좋아요");
-        likeBtn.addEventListener("click", (e) => {
+        likeEl = document.createElement("button");
+        likeEl.type = "button";
+        likeEl.className = "kakao-like-btn" + (msg.liked ? " liked" : "");
+        likeEl.innerHTML = HEART_ICON_SVG;
+        likeEl.setAttribute("aria-label", "좋아요");
+        likeEl.addEventListener("click", (e) => {
           e.stopPropagation();
-          toggleKakaoMessageLike(index, likeBtn);
+          toggleKakaoMessageLike(index, likeEl);
         });
-        row.appendChild(likeBtn);
       } else if (msg.liked) {
-        const likeIndicator = document.createElement("span");
-        likeIndicator.className = "kakao-like-btn liked";
-        likeIndicator.innerHTML = HEART_ICON_SVG;
-        row.appendChild(likeIndicator);
+        likeEl = document.createElement("span");
+        likeEl.className = "kakao-like-btn liked";
+        likeEl.innerHTML = HEART_ICON_SVG;
+      }
+      if (likeEl) {
+        const bubbleEl = row.querySelector(".kakao-bubble, .kakao-bubble-image");
+        if (bubbleEl) {
+          const wrap = document.createElement("div");
+          wrap.className = "kakao-bubble-wrap";
+          bubbleEl.replaceWith(wrap);
+          wrap.append(bubbleEl, likeEl);
+        }
       }
     }
     currentGroupCol.appendChild(row);
