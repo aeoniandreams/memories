@@ -2775,8 +2775,13 @@ detailDeleteBtn.addEventListener("click", async () => {
   loadCards();
 });
 
+// "이어서 추가"는 대화창을 닫고 추가 창을 엽니다. 아무것도 추가하지 않고 취소하면 그 대화창으로
+// 돌아가야 해서, 떠나기 전의 스크롤 위치를 기억해둡니다(취소 버튼 쪽에서 씁니다).
+let appendReturnScrollTop = 0;
 detailAppendBtn.addEventListener("click", () => {
   if (!currentDetailCardId) return;
+  const detailPanel = detailModal.querySelector(".modal-panel");
+  appendReturnScrollTop = detailPanel ? detailPanel.scrollTop : 0;
   appendTargetCardId = currentDetailCardId;
   editTargetCardId = null;
   editingMessages = [];
@@ -2822,10 +2827,18 @@ newCardBtn.addEventListener("click", () => {
 });
 
 newCardCloseBtn.addEventListener("click", () => {
+  // "이어서 추가"를 누르고 들어온 거라면(아무것도 추가하지 않고 취소) 그 대화창으로 돌아갑니다.
+  const returnCardId = appendTargetCardId;
   newCardModal.hidden = true;
   appendTargetCardId = null;
   editTargetCardId = null;
   appendModeLabel.hidden = true;
+  if (returnCardId && currentDetailData && currentDetailCardId === returnCardId) {
+    const scrollTop = appendReturnScrollTop;
+    openDetail(returnCardId, currentDetailData).then(() => {
+      pinScrollPosition(detailModal.querySelector(".modal-panel"), scrollTop);
+    });
+  }
 });
 
 // ---------- 태그 편집 (미리 정해둔 TAG_OPTIONS 중에서 골라서 켜고 끔) ----------
