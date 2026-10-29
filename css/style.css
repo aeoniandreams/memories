@@ -3180,7 +3180,8 @@ span.kakao-like-btn {
   }
   .nickname { font-size: 13px; }
   .handle, .date { font-size: 12px; }
-  .tweet-text { font-size: 13px; }
+  /* 트위터 본문 굵기: 데스크탑은 400이지만 폰에서는 500으로 둡니다. */
+  .tweet-text { font-size: 13px; font-weight: 500; }
   .kakao-bubble { font-size: 13px; }
 
   /* 좌측 코멘트 작성 버튼을 20px -> 16px(아이콘 18px -> 14px)로 줄였습니다.
