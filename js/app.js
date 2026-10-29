@@ -1879,6 +1879,14 @@ function renderHighlightPicker(container, highlights, rerender) {
   container.appendChild(wrap);
 }
 
+// 코멘트 창(바텀시트/옆 패널)의 스크롤을 맨 위로 되돌립니다. 긴 코멘트를 읽고 닫았다가 같은 창을
+// 다시 열면 읽던 위치 그대로 아래로 내려간 채 떠서 처음부터 안 보였습니다. 열 때와 닫을 때마다
+// 맨 위로 돌려놓습니다(쓰는 중에 보기/수정 모드가 바뀌어 다시 그려질 땐 건드리지 않습니다).
+function resetCommentPanelScroll(panelEl) {
+  const card = panelEl.querySelector(".tweet-comment-panel-card");
+  if (card) card.scrollTop = 0;
+}
+
 // ---------- 트윗 코멘트 보기/작성/수정 ----------
 // 관리자가 아닌 사용자는 항상 "wine" 아이콘으로 저장되고, 관리자는 message-circle/coffee
 // 중 하나를 골라 저장합니다. (본인 역할의 코멘트만 쓸 수 있게 firestore.rules에서 막아둡니다.)
@@ -2197,6 +2205,7 @@ function openTweetCommentView(commentKey, role, entryId) {
   // 안 되게 찌그러져 보였습니다(글자를 입력하는 순간 다시 계산되어 정상으로
   // 돌아왔던 것도 이 때문).
   tweetCommentPanel.hidden = false;
+  resetCommentPanelScroll(tweetCommentPanel); // 읽던 위치가 남지 않게 맨 위부터 보여줍니다.
   renderTweetCommentPanel();
 }
 
@@ -2211,6 +2220,7 @@ function openTweetCommentCompose(commentKey) {
     highlights: [],
   };
   tweetCommentPanel.hidden = false;
+  resetCommentPanelScroll(tweetCommentPanel); // 읽던 위치가 남지 않게 맨 위부터 보여줍니다.
   renderTweetCommentPanel();
   // 코멘트 작성 창은 특정 "보기" 버튼과 무관하니, 다른 코멘트를 보다가 넘어온
   // 거라면 그 버튼의 강조 표시를 지웁니다.
@@ -2219,6 +2229,7 @@ function openTweetCommentCompose(commentKey) {
 
 function closeTweetCommentPanel() {
   exitExcerptPeek();
+  resetCommentPanelScroll(tweetCommentPanel);
   tweetCommentPanel.hidden = true;
   tweetCommentPanelState = null;
   setActiveTweetCommentViewBtn(null);
@@ -4664,6 +4675,7 @@ function openKakaoCommentView(msgIndex, role, entryId) {
   const entry = findKakaoCommentEntry(msgIndex, role, entryId);
   kakaoCommentPanelState = { msgIndex, role, entryId, mode: "view", highlights: (entry && entry.highlights) || [] };
   kakaoCommentPanel.hidden = false;
+  resetCommentPanelScroll(kakaoCommentPanel); // 읽던 위치가 남지 않게 맨 위부터 보여줍니다.
   renderKakaoCommentPanel();
 }
 
@@ -4678,12 +4690,14 @@ function openKakaoCommentCompose(msgIndex) {
     highlights: [],
   };
   kakaoCommentPanel.hidden = false;
+  resetCommentPanelScroll(kakaoCommentPanel); // 읽던 위치가 남지 않게 맨 위부터 보여줍니다.
   renderKakaoCommentPanel();
   setActiveKakaoCommentViewBtn(null);
 }
 
 function closeKakaoCommentPanel() {
   exitExcerptPeek();
+  resetCommentPanelScroll(kakaoCommentPanel);
   kakaoCommentPanel.hidden = true;
   kakaoCommentPanelState = null;
   setActiveKakaoCommentViewBtn(null);
@@ -5214,15 +5228,18 @@ function makeSumoneCommentViewBtn(role, commentEntry) {
 function openSumoneCommentView(role, entryId) {
   sumoneCommentPanelState = { role, entryId, mode: "view" };
   sumoneCommentPanel.hidden = false;
+  resetCommentPanelScroll(sumoneCommentPanel); // 읽던 위치가 남지 않게 맨 위부터 보여줍니다.
   renderSumoneCommentPanel();
 }
 function openSumoneCommentCompose() {
   sumoneCommentPanelState = { role: null, entryId: null, mode: "compose", adminType: "message-circle" };
   sumoneCommentPanel.hidden = false;
+  resetCommentPanelScroll(sumoneCommentPanel); // 읽던 위치가 남지 않게 맨 위부터 보여줍니다.
   renderSumoneCommentPanel();
   setActiveSumoneCommentViewBtn(null);
 }
 function closeSumoneCommentPanel() {
+  resetCommentPanelScroll(sumoneCommentPanel);
   sumoneCommentPanel.hidden = true;
   sumoneCommentPanelState = null;
   setActiveSumoneCommentViewBtn(null);
