@@ -2775,8 +2775,8 @@ detailDeleteBtn.addEventListener("click", async () => {
   loadCards();
 });
 
-// "이어서 추가"는 대화창을 닫고 추가 창을 엽니다. 아무것도 추가하지 않고 취소하면 그 대화창으로
-// 돌아가야 해서, 떠나기 전의 스크롤 위치를 기억해둡니다(취소 버튼 쪽에서 씁니다).
+// "이어서 추가"와 "수정"은 대화창을 닫고 추가/수정 창을 엽니다. 아무것도 하지 않고 취소하면 그
+// 대화창으로 돌아가야 해서, 떠나기 전의 스크롤 위치를 기억해둡니다(취소 버튼 쪽에서 씁니다).
 let appendReturnScrollTop = 0;
 detailAppendBtn.addEventListener("click", () => {
   if (!currentDetailCardId) return;
@@ -2798,6 +2798,8 @@ detailAppendBtn.addEventListener("click", () => {
 
 detailEditBtn.addEventListener("click", () => {
   if (!currentDetailCardId) return;
+  const detailPanel = detailModal.querySelector(".modal-panel");
+  appendReturnScrollTop = detailPanel ? detailPanel.scrollTop : 0;
   editTargetCardId = currentDetailCardId;
   appendTargetCardId = null;
   editingMessages = (currentDetailData.messages || []).map((m) => ({ ...m, images: normalizeImages(m.images) }));
@@ -2827,8 +2829,8 @@ newCardBtn.addEventListener("click", () => {
 });
 
 newCardCloseBtn.addEventListener("click", () => {
-  // "이어서 추가"를 누르고 들어온 거라면(아무것도 추가하지 않고 취소) 그 대화창으로 돌아갑니다.
-  const returnCardId = appendTargetCardId;
+  // "이어서 추가"나 "수정"을 누르고 들어온 거라면(아무것도 하지 않고 취소) 그 대화창으로 돌아갑니다.
+  const returnCardId = appendTargetCardId || editTargetCardId;
   newCardModal.hidden = true;
   appendTargetCardId = null;
   editTargetCardId = null;
