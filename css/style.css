@@ -1746,6 +1746,17 @@ mark.comment-highlight-mark {
   margin: 8px 20px 12px;
 }
 
+/* 이미지가 2장인 블록: 같은 높이로 나란히(폭은 js/app.js가 각자 비율에 맞춰 정함). 사이 간격은
+   트위터 대화창과 같은 5px입니다. */
+.comment-block-image-pair {
+  display: flex;
+  gap: 5px;
+}
+.comment-block-image-pair .tweet-comment-block-image {
+  min-width: 0;
+  width: auto;
+}
+
 .tweet-comment-block-image {
   display: block;
   /* max-width가 아니라 width를 100%로 고정해서, 원본이 아무리 가로로 길어도

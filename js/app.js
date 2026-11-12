@@ -2145,11 +2145,33 @@ function getBlockImageUrls(block) {
   return block.url ? [block.url] : [];
 }
 
-// 이미지 블록 하나를 보여주는 엘리먼트를 만듭니다. 이미지가 여러 장이면
-// 화살표 두 개로 넘겨보는 캐러셀이 되고, 우측 하단에 "n / 전체" 배지가 뜹니다.
+// 이미지 블록 하나를 보여주는 엘리먼트를 만듭니다. 이미지가 2장이면 트위터 대화창처럼 같은 높이로
+// 나란히 놓고(각자 원본 비율을 지킨 채 폭을 꽉 채움), 3장부터는 화살표 두 개로 넘겨보는 캐러셀이
+// 되고 우측 하단에 "n / 전체" 배지가 뜹니다.
 function createCommentBlockImageView(urls) {
   const wrap = document.createElement("div");
   wrap.className = "comment-block-image-wrap";
+
+  if (urls.length === 2) {
+    wrap.classList.add("comment-block-image-pair");
+    const imgs = urls.map((url) => {
+      const img = document.createElement("img");
+      img.className = "tweet-comment-block-image";
+      img.alt = "";
+      img.src = toOriginalQualityImageUrl(url);
+      img.style.flex = "1 1 0"; // 비율을 읽어오기 전엔 반반
+      img.addEventListener("click", () => openImageViewer(url));
+      wrap.appendChild(img);
+      return img;
+    });
+    // 폭을 가로/세로 비율(w/h)에 비례해서 나눠 가지면 두 사진의 높이가 같아집니다.
+    Promise.all(urls.map((url) => getImageDimensions(url))).then((dims) => {
+      dims.forEach((dim, i) => {
+        imgs[i].style.flex = `${dim.w / dim.h} 1 0`;
+      });
+    });
+    return wrap;
+  }
 
   const img = document.createElement("img");
   img.className = "tweet-comment-block-image";
