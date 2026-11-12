@@ -2023,9 +2023,12 @@ function setCommentText(el, block) {
 
 // 저장할 글 블록을 만듭니다. 서식(<s>, <span>)이 실제로 하나도 없으면 html은 저장하지 않습니다.
 function finalizeCommentTextBlock(b, extra = {}) {
-  const text = (b.text || "").trim();
+  // 맨 앞/맨 뒤의 줄바꿈(엔터)도 입력한 그대로 저장합니다(예전엔 trim()으로 잘려서 저장하면 없던 일이
+  // 됐습니다). 다만 글자가 하나도 없고 줄바꿈/공백뿐인 블록은 빈 블록으로 보고 비워서 저장하지 않게 합니다.
+  const raw = b.text || "";
+  const text = raw.trim() === "" ? "" : raw;
   const out = { type: "text", text, ...extra };
-  const html = (b.html || "").trim();
+  const html = b.html || "";
   if (text && html && /<(s|span)[ >]/.test(html)) out.html = html;
   return out;
 }
