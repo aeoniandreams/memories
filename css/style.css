@@ -3348,3 +3348,26 @@ span.kakao-like-btn {
     overscroll-behavior: contain;
   }
 }
+
+/* 폰(폭 480px 이하 터치 기기)에서는 트위터 대화창 상단바의 "이어서 추가" 버튼이 숨겨져서 자리가
+   넉넉하니, 위에서 좁혀 놓았던 값을 조금 풀어 줍니다: 오른쪽 끝에 붙어 보이지 않도록 좌우 여백을
+   기본값(16px)으로 되돌리고, 수정/삭제 버튼의 안쪽 여백과 두 화살표 사이 간격을 키웁니다. 마우스를
+   쓰는 좁은 창에서는 "이어서 추가"가 아직 보여서 위의 좁힌 값을 그대로 둡니다. */
+@media (max-width: 480px) and (hover: none) and (pointer: coarse) {
+  #detail-modal .modal-header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  #detail-modal .modal-header-right {
+    gap: 6px;
+  }
+  #detail-modal .modal-header .btn-secondary,
+  #detail-modal .modal-header #detail-delete-btn {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  #detail-modal .modal-header .comment-nav-btn {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+}
