@@ -1852,17 +1852,24 @@ mark.comment-highlight-mark {
   padding-bottom: 8px;
 }
 
-/* 데스크탑: 대화창(.modal-panel, max-width 620px)이 화면 중앙에 뜨는 걸 기준으로,
-   그 오른쪽에 16px 띄워서 400px 폭 패널을 붙입니다. 패널이 화면 오른쪽 밖으로
-   잘리지 않으려면 화면 폭이 대략 (620/2 + 16 + 400) * 2 = 1452px는 넘어야 해서,
-   여유를 두고 1520px부터 이 배치를 적용합니다. 그보다 좁으면(작은 노트북 등) 위의
-   모바일과 같은 가운데 모달 형태로 자연스럽게 대체됩니다. */
-@media (min-width: 1520px) {
+/* 데스크탑: 화면이 충분히 넓으면 코멘트 창을 대화창(.modal-panel, max-width 620px) 오른쪽 바깥에
+   400px 폭 패널로 띄웁니다(바텀시트가 아니라 뒤를 어둡게 덮지 않음). 대화창 + 16px 간격 + 패널 =
+   1036px이고 양옆 여백(12px씩)까지 합쳐 1100px부터 이 배치를 씁니다.
+   - 1520px 이상: 대화창은 화면 가운데에 그대로 두고, 그 오른쪽에 패널을 붙입니다.
+   - 1100px ~ 1519px: 가운데 두면 오른쪽에 패널 자리가 부족하니, 코멘트 창이 떠 있는 동안만 대화창을
+     왼쪽으로 밀어서(오버레이 오른쪽 여백을 416px 늘려 대화창이 놓이는 영역의 가운데를 왼쪽으로
+     옮김) "대화창 + 패널" 한 덩어리가 화면 가운데에 오게 합니다. 코멘트 창을 닫으면 대화창이
+     다시 가운데로 돌아옵니다.
+   1100px보다 좁으면(폰, 작은 창 등) 위의 바텀시트 모양이 그대로 쓰입니다.
+   js/app.js의 isCommentSheetLayout()은 이 기준(1100px)과 똑같이 맞춰야 합니다. */
+@media (min-width: 1100px) {
   .tweet-comment-panel {
     position: fixed;
     inset: auto;
     top: 24px;
-    left: calc(50% + 326px);
+    /* 대화창이 (코멘트 창이 떠 있는 동안) 왼쪽으로 208px 밀려 있을 때, 그 오른쪽 끝에서 16px 띄운 자리:
+       중앙 + (310 - 208) + 16 = 중앙 + 118px */
+    left: calc(50% + 118px);
     /* 모바일 전용으로 넣어둔 height: 100dvh를 데스크탑에서는 다시 풀어줍니다
        (안 그러면 화면 전체 높이의 안 보이는 상자가 남아서 클릭을 가로챌 수 있음). */
     height: auto;
@@ -1876,6 +1883,20 @@ mark.comment-highlight-mark {
     max-height: calc(100vh - 48px);
     max-height: calc(100dvh - 48px);
     border-radius: 16px;
+  }
+  .modal-overlay {
+    transition: padding-right 0.2s ease;
+  }
+  .modal-overlay:has(> .tweet-comment-panel:not([hidden])) {
+    padding-right: 428px; /* 기본 12px + 416px(패널 400px + 간격 16px) */
+  }
+}
+@media (min-width: 1520px) {
+  .tweet-comment-panel {
+    left: calc(50% + 326px); /* 대화창이 가운데에 있을 때 그 오른쪽 끝(310px) + 16px */
+  }
+  .modal-overlay:has(> .tweet-comment-panel:not([hidden])) {
+    padding-right: 12px;
   }
 }
 
@@ -3173,7 +3194,7 @@ span.kakao-like-btn {
    구분할 수 없습니다. 그래서 너비(480px 이하)에 더해 (hover: none)과
    (pointer: coarse) 조건을 같이 걸었습니다 — 이 둘은 "정밀한 마우스 없이 손가락
    터치로만 조작하는 기기"를 뜻해서, 마우스가 있는 데스크탑은 창을 아무리 좁혀도
-   해당되지 않습니다. 코멘트 패널의 데스크탑/모바일 전환 기준(1520px, 너비만 봄)과는
+   해당되지 않습니다. 코멘트 패널의 데스크탑/모바일 전환 기준(1100px, 너비만 봄)과는
    별개입니다. */
 @media (max-width: 480px) and (hover: none) and (pointer: coarse) {
   .avatar-col {

@@ -1806,11 +1806,11 @@ function isMobileViewport() {
 }
 
 // 코멘트 창이 대화창 옆 패널이 아니라 화면을 덮는 바텀시트로 뜨는 화면인지.
-// CSS의 @media (min-width: 1520px)(그 이상이면 옆 패널) 기준과 똑같이 맞춥니다.
+// CSS의 @media (min-width: 1100px)(그 이상이면 옆 패널) 기준과 똑같이 맞춥니다.
 // 폰뿐 아니라 태블릿, 가로로 돌린 폰, 좁은 데스크탑 창도 바텀시트로 뜨기 때문에,
 // "발췌 본문 보기" 버튼도 이 기준으로 보여줍니다(터치 여부/관리자 여부와 무관).
 function isCommentSheetLayout() {
-  return !window.matchMedia("(min-width: 1520px)").matches;
+  return !window.matchMedia("(min-width: 1100px)").matches;
 }
 
 // "발췌 본문 보기": 코멘트 창이 바텀시트로 뜨는 화면에선 시트가 화면을 많이
