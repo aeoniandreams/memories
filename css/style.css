@@ -1224,6 +1224,14 @@ h1 {
   max-width: 400px;
 }
 
+/* 글 블록이 연달아 나올 때 그 사이에 자동으로 들어가는 구분선(js/app.js의 renderCommentBlocksView).
+   글 블록의 아래 여백(28px)이 커서, 선을 글 쪽으로 당겨 붙이고 다음 글과도 적당히 띄웁니다. */
+.comment-block-divider {
+  height: 1px;
+  background: var(--border);
+  margin: -10px 20px 4px;
+}
+
 .comment-modal-text {
   margin: 0;
   padding: 8px 20px 28px;
@@ -3391,4 +3399,17 @@ span.kakao-like-btn {
     padding-left: 7px;
     padding-right: 7px;
   }
+}
+
+/* 코멘트 보기 버튼을 끌어서 다른 트윗으로 옮기는 중(js/app.js의 moveTweetComment): 끄는 버튼은 흐리게,
+   놓을 수 있는 트윗은 연한 포인트색으로 표시합니다. */
+.tweet-comment-view-btn.is-dragging {
+  opacity: 0.45;
+}
+.tweet-comment-view-btn[draggable="true"] {
+  cursor: grab;
+}
+.message-row.comment-drop-target {
+  background: var(--highlight-bg);
+  border-radius: 12px;
 }

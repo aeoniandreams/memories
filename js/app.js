@@ -16,6 +16,7 @@ import {
   getDoc,
   updateDoc,
   setDoc,
+  writeBatch,
   getDocs,
   onSnapshot,
   query,
@@ -406,6 +407,8 @@ onAuthStateChanged(auth, (user) => {
       applyAdminUI();
       currentUid = user.uid;
       loadCards();
+      // 일회성 작업: 관리자 코멘트의 [2026]을 파란색으로(위의 runMarkerColoringOnce). 끝나면 이 호출도 지워도 됩니다.
+      if (isAdmin) setTimeout(() => runMarkerColoringOnce().catch((e) => console.error("[2026] 색 바꾸기 실패", e)), 2500);
       loadSeenMaps().then(loadNotifEntries).then(() => {
         // 카드 목록이 이미 그려졌을 수 있어서(위 loadCards가 비동기라 순서가
         // 겹칠 수 있음), 알림 데이터가 준비된 뒤 한 번 더 그려서 새 코멘트
@@ -1082,10 +1085,64 @@ function refreshTweetMessageRow(commentKey) {
   rows[msgIndex].replaceWith(newRow);
 }
 
+// 지금 끌고 있는 코멘트 버튼 정보 { commentKey, role, entryId } (끌고 있지 않으면 null)
+let draggingTweetComment = null;
+
+// 코멘트 하나를 다른 트윗(toKey)으로 옮깁니다. 원래 트윗 문서에서 빼고 새 트윗 문서에 더하는 두
+// 쓰기를 한 번에(전부 되거나 전부 안 되게) 보냅니다. 코멘트 안의 내용/작성 시각/발췌 정보는 그대로
+// 따라갑니다. 쓰기 권한은 규칙상 내가 쓴 쪽(role) 배열만 바꿀 수 있어서 남의 코멘트는 옮길 수 없습니다.
+async function moveTweetComment(fromKey, role, entryId, toKey) {
+  if (!currentDetailCardId || fromKey === toKey) return;
+  const fromDoc = currentTweetComments.get(fromKey) || {};
+  const fromArr = (Array.isArray(fromDoc[role]) ? fromDoc[role] : []).slice();
+  const idx = fromArr.findIndex((e) => e.id === entryId);
+  if (idx === -1) return;
+  const [entry] = fromArr.splice(idx, 1);
+  const toDoc = currentTweetComments.get(toKey) || {};
+  const toArr = (Array.isArray(toDoc[role]) ? toDoc[role] : []).slice();
+  toArr.push(entry);
+
+  try {
+    const batch = writeBatch(db);
+    batch.set(doc(db, "cards", currentDetailCardId, "tweetComments", fromKey), { [role]: fromArr, updatedAt: serverTimestamp() }, { merge: true });
+    batch.set(doc(db, "cards", currentDetailCardId, "tweetComments", toKey), { [role]: toArr, updatedAt: serverTimestamp() }, { merge: true });
+    await batch.commit();
+  } catch (e) {
+    alert("코멘트 이동에 실패했습니다: " + e.message);
+    return;
+  }
+
+  currentTweetComments.set(fromKey, { ...fromDoc, [role]: fromArr });
+  currentTweetComments.set(toKey, { ...toDoc, [role]: toArr });
+  // 옮긴 코멘트를 보고 있던 코멘트 창은 닫습니다(옛 자리를 가리키고 있어서).
+  if (tweetCommentPanelState && tweetCommentPanelState.entryId === entryId) closeTweetCommentPanel();
+  refreshTweetMessageRow(fromKey);
+  refreshTweetMessageRow(toKey);
+}
+
 function renderMessageRow(msg, msgIndex, commentKey, comments) {
   const row = document.createElement("div");
   row.className = "message-row";
   row.dataset.commentKey = commentKey;
+
+  // 다른 트윗의 코멘트 버튼을 끌어와 이 트윗 위에 놓으면 그 코멘트가 이 트윗으로 옮겨집니다.
+  row.addEventListener("dragover", (e) => {
+    if (!draggingTweetComment || draggingTweetComment.commentKey === commentKey) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    row.classList.add("comment-drop-target");
+  });
+  row.addEventListener("dragleave", (e) => {
+    if (!row.contains(e.relatedTarget)) row.classList.remove("comment-drop-target");
+  });
+  row.addEventListener("drop", (e) => {
+    if (!draggingTweetComment || draggingTweetComment.commentKey === commentKey) return;
+    e.preventDefault();
+    row.classList.remove("comment-drop-target");
+    const dragged = draggingTweetComment;
+    draggingTweetComment = null;
+    moveTweetComment(dragged.commentKey, dragged.role, dragged.entryId, commentKey);
+  });
 
   const addCommentBtn = document.createElement("button");
   addCommentBtn.type = "button";
@@ -1203,6 +1260,25 @@ function makeTweetCommentViewBtn(commentKey, role, commentEntry) {
 
   btn.append(bubble, icon);
   applyNotifViewBtnColor(bubble, "x", currentDetailCardId, commentKey, commentEntry.type, commentEntry.createdAt || 0);
+
+  // 내가 쓴 코멘트(관리자는 admin, 일반 사용자는 user 쪽)만, 마우스를 쓰는 기기에서, 같은 카드 안의
+  // 다른 트윗 위로 끌어다 놓아서 옮길 수 있습니다. 다른 사람이 쓴 코멘트는 규칙상 고칠 수 없어서
+  // 옮기지 못하고, 터치 기기(폰)는 아직 지원하지 않습니다.
+  const ownRole = isAdmin ? "admin" : "user";
+  if (role === ownRole && !matchMedia("(hover: none) and (pointer: coarse)").matches) {
+    btn.draggable = true;
+    btn.addEventListener("dragstart", (e) => {
+      draggingTweetComment = { commentKey, role, entryId: commentEntry.id };
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", "comment:" + commentEntry.id);
+      btn.classList.add("is-dragging");
+    });
+    btn.addEventListener("dragend", () => {
+      draggingTweetComment = null;
+      btn.classList.remove("is-dragging");
+      detailThread.querySelectorAll(".comment-drop-target").forEach((r) => r.classList.remove("comment-drop-target"));
+    });
+  }
   btn.addEventListener("click", () => {
     // 이미 이 코멘트를 보여주고 있는 패널이 열려 있으면, 뒤로가기 없이 바로 닫습니다.
     const state = tweetCommentPanelState;
@@ -2021,6 +2097,111 @@ function setCommentText(el, block) {
   else el.textContent = block.text || "";
 }
 
+// ---------- 일회성: 이미 써둔 코멘트의 "[2026]"을 파란색(포인트색)으로 바꾸기 ----------
+// 화면에서 자동으로 칠하는 기능이 아니라, 저장돼 있는 코멘트 내용 자체에 포인트색 서식(cm-accent)을
+// 입히는 한 번짜리 작업입니다. 관리자 계정으로 로그인하면 바꿀 곳이 있는지 찾아서, 몇 곳인지
+// 알려주고 확인을 받은 뒤에만 저장합니다(취소하면 아무것도 안 바꿈). 끝나면 이 브라우저에 "했음"
+// 표시를 남겨 다시 묻지 않습니다. 끝난 뒤에는 이 블록을 지워도 됩니다.
+const MARKER_TO_COLOR = "[2026]";
+const MARKER_DONE_KEY = "memories-marker-2026-colored";
+
+// 글 블록 하나에서 아직 색이 없는 MARKER를 포인트색 span으로 감쌉니다. 바꿀 게 없거나, 바꾼 뒤 글자가
+// 원래와 달라지면(안전장치) null을 돌려주고, 바꿨으면 { text, html, count }를 돌려줍니다.
+function colorizeMarkerInBlock(block) {
+  if (!block || block.type === "image" || typeof block.text !== "string" || !block.text.includes(MARKER_TO_COLOR)) return null;
+  const root = document.createElement("div");
+  if (block.html) root.appendChild(buildSafeCommentFragment(block.html));
+  else root.textContent = block.text;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const targets = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const parent = node.parentElement;
+    if (node.textContent.includes(MARKER_TO_COLOR) && !(parent && parent.closest(".cm-accent"))) targets.push(node);
+  }
+  let count = 0;
+  targets.forEach((node) => {
+    const pieces = node.textContent.split(MARKER_TO_COLOR);
+    const frag = document.createDocumentFragment();
+    pieces.forEach((piece, i) => {
+      if (i > 0) {
+        const span = document.createElement("span");
+        span.className = "cm-accent";
+        span.textContent = MARKER_TO_COLOR;
+        frag.appendChild(span);
+        count++;
+      }
+      if (piece) frag.appendChild(document.createTextNode(piece));
+    });
+    node.replaceWith(frag);
+  });
+  if (count === 0) return null;
+  const { text, html } = serializeCommentEditor(root);
+  if (text !== block.text) return null;
+  return { text, html, count };
+}
+
+async function runMarkerColoringOnce() {
+  if (!isAdmin) return;
+  try {
+    if (localStorage.getItem(MARKER_DONE_KEY)) return;
+  } catch (e) {}
+  const changes = []; // { ref, admin(새 배열), blocks, marks }
+  for (const subcollection of ["tweetComments", "kakaoComments", "sumoneComments"]) {
+    const snap = await getDocs(collectionGroup(db, subcollection));
+    snap.forEach((docSnap) => {
+      // 규칙상 관리자는 자기 코멘트(admin 쪽)만 고칠 수 있어서, 거기만 봅니다.
+      const adminArr = docSnap.data().admin;
+      if (!Array.isArray(adminArr)) return;
+      let blocks = 0;
+      let marks = 0;
+      const newArr = adminArr.map((entry) => {
+        let content = Array.isArray(entry.content) ? entry.content : null;
+        let legacyText = false;
+        if (!content && typeof entry.text === "string") {
+          content = [{ type: "text", text: entry.text }]; // 예전 형식(content 없이 text만)
+          legacyText = true;
+        }
+        if (!content) return entry;
+        let changed = false;
+        const newContent = content.map((b) => {
+          const r = colorizeMarkerInBlock(b);
+          if (!r) return b;
+          changed = true;
+          blocks++;
+          marks += r.count;
+          return { ...b, text: r.text, html: r.html };
+        });
+        if (!changed) return entry;
+        const next = { ...entry, content: newContent };
+        if (legacyText) delete next.text;
+        return next;
+      });
+      if (blocks > 0) changes.push({ ref: docSnap.ref, admin: newArr, blocks, marks });
+    });
+  }
+  if (changes.length === 0) {
+    try {
+      localStorage.setItem(MARKER_DONE_KEY, "1");
+    } catch (e) {}
+    return;
+  }
+  const totalBlocks = changes.reduce((n, c) => n + c.blocks, 0);
+  const totalMarks = changes.reduce((n, c) => n + c.marks, 0);
+  if (!confirm(`관리자 코멘트의 ${MARKER_TO_COLOR}을(를) 파란색으로 바꿀까요?\n\n글 블록 ${totalBlocks}개, ${MARKER_TO_COLOR} ${totalMarks}곳\n(취소하면 아무것도 바꾸지 않아요)`)) return;
+  try {
+    for (const change of changes) {
+      await updateDoc(change.ref, { admin: change.admin, updatedAt: serverTimestamp() });
+    }
+    localStorage.setItem(MARKER_DONE_KEY, "1");
+  } catch (e) {
+    alert("저장하는 중 문제가 생겼어요: " + e.message);
+    return;
+  }
+  alert(`${MARKER_TO_COLOR} ${totalMarks}곳을 파란색으로 바꿨어요. 코멘트를 다시 열면 보여요.`);
+}
+
 // 저장할 글 블록을 만듭니다. 서식(<s>, <span>)이 실제로 하나도 없으면 html은 저장하지 않습니다.
 function finalizeCommentTextBlock(b, extra = {}) {
   // 맨 앞/맨 뒤의 줄바꿈(엔터)도 입력한 그대로 저장합니다(예전엔 trim()으로 잘려서 저장하면 없던 일이
@@ -2300,13 +2481,22 @@ function tryLeaveTweetCommentPanel() {
 // 코멘트 블록(텍스트/이미지) 목록을 "보기" 모드로 그려서 container에 붙입니다.
 // 트윗 코멘트/카톡 코멘트 둘 다 씁니다.
 function renderCommentBlocksView(container, blocks) {
+  // 글 블록이 연달아 나올 때만(사이에 이미지 블록이 없을 때만) 그 사이에 구분선을 자동으로 놓습니다.
+  let prevWasText = false;
   blocks.forEach((block) => {
     if (block.type === "image") {
       const urls = getBlockImageUrls(block);
       if (!urls.length) return;
       container.appendChild(createCommentBlockImageView(urls));
+      prevWasText = false;
     } else {
       if (!block.text) return;
+      if (prevWasText) {
+        const divider = document.createElement("div");
+        divider.className = "comment-block-divider";
+        container.appendChild(divider);
+      }
+      prevWasText = true;
       const p = document.createElement("p");
       p.className = "comment-modal-text";
       setCommentText(p, block);
