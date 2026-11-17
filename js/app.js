@@ -407,8 +407,6 @@ onAuthStateChanged(auth, (user) => {
       applyAdminUI();
       currentUid = user.uid;
       loadCards();
-      // 일회성 작업: 관리자 코멘트의 [2026]을 파란색으로(위의 runMarkerColoringOnce). 끝나면 이 호출도 지워도 됩니다.
-      if (isAdmin) setTimeout(() => runMarkerColoringOnce().catch((e) => console.error("[2026] 색 바꾸기 실패", e)), 2500);
       loadSeenMaps().then(loadNotifEntries).then(() => {
         // 카드 목록이 이미 그려졌을 수 있어서(위 loadCards가 비동기라 순서가
         // 겹칠 수 있음), 알림 데이터가 준비된 뒤 한 번 더 그려서 새 코멘트
@@ -2095,111 +2093,6 @@ function buildSafeCommentFragment(html) {
 function setCommentText(el, block) {
   if (block.html) el.replaceChildren(buildSafeCommentFragment(block.html));
   else el.textContent = block.text || "";
-}
-
-// ---------- 일회성: 이미 써둔 코멘트의 "[2026]"을 파란색(포인트색)으로 바꾸기 ----------
-// 화면에서 자동으로 칠하는 기능이 아니라, 저장돼 있는 코멘트 내용 자체에 포인트색 서식(cm-accent)을
-// 입히는 한 번짜리 작업입니다. 관리자 계정으로 로그인하면 바꿀 곳이 있는지 찾아서, 몇 곳인지
-// 알려주고 확인을 받은 뒤에만 저장합니다(취소하면 아무것도 안 바꿈). 끝나면 이 브라우저에 "했음"
-// 표시를 남겨 다시 묻지 않습니다. 끝난 뒤에는 이 블록을 지워도 됩니다.
-const MARKER_TO_COLOR = "[2026]";
-const MARKER_DONE_KEY = "memories-marker-2026-colored";
-
-// 글 블록 하나에서 아직 색이 없는 MARKER를 포인트색 span으로 감쌉니다. 바꿀 게 없거나, 바꾼 뒤 글자가
-// 원래와 달라지면(안전장치) null을 돌려주고, 바꿨으면 { text, html, count }를 돌려줍니다.
-function colorizeMarkerInBlock(block) {
-  if (!block || block.type === "image" || typeof block.text !== "string" || !block.text.includes(MARKER_TO_COLOR)) return null;
-  const root = document.createElement("div");
-  if (block.html) root.appendChild(buildSafeCommentFragment(block.html));
-  else root.textContent = block.text;
-
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const targets = [];
-  while (walker.nextNode()) {
-    const node = walker.currentNode;
-    const parent = node.parentElement;
-    if (node.textContent.includes(MARKER_TO_COLOR) && !(parent && parent.closest(".cm-accent"))) targets.push(node);
-  }
-  let count = 0;
-  targets.forEach((node) => {
-    const pieces = node.textContent.split(MARKER_TO_COLOR);
-    const frag = document.createDocumentFragment();
-    pieces.forEach((piece, i) => {
-      if (i > 0) {
-        const span = document.createElement("span");
-        span.className = "cm-accent";
-        span.textContent = MARKER_TO_COLOR;
-        frag.appendChild(span);
-        count++;
-      }
-      if (piece) frag.appendChild(document.createTextNode(piece));
-    });
-    node.replaceWith(frag);
-  });
-  if (count === 0) return null;
-  const { text, html } = serializeCommentEditor(root);
-  if (text !== block.text) return null;
-  return { text, html, count };
-}
-
-async function runMarkerColoringOnce() {
-  if (!isAdmin) return;
-  try {
-    if (localStorage.getItem(MARKER_DONE_KEY)) return;
-  } catch (e) {}
-  const changes = []; // { ref, admin(새 배열), blocks, marks }
-  for (const subcollection of ["tweetComments", "kakaoComments", "sumoneComments"]) {
-    const snap = await getDocs(collectionGroup(db, subcollection));
-    snap.forEach((docSnap) => {
-      // 규칙상 관리자는 자기 코멘트(admin 쪽)만 고칠 수 있어서, 거기만 봅니다.
-      const adminArr = docSnap.data().admin;
-      if (!Array.isArray(adminArr)) return;
-      let blocks = 0;
-      let marks = 0;
-      const newArr = adminArr.map((entry) => {
-        let content = Array.isArray(entry.content) ? entry.content : null;
-        let legacyText = false;
-        if (!content && typeof entry.text === "string") {
-          content = [{ type: "text", text: entry.text }]; // 예전 형식(content 없이 text만)
-          legacyText = true;
-        }
-        if (!content) return entry;
-        let changed = false;
-        const newContent = content.map((b) => {
-          const r = colorizeMarkerInBlock(b);
-          if (!r) return b;
-          changed = true;
-          blocks++;
-          marks += r.count;
-          return { ...b, text: r.text, html: r.html };
-        });
-        if (!changed) return entry;
-        const next = { ...entry, content: newContent };
-        if (legacyText) delete next.text;
-        return next;
-      });
-      if (blocks > 0) changes.push({ ref: docSnap.ref, admin: newArr, blocks, marks });
-    });
-  }
-  if (changes.length === 0) {
-    try {
-      localStorage.setItem(MARKER_DONE_KEY, "1");
-    } catch (e) {}
-    return;
-  }
-  const totalBlocks = changes.reduce((n, c) => n + c.blocks, 0);
-  const totalMarks = changes.reduce((n, c) => n + c.marks, 0);
-  if (!confirm(`관리자 코멘트의 ${MARKER_TO_COLOR}을(를) 파란색으로 바꿀까요?\n\n글 블록 ${totalBlocks}개, ${MARKER_TO_COLOR} ${totalMarks}곳\n(취소하면 아무것도 바꾸지 않아요)`)) return;
-  try {
-    for (const change of changes) {
-      await updateDoc(change.ref, { admin: change.admin, updatedAt: serverTimestamp() });
-    }
-    localStorage.setItem(MARKER_DONE_KEY, "1");
-  } catch (e) {
-    alert("저장하는 중 문제가 생겼어요: " + e.message);
-    return;
-  }
-  alert(`${MARKER_TO_COLOR} ${totalMarks}곳을 파란색으로 바꿨어요. 코멘트를 다시 열면 보여요.`);
 }
 
 // 저장할 글 블록을 만듭니다. 서식(<s>, <span>)이 실제로 하나도 없으면 html은 저장하지 않습니다.
