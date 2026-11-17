@@ -1228,7 +1228,8 @@ h1 {
    글 블록의 아래 여백(28px)이 커서, 선을 글 쪽으로 당겨 붙이고 다음 글과도 적당히 띄웁니다. */
 .comment-block-divider {
   height: 1px;
-  background: var(--border);
+  /* 설명란/아이콘에 쓰는 연한 회색(--muted-pale)의 50%: 배경에 묻히지 않고 글보다 튀지도 않습니다. */
+  background: color-mix(in srgb, var(--muted-pale) 50%, transparent);
   margin: -10px 20px 4px;
 }
 
